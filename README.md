@@ -2,7 +2,15 @@
 
 A shop styled in code: dark rounded window, gold title, a coin counter that counts up and down, category tabs, item cards with rarity colors and hover effects, pop-up messages and open/close animations.
 
-## Put it in Roblox Studio
+## Quickest way: one paste
+
+1. Open `InstallShop.lua` on GitHub and click **Copy raw file**.
+2. In Studio, open **View → Command Bar**, paste it in, and press **Enter**.
+3. Press **Play**.
+
+The installer creates all 3 scripts for you. Ctrl+Z undoes it.
+
+## Put it in Roblox Studio by hand
 
 Make 3 scripts in the **Explorer** (hover a service → click **+**), then copy in the code from each file:
 
