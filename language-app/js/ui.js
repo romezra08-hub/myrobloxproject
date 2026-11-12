@@ -168,5 +168,27 @@
     } catch (e) {}
   }
 
-  root.LSUI = { sfx, saveFile, h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
+  // Karaoke text: words light up as they are spoken (reading-while-listening).
+  function karaoke(text, lang, cls) {
+    const words = String(text).split(/(\s+)/);
+    const el = h("span.karaoke" + (cls ? "." + cls : ""), { lang, dir: lang === "he" ? "rtl" : "ltr" });
+    const spans = [], starts = [];
+    let pos = 0;
+    words.forEach((w) => {
+      const plain = root.LSUtil.stripStress(w);
+      if (/\S/.test(w)) { const s = h("span.kw", w); spans.push(s); starts.push(pos); el.appendChild(s); }
+      else el.appendChild(document.createTextNode(w));
+      pos += plain.length;
+    });
+    const mark = (ci) => {
+      spans.forEach((s) => s.classList.remove("on"));
+      if (ci < 0) return;
+      let k = 0; for (let i = 0; i < starts.length; i++) if (starts[i] <= ci) k = i;
+      spans[k] && spans[k].classList.add("on");
+    };
+    const play = (rate) => root.LSSpeech.speak(text, lang, { rate, onWord: mark });
+    return { el, play };
+  }
+
+  root.LSUI = { karaoke, sfx, saveFile, h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
 })(window);

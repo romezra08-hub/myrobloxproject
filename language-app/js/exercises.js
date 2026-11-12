@@ -49,7 +49,7 @@
       h("div.help-word", L(hlp(it, ctx), H)),
       info.length ? h("div.chips", info) : null,
       exT ? h("div.example",
-        h("div.ex-t", L(exT, T), speakerBtn(exT, T)),
+        h("div.ex-t", ...(() => { const k = root.LSUI.karaoke(exT, T); return [k.el, h("button.icon-btn.speaker", { type: "button", "aria-label": t("listen"), onclick: () => k.play(ctx.rate) }, "🔊")]; })()),
         exH ? h("div.ex-h", L(exH, H)) : null) : null,
       T === "ru" && /́/.test(tgt(it, ctx)) ? h("div.small.muted", t("stressNote")) : null,
       isPhrase ? null : selfRef(it, ctx),

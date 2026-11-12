@@ -59,7 +59,8 @@
         u.pitch = 1;
         let done = false;
         const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
-        u.onend = () => finish(true);
+        if (opts.onWord) u.onboundary = (ev) => { if (ev.name === "word" || ev.name == null) opts.onWord(ev.charIndex); };
+        u.onend = () => { if (opts.onWord) opts.onWord(-1); finish(true); };
         u.onerror = () => finish(false);
         // Safety timeout: some engines never fire onend.
         setTimeout(() => finish(true), 1500 + text.length * 120 / (u.rate || 1));

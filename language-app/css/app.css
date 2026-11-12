@@ -571,3 +571,5 @@ h1, h2, .hero-title, .st-title, .target-word, .reel-word { font-family: "Rubik",
 .focus-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .focus-chip { padding: 8px 12px; border-radius: 99px; border: 2px solid var(--line); background: var(--surface); font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--line); }
 .focus-chip.on { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 3px 0 var(--primary-deep); }
+.karaoke .kw { border-radius: 6px; padding: 0 2px; transition: background .12s, color .12s; }
+.karaoke .kw.on { background: var(--sun); color: #2b1a00; box-shadow: 0 2px 0 #e0a800; }

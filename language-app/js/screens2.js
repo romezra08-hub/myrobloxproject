@@ -385,13 +385,14 @@
     const T = p.target, H = p.help;
     let showTr = true, hide = false, stopFlag = false;
     const linesBox = h("div.chat");
+    const kar = [];
     const renderLines = (active) => {
       linesBox.innerHTML = "";
       d.lines.forEach((ln, i) => {
         linesBox.appendChild(h("div.bubble." + (ln.who === "B" ? "me" : "bot") + (i === active ? ".active" : ""),
           h("span.who", ln.who === "B" ? "🙋" : "🤖"),
           h("div.bubble-body",
-            h("div", hide && ln.who === "B" && i >= (active == null ? 0 : active) ? h("span.hidden-text", "• • •") : L(ln[T], T, "strong"), speakerBtn(ln[T], T, { withSlow: true })),
+            h("div", hide && ln.who === "B" && i >= (active == null ? 0 : active) ? h("span.hidden-text", "• • •") : (kar[i] = root.LSUI.karaoke(ln[T], T, "strong")).el, h("button.icon-btn.speaker", { type: "button", "aria-label": t("listen"), onclick: () => kar[i] && kar[i].play(app.ttsRate()) }, "🔊")),
             showTr ? h("div.small.muted", L(ln[H] || "", H)) : null)));
       });
     };
@@ -400,7 +401,7 @@
       stopFlag = false;
       for (let i = 0; i < d.lines.length && !stopFlag; i++) {
         renderLines(i);
-        await SP.speak(d.lines[i][T], T, { rate: app.ttsRate() });
+        await (kar[i] ? kar[i].play(app.ttsRate()) : SP.speak(d.lines[i][T], T, { rate: app.ttsRate() }));
         await new Promise((r) => setTimeout(r, 400));
       }
       renderLines(null);

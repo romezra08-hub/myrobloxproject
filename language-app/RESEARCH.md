@@ -88,3 +88,7 @@ Sources: https://eprints.whiterose.ac.uk/141710/14/KASPROWICZ_et_al_2019_The_Mod
 ## Round 7
 - **Semantic vs thematic clustering:** learning words from one category together (colors, numbers) causes interference. Thematic groups (a café scene) are easier (Tinkham 1997; Nakata & Suzuki 2019 report mixed effects and say spacing helps). → New words in the daily lesson now rotate across topics. Reels feeds stay thematic.
 Sources: https://ideals.illinois.edu/items/19069 ; https://www.cambridge.org/core/product/F58BA8D70385603B9C42E408BFCB8A10
+
+## Round 8
+- **Reading while listening with synchronized highlighting:** colouring words as they're spoken improved meaning recall and recognition speed (Jung & Zhang 2024, 87 learners). Eye-tracking shows it changes how readers follow the text (Gerbier et al. 2015). Evidence is small-scale. → Conversations and example sentences now use **karaoke highlighting** (each word lights up as it's spoken, on voices that report word timing).
+Sources: https://www.degruyterbrill.com/document/doi/10.1515/iral-2023-0232/html ; https://hal.archives-ouvertes.fr/hal-01192870/file/eg_SLaTE2015_revision_TRACK_2015-06-18.pdf ; https://durham-repository.worktribe.com/OutputFile/1219137
