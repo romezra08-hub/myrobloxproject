@@ -67,9 +67,11 @@
 
   // ---- distractors for multiple choice ----
   function distractors(it, field, n) {
-    const pool = (it._type === "phrase" ? phrases() : vocab()).filter((v) => v.id !== it.id && v[field] && U.normalize(v[field]) !== U.normalize(it[field]));
-    const same = pool.filter((v) => v.topic === it.topic || (it.sit && v.sit === it.sit));
-    const picks = U.sample(same, n);
+    // never offer an option that shares a translation with the answer in ANY language (avoids two "right" answers)
+    const same = (v) => ["en", "ru", "he"].some((l) => v[l] && it[l] && U.normalize(v[l]) === U.normalize(it[l]));
+    const pool = (it._type === "phrase" ? phrases() : vocab()).filter((v) => v.id !== it.id && v[field] && !same(v));
+    const near = pool.filter((v) => v.topic === it.topic || (it.sit && v.sit === it.sit));
+    const picks = U.sample(near, n);
     if (picks.length < n) picks.push(...U.sample(pool.filter((v) => !picks.includes(v)), n - picks.length));
     // avoid duplicate visible texts
     const seen = new Set([U.normalize(it[field])]);
