@@ -160,7 +160,8 @@ async function runLesson(page, tag, maxSteps) {
   const steps2 = await runLesson(page, "11-son-daily");
   console.log("son daily lesson steps:", steps2);
   // second lesson to exercise reviews path
-  await page.goto(base + "#/home");
+  await page.click(".main-btn");
+  await page.waitForSelector(".home");
   await page.click(".hero-card");
   await runLesson(page, "12-son-daily2");
   for (const r of ["alphabet", "letter/Ж", "writing/Ж", "topic/basics", "grammar", "sounds", "progress", "family", "reels/topic/basics"]) {

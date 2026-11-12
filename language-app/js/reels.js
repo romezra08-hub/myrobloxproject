@@ -192,7 +192,7 @@
         main.innerHTML = "";
         ST.addSeconds(profile.id, Math.min(1800, Math.round((Date.now() - started) / 1000)));
         ST.flush(profile.id);
-        main.append(
+        main.append(...[
           h("div.big-emoji", "🎬"),
           h("h2", tx("end")),
           quizTotal ? h("div.stat-row", h("div.stat", h("div.stat-num", quizRight + "/" + quizTotal), h("div.stat-lbl", tx("quizScore")))) : null,
@@ -200,7 +200,7 @@
           h("div.recap", items.map((it) => h("button.recap-item", { type: "button", onclick: () => SP.speak(it[T], T, { rate: app.ttsRate() }) }, it.emoji ? it.emoji + " " : "", L(it[T], T), h("span.muted", " — "), L(it[H] || "", H)))),
           h("div.row.center",
             h("button.btn.primary", { type: "button", onclick: () => { app.go("#/reels"); } }, "🎬 " + tx("another")),
-            h("button.btn.ghost", { type: "button", onclick: () => app.go("#/home") }, t("backHome"))));
+            h("button.btn.ghost", { type: "button", onclick: () => app.go("#/home") }, t("backHome")))].filter(Boolean));
       };
       return el;
     }
