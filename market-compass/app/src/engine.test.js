@@ -602,6 +602,7 @@ test('forecasts are scored against a coin and against the naive rule', () => {
   assert.equal(E.scoreForecasts([f(0.7, true, 0.5, true)]).adjBrier, null);
   // calls that rest on a named news item are counted apart from the rest
   const news = E.scoreForecasts([Object.assign(f(0.7, true, 0.5, true), { onNews: true }), f(0.6, false, 0.5, true), f(0.4, false, 0.5, true)]);
+  near(E.scoreForecasts(Array.from({ length: 100 }, (_, i) => f(0.6, i % 2 === 0, 0.5, true))).luck, 0.098);   // 100 calls: within about 10 points
   assert.equal(news.byNews.yes.n, 1);
   assert.equal(news.byNews.no.n, 2);
   assert.equal(news.byNews.yes.hits, 1);

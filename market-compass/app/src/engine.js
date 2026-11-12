@@ -582,6 +582,8 @@
       var base = bN ? bSum / bN : null;
       return {
         n: n, hits: hits, calls: calls, brier: n ? sum / n : null, baseBrier: base,
+        // nineteen coin-flippers in twenty would land within this distance of 50% on this many calls
+        luck: calls ? 1.96 * Math.sqrt(0.25 / calls) : null,
         // compared on the same forecasts, and only where a base rate was recorded
         skill: bN && base > 0 ? 1 - (bMine / bN) / base : null,
         inRange: rN ? inR / rN : null,

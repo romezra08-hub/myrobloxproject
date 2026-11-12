@@ -1582,7 +1582,7 @@
     if (sc.n > 0) {
       head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored')));
       head.appendChild(h('div', { class: 'tiles' },
-        tile('Right way round', sc.calls ? sc.hits + ' of ' + sc.calls : '–', sc.calls ? pc0(sc.hits / sc.calls) + '; a coin gets 50%' : ''),
+        tile('Right way round', sc.calls ? sc.hits + ' of ' + sc.calls : '–', sc.calls ? pc0(sc.hits / sc.calls) + '; a coin would land between ' + pc0(0.5 - sc.luck) + ' and ' + pc0(0.5 + sc.luck) + ' on this many' : ''),
         tile('Score', isNum(sc.brier) ? sc.brier.toFixed(3) : '–', 'lower is better; always saying 50% scores 0.250'),
         tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
         tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
@@ -2159,7 +2159,7 @@
       renderData();
     }, onErr);
     db.doc('market/brief').onSnapshot(function (d) { S.brief = d.exists ? d.data() : null; renderData(); }, function () {});
-    db.doc('market/forecasts').onSnapshot(function (d) { S.forecasts = d.exists ? d.data() : null; renderForecasts(); }, function () {});
+    db.doc('market/forecasts').onSnapshot(function (d) { S.forecasts = d.exists ? d.data() : null; renderForecasts(); renderPlan(); }, function () {});
   }
 
   function boot() {
