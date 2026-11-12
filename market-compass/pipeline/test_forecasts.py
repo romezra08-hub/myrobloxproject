@@ -94,6 +94,36 @@ class HotNames(unittest.TestCase):
         self.assertAlmostEqual(out["closed"][0]["brier"], 0.58 ** 2, places=4)
         self.assertIn(" 1-day calls: right way round 0 of 1", fc.summary(out))
 
+    def test_a_named_news_item_opens_a_call_on_any_well_known_name(self):
+        s = self.snap("2026-11-12T21:10:00Z")
+        rec, problems = fc.add(fc.empty(), [
+            {"asset": "NVDA", "horizonDays": 1, "pUp": 0.47, "news": "  Chief executive   resigned today "},
+            {"asset": "MU", "horizonDays": 1, "pUp": 0.55, "news": "Raised its sales forecast"},
+            {"asset": "TRX-USD", "horizonDays": 1, "pUp": 0.5},
+            {"asset": "TSLA", "horizonDays": 1, "pUp": 0.5, "news": "Something"},      # not priced in the snapshot at all
+        ], s)
+        by = {f["asset"]: f for f in rec["open"]}
+        self.assertEqual(sorted(by), ["MU", "NVDA", "TRX-USD"])
+        self.assertEqual((by["NVDA"]["news"], by["NVDA"]["onNews"], by["NVDA"]["extra"], by["NVDA"]["name"]), ("Chief executive resigned today", True, True, "Nvidia"))
+        self.assertEqual((by["MU"]["onNews"], by["MU"]["extra"]), (True, False))          # a hot name can rest on news too
+        self.assertEqual((by["TRX-USD"]["onNews"], by["TRX-USD"]["news"]), (False, None))
+        self.assertEqual(len(problems), 1)
+
+    def test_only_three_news_only_calls_a_day(self):
+        s = self.snap("2026-11-12T21:10:00Z")
+        for sym in ("AAA", "BBB", "CCC", "DDD"):
+            s["hot"]["assets"][sym] = {"px": 10.0, "name": sym, "kind": "stock", "up1d": 0.5}
+        items = [{"asset": sym, "horizonDays": 1, "pUp": 0.5, "news": "x"} for sym in ("AAA", "BBB", "CCC", "DDD")]
+        rec, problems = fc.add(fc.empty(), items, s)
+        self.assertEqual(sorted(f["asset"] for f in rec["open"]), ["AAA", "BBB", "CCC"])
+        self.assertIn("only 3 news calls a day", problems[0])
+        rec2, problems2 = fc.add(rec, [{"asset": "DDD", "horizonDays": 1, "pUp": 0.5, "news": "x"}], s)   # a later attempt the same day
+        self.assertEqual(len(rec2["open"]), 3)
+        nxt = self.snap("2026-11-13T21:10:00Z")
+        nxt["hot"]["assets"]["DDD"] = {"px": 10.0, "name": "DDD", "kind": "stock", "up1d": 0.5}
+        rec3, _ = fc.add(rec, [{"asset": "DDD", "horizonDays": 1, "pUp": 0.5, "news": "x"}], nxt)          # a new day, a new allowance
+        self.assertEqual(len(rec3["open"]), 4)
+
     def test_a_friday_call_waits_for_monday(self):
         rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.58}], self.snap("2026-11-13T21:10:00Z"))
         self.assertEqual(len(fc.resolve(rec, self.snap("2026-11-14T09:00:00Z"))["closed"]), 0)
@@ -146,6 +176,11 @@ class Learning(unittest.TestCase):
         self.assertIn("you said 70% on average, the usual figure was 50%, it rose 50% of the time", text)
         self.assertIn("you were worse", text)
         self.assertIn("added nothing", text)
+        for i, f in enumerate(rec["closed"]):
+            f["onNews"] = i < 30
+        text = fc.feedback(rec)
+        self.assertRegex(text, r"calls resting on a named news item\s+30 calls")
+        self.assertIn("calls with no named news item", text)
         self.assertNotIn("why", text)
 
     def test_three_month_calls_are_allowed_for_the_five_markets(self):

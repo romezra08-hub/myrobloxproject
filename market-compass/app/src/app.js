@@ -1377,6 +1377,18 @@
         'Looking back over ' + tr.n + ' scored calls, the best use of them would have been to take ' + Math.round(tr.k * 100) + '% of each departure from the usual figure. New calls show that corrected chance beside the one Claude gave.' +
         (isNum(sc.adjBrier) ? ' On the ' + sc.adjN + ' corrected calls scored so far, the corrected chance scored ' + sc.adjBrier.toFixed(3) + ' against ' + sc.adjRawBrier.toFixed(3) + ' uncorrected.' : '')));
       var spans = Object.keys(sc.byHorizon).sort(function (a, b) { return Number(a) - Number(b); });
+      var bn = sc.byNews;
+      if (bn && bn.yes.n > 0) {
+        var row = function (label, s) {
+          return h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'num' }, String(s.n)),
+            h('td', { class: 'num' }, s.calls ? s.hits + ' of ' + s.calls + ' (' + pc0(s.hits / s.calls) + ')' : '\u2013'),
+            h('td', { class: 'num' }, isNum(s.brier) ? s.brier.toFixed(3) : '\u2013'), h('td', { class: 'num' }, isNum(s.baseBrier) ? s.baseBrier.toFixed(3) : '\u2013'));
+        };
+        head.appendChild(h('div', { class: 'table-scroll' }, h('table', null,
+          h('thead', null, h('tr', null, ['Does news help?', 'Scored', 'Right way round', 'Score', 'Naive rule'].map(function (t) { return h('th', { scope: 'col' }, t); }))),
+          h('tbody', null, row('Calls resting on a named news item', bn.yes), row('All other calls', bn.no)))));
+        head.appendChild(h('p', { class: 'note' }, 'A news call is one made because something specific had just happened, such as a chief executive leaving or an exchange being hacked. If news of that kind can be traded, the first row should beat its naive rule by more than the second does.'));
+      }
       if (spans.length > 1) head.appendChild(h('div', { class: 'table-scroll' }, h('table', null,
         h('thead', null, h('tr', null, ['By length of call', 'Scored', 'Right way round', 'Score', 'Naive rule'].map(function (t) { return h('th', { scope: 'col' }, t); }))),
         h('tbody', null, spans.map(function (k) {
@@ -1400,9 +1412,9 @@
           h('td', { class: 'num' }, fcPrice(f, f.startPx)),
           h('td', { class: 'num' }, isNum(f.low) && isNum(f.high) ? fcPrice(f, f.low) + ' to ' + fcPrice(f, f.high) : '–'),
           h('td', { class: 'num' }, dateShort(f.dueAt)),
-          h('td', { class: 'txt' }, str(f.why, 320))));
+          h('td', { class: 'txt' }, f.onNews && f.news ? h('span', null, chip('News', 'warn'), ' ', h('b', null, str(f.news, 200) + '. ')) : null, str(f.why, 320))));
       });
-      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made. One-day calls are on the five shares and five coins with the best twelve months.',
+      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made. One-day calls are on the five shares and five coins with the best twelve months, plus up to three other well-known names a day that were hit by news.',
         h('div', { class: 'table-scroll' }, h('table', { class: 'fc' },
           h('thead', null, h('tr', null, ['Market', 'Chance higher', 'Usually', 'Price then', '80% range', 'Due', 'Why'].map(function (t, i) { return h('th', { scope: 'col', class: i === 6 ? 'txt' : null }, t); }))), tb)),
         h('p', { class: 'note' }, '"Usually" is how often that market rose over a stretch this long in the recent past. A call close to it means the news changed little. A one-day call made on a Friday is scored on Monday.')));
@@ -1417,7 +1429,7 @@
           h('td', { class: 'num' }, dateShort(f.madeAt)),
           h('td', { class: 'num' }, pc0(f.pUp) + ' up'),
           h('td', { class: 'num ' + dirClass(f.change) }, pct(f.change)),
-          h('td', null, right === null ? chip('No call', '') : right ? chip('Right', 'pos') : chip('Wrong', 'neg')),
+          h('td', null, right === null ? chip('No call', '') : right ? chip('Right', 'pos') : chip('Wrong', 'neg'), f.onNews ? chip('News', 'warn') : null),
           h('td', { class: 'num' }, isNum(f.brier) ? f.brier.toFixed(2) : '–')));
       });
       root.appendChild(card('Scored calls', 'The latest 40, newest first.',

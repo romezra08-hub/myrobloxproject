@@ -590,6 +590,8 @@
     };
     var out = one(list);
     out.verdict = out.n < 60 || out.skill === null ? 'early' : out.skill > 0.05 ? 'ahead' : out.skill < -0.05 ? 'behind' : 'level';
+    // do the calls that rest on a named news item do any better than the rest?
+    out.byNews = { yes: one(list.filter(function (f) { return f.onNews === true; })), no: one(list.filter(function (f) { return f.onNews !== true; })) };
     out.byHorizon = {};
     list.forEach(function (f) { out.byHorizon[f.horizonDays] = true; });
     Object.keys(out.byHorizon).forEach(function (k) { out.byHorizon[k] = one(list.filter(function (f) { return String(f.horizonDays) === k; })); });

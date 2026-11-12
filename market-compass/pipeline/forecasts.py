@@ -19,7 +19,11 @@ naive rule have deserved to be believed and stores each new call with that corre
 A forecast says: "the chance that this asset's price is higher after N days is p, and I am
 80% sure it will lie between low and high". Five markets are forecast a week and a month
 ahead. The day's "hot names" (the shares and coins with the best twelve months, listed in the
-snapshot) are forecast one day ahead: the very short test the owner asked for. It is scored when the first refresh on or after
+snapshot) are forecast one day ahead: the very short test the owner asked for. Up to three
+other well-known names a day may also get a one-day call when something has just happened to
+them, such as a chief executive leaving or an exchange being hacked. Any call may carry a "news"
+line naming the item it rests on, and those calls are scored as a group of their own, so the
+record shows whether news of that kind helps. It is scored when the first refresh on or after
 its due date runs, against the price in that refresh. A call due on a weekend is therefore
 scored on the Monday.
 """
@@ -38,6 +42,7 @@ ASSETS = {            # what may be forecast: snapshot key -> name shown on the 
 }
 HORIZONS = (7, 30, 90)    # days, for the five markets above
 HOT_HORIZON = 1       # days, for the snapshot's hot names
+NEWS_CALLS_A_DAY = 3  # one-day calls allowed on other well-known names, each resting on a named news item
 P_MIN, P_MAX = 0.05, 0.95
 KEEP_CLOSED = 400
 LEARN_MIN = 60        # scored calls needed before the record is allowed to correct new ones
@@ -134,9 +139,10 @@ def clean_new(item, snapshot):
     asset, horizon = item.get("asset"), item.get("horizonDays")
     if isinstance(horizon, bool) or not isinstance(horizon, int):
         return None, "%r: horizonDays must be a whole number" % (asset,)
+    news = " ".join(str(item.get("news") or "").split())[:200]
     if horizon == HOT_HORIZON:
-        if asset not in hot_names(snapshot):
-            return None, "%r: one-day forecasts are only for today's hot names" % (asset,)
+        if asset not in hot_names(snapshot) and not (news and hot_info(snapshot, asset)):
+            return None, "%r: a one-day forecast needs one of today's hot names, or a well-known name with a news item" % (asset,)
     elif asset not in ASSETS:
         return None, "unknown asset %r" % (asset,)
     elif horizon not in HORIZONS:
@@ -162,6 +168,8 @@ def clean_new(item, snapshot):
         "madeAt": made, "dueAt": due, "startPx": px,
         "pUp": round(min(P_MAX, max(P_MIN, float(p))), 3),     # never certain
         "low": low, "high": high, "base": base_rate(snapshot, asset, horizon), "why": why,
+        "news": news or None, "onNews": bool(news),
+        "extra": horizon == HOT_HORIZON and asset not in hot_names(snapshot),   # called only because of the news
     }, None
 
 
@@ -190,13 +198,18 @@ def add(record, new_items, snapshot):
     have = {f["id"] for f in record["open"]} | {f["id"] for f in record["closed"]}
     k, n = trust(record["closed"])
     out, problems = list(record["open"]), []
+    day = snapshot["generatedAt"][:10]
+    extras = sum(1 for f in record["open"] + record["closed"] if f.get("extra") and (f.get("madeAt") or "")[:10] == day)
     for item in (new_items if isinstance(new_items, list) else []):
         f, problem = clean_new(item, snapshot)
         if problem:
             problems.append(problem)
         elif f["id"] in have:
             problems.append("%s: already forecast today" % f["id"])
+        elif f["extra"] and extras >= NEWS_CALLS_A_DAY:
+            problems.append("%s: only %d news calls a day" % (f["id"], NEWS_CALLS_A_DAY))
         else:
+            extras += 1 if f["extra"] else 0
             if k is not None and f.get("base") is not None:
                 f["pAdj"] = round(min(P_MAX, max(P_MIN, f["base"] + k * (f["pUp"] - f["base"]))), 3)
             out.append(f)
@@ -225,6 +238,8 @@ def feedback(record):
             label, len(rows), said * 100, usual * 100, came * 100, mine, naive, "you were better" if mine < naive - 0.002 else "you were worse" if mine > naive + 0.002 else "no difference"))
     for h in sorted({f["horizonDays"] for f in c}):
         line("%d-day calls" % h, [f for f in c if f["horizonDays"] == h])
+    line("calls resting on a named news item", [f for f in c if f.get("onNews")])
+    line("calls with no named news item", [f for f in c if not f.get("onNews")])
     line("when you said MORE likely than usual", [f for f in c if f["pUp"] > f["base"] + 0.005])
     line("when you said LESS likely than usual", [f for f in c if f["pUp"] < f["base"] - 0.005])
     line("coins", [f for f in c if f.get("kind") == "crypto" or f["asset"].endswith("-USD")])

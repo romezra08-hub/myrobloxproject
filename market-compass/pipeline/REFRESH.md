@@ -41,7 +41,9 @@ mechanically, so that whether they are worth anything is a matter of record. The
    `{asset, horizonDays: 7, pUp, low, high, why}`, on Mondays a second with `horizonDays: 30`, and on the first
    Monday of a month a third with `horizonDays: 90`. Also one with
    `horizonDays: 1` for each of the ten "Hot names" in the digest (the five shares and five coins with the best
-   twelve months), scored at the next refresh. `pUp` is the probability that the price is higher at the due
+   twelve months), scored at the next refresh, and up to three more one-day calls on other well-known names hit
+   by a specific piece of news, each with a `news` field stating it. Any call may carry `news`; those calls are
+   scored as a group of their own. `pUp` is the probability that the price is higher at the due
    date; `low` and `high` bound an 80% range.
 4. `python3 forecasts.py add --snapshot ... --in resolved.json --new new_forecasts.json --out forecasts.json`
    fills in the starting price, the due date and the naive base rate, and refuses a second forecast for the same

@@ -88,6 +88,11 @@ The owner also asked for a very short test on "hot" names. Each day the pipeline
 18 coins by their last twelve months (`HOT_STOCKS`, `HOT_COINS` in `refresh.py`) and the top five of each get a
 one-day forecast, scored at the next refresh.
 
+Sudden company news gets its own test. Each day the forecaster looks for shocks to single companies or coins
+(a chief executive leaving, a hack, a profit warning) and may make up to three one-day calls on affected names
+from the wider list. Any call may carry a `news` line naming the item it rests on, and the page scores those
+calls as a group against all the others, which shows whether news of that kind can be used.
+
 `research/blind_test.py` is a test that could be scored at once. It builds anonymous cases from hot names on
 dates after the model's training ended, hands them to fresh forecasters, and scores the answers only afterwards.
 On 12 November 2026, over 150 cases, the calls were right way round 47% of the time for the next day and 53% for

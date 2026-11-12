@@ -1520,6 +1520,11 @@ def summary(s):
                 k, (a.get("name") or "")[:14], a["px"], f(a.get("ret12m")),
                 "n/a" if a.get("up1d") is None else "%.0f%%" % (a["up1d"] * 100),
                 f(a.get("chg1d")), f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs50")), "n/a" if not r1 else "%s to %s" % r1))
+    if hot.get("assets"):
+        picked = set((hot.get("stocks") or []) + (hot.get("coins") or []))
+        rest = sorted(((abs(v.get("chg1d") or 0), k) for k, v in hot["assets"].items() if k not in picked), reverse=True)
+        L.append("Other well-known names, biggest move today first. A one-day forecast is allowed on up to three of them, only with a news item:")
+        L.append("   " + "  ".join("%s %s (%s)" % (k, hot["assets"][k]["px"], f(hot["assets"][k].get("chg1d")).strip()) for _, k in rest))
     c = s["crypto"]
     L.append("")
     if c.get("btc"):
