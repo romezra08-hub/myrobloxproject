@@ -221,3 +221,73 @@ test('full plan is coherent and flags what needs attention first', () => {
   const bare = E.plan({ horizon: 12, risk: 3 }, null, null, NOW);
   assert.deepEqual(bare.target, bare.baseRounded);
 });
+
+test('risk shares add to one and match a hand-worked two-asset case', () => {
+  // 50/50 stocks and cash: cash barely moves, so stocks carry essentially all of the risk
+  const half = E.riskShares({ us: 50, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 50 }, null);
+  near(E.SLEEVES.reduce((a, k) => a + half.shares[k], 0), 1, 1e-9);
+  assert.ok(half.shares.us > 0.99);
+  near(half.vol, Math.sqrt(0.25 * 0.16 * 0.16 + 0.25 * 0.01 * 0.01), 1e-9);
+  // two uncorrelated parts with equal swings and equal weights share risk equally
+  const live = { vol: { us: 0.2, intl: 0.2, crypto: 0.65, gold: 0.2, bonds: 0.2, cash: 0.01 },
+    corr: { us: { intl: 0 }, intl: { us: 0 } } };
+  const even = E.riskShares({ us: 50, intl: 50, crypto: 0, gold: 0, bonds: 0, cash: 0 }, live);
+  near(even.shares.us, 0.5, 1e-9);
+  near(even.vol, Math.sqrt(2 * 0.25 * 0.04), 1e-9);
+  assert.equal(even.live, true);
+});
+
+test('a small crypto slice carries a far larger share of the risk', () => {
+  const r = E.riskShares({ us: 40, intl: 20, crypto: 5, gold: 5, bonds: 25, cash: 5 }, null);
+  assert.ok(r.shares.crypto > 0.12, `crypto share ${r.shares.crypto}`);   // 5% of the money, well over 12% of the risk
+  assert.ok(r.shares.bonds < 0.05);                                        // 25% of the money, under 5% of the risk
+  near(E.SLEEVES.reduce((a, k) => a + r.shares[k], 0), 1, 1e-9);
+});
+
+test('a calm recent spell never makes a part look safer than its history', () => {
+  const calm = { vol: { us: 0.05, intl: 0.05, crypto: 0.10, gold: 0.05, bonds: 0.01, cash: 0.001 }, corr: {} };
+  const r = E.riskShares({ us: 100, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }, calm);
+  near(r.vol, E.LONG_RUN_VOL.us, 1e-9);
+  const wild = { vol: { us: 0.40 }, corr: {} };
+  near(E.riskShares({ us: 100, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }, wild).vol, 0.40, 1e-9);
+  // all cash: no risk, and no division by zero
+  const none = E.riskShares({ us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }, null);
+  assert.equal(none.vol, 0);
+  assert.equal(none.shares.us, 0);
+});
+
+test('a part that moves against the rest carries a negative share', () => {
+  const hedge = { vol: { us: 0.2, bonds: 0.1 }, corr: { us: { bonds: -0.9 }, bonds: { us: -0.9 } } };
+  const r = E.riskShares({ us: 80, intl: 0, crypto: 0, gold: 0, bonds: 20, cash: 0 }, hedge);
+  assert.ok(r.shares.bonds < 0);
+  near(r.shares.us + r.shares.bonds, 1, 1e-9);
+});
+
+test('future value matches the textbook formulas', () => {
+  near(E.futureValue(1000, 0, 10, 0.07).value, 1000 * Math.pow(1.07, 10), 1e-6);
+  near(E.futureValue(0, 100, 10, 0).value, 12000, 1e-9);
+  assert.equal(E.futureValue(0, 100, 10, 0).paidIn, 12000);
+  // one year of monthly deposits at 6% a year: an annuity at the matching monthly rate
+  const i = Math.pow(1.06, 1 / 12) - 1;
+  near(E.futureValue(0, 100, 1, 0.06).value, 100 * (Math.pow(1 + i, 12) - 1) / i, 1e-9);
+  // the two pieces simply add
+  near(E.futureValue(1000, 100, 5, 0.05).value, E.futureValue(1000, 0, 5, 0.05).value + E.futureValue(0, 100, 5, 0.05).value, 1e-6);
+  // bad input degrades to zero rather than NaN
+  assert.equal(E.futureValue('x', -5, 'y', 0.05).value, 0);
+  // starting ten years earlier roughly doubles the result at 7%
+  assert.ok(E.futureValue(0, 100, 40, 0.07).value > 1.9 * E.futureValue(0, 100, 30, 0.07).value);
+});
+
+test('fee drag: one percent a year for forty years takes about a third', () => {
+  near(E.feeDrag(40, 0.07, 0.01), 1 - Math.pow(1.06 / 1.07, 40), 1e-12);
+  assert.ok(E.feeDrag(40, 0.07, 0.01) > 0.30 && E.feeDrag(40, 0.07, 0.01) < 0.33);
+  assert.equal(E.feeDrag(40, 0.07, 0), 0);
+  assert.ok(E.feeDrag(40, 0.07, 0.0003) < 0.012);     // a 0.03% index fund takes about one percent
+});
+
+test('the plan carries risk shares for its target mix', () => {
+  const pl = E.plan({ horizon: 20, risk: 4, crypto: 'high' }, null, null, NOW);
+  near(E.SLEEVES.reduce((a, k) => a + pl.risk.shares[k], 0), 1, 1e-9);
+  assert.ok(pl.risk.shares.crypto > pl.target.crypto / 100);
+  assert.ok(pl.risk.vol > 0.1 && pl.risk.vol < 0.3);
+});

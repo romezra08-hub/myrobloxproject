@@ -198,6 +198,63 @@ def realized_vol(series, k, ppy):
     return math.sqrt(var) * math.sqrt(ppy)
 
 
+def pearson(x, y):
+    """Correlation of two equal-length lists, or None when it is undefined."""
+    n = len(x)
+    if n != len(y) or n < 3:
+        return None
+    mx, my = sum(x) / n, sum(y) / n
+    sxx = sum((a - mx) ** 2 for a in x)
+    syy = sum((b - my) ** 2 for b in y)
+    if sxx <= 0 or syy <= 0:
+        return None
+    return sum((a - mx) * (b - my) for a, b in zip(x, y)) / math.sqrt(sxx * syy)
+
+
+def weekly_log_returns(named, step=5):
+    """Non-overlapping log returns on the dates every series shares.
+
+    named: {key: (dates, values)}. Stocks trade five days a week and crypto
+    seven, so everything is first aligned to common dates and then sampled
+    every `step` of them (about a week). Weekly sampling also keeps markets
+    that close at different hours from looking less related than they are.
+    Returns ({key: [returns]}, first_date, last_date).
+    """
+    keys = list(named)
+    if not keys:
+        return {}, None, None
+    common = sorted(set.intersection(*[set(named[k][0]) for k in keys]))
+    picks = common[::-1][::step][::-1]          # anchor on the most recent date
+    out = {}
+    for k in keys:
+        m = dict(zip(named[k][0], named[k][1]))
+        v = [m[d] for d in picks]
+        out[k] = [math.log(v[i + 1] / v[i]) for i in range(len(v) - 1) if v[i] > 0 and v[i + 1] > 0]
+    if not picks:
+        return out, None, None
+    return out, picks[0], picks[-1]
+
+
+def risk_table(named, step=5, periods_per_year=52):
+    """Annualised volatility and the correlation matrix for the named series."""
+    rets, d0, d1 = weekly_log_returns(named, step)
+    keys = list(rets)
+    n = min((len(rets[k]) for k in keys), default=0)
+    if n < 26:
+        return None
+    vol, corr = {}, {}
+    for k in keys:
+        r = rets[k][-n:]
+        m = sum(r) / n
+        vol[k] = round(math.sqrt(sum((x - m) ** 2 for x in r) / (n - 1)) * math.sqrt(periods_per_year), 4)
+    for a in keys:
+        corr[a] = {}
+        for b in keys:
+            c = 1.0 if a == b else pearson(rets[a][-n:], rets[b][-n:])
+            corr[a][b] = None if c is None else round(c, 3)
+    return {"from": d0, "to": d1, "weeks": n, "vol": vol, "corr": corr}
+
+
 def percentile_rank(series, value):
     """Share of observations at or below value, 0..100."""
     if not series or value is None:
@@ -867,6 +924,14 @@ def build(out_dir, verbose=True):
                        "px": [rnd(tr[idx[i]] / base * 100, 2) for i in pick],
                        "ma": [rnd(ma[i] / base * 100, 2) for i in pick]}
 
+    # ---- how the six parts move together -------------------------------------
+    named = {}
+    for key, c in CORE.items():
+        if c["sym"] in series:
+            d, px, tr = series[c["sym"]]
+            named[key] = (d, tr or px)
+    risk = risk_table(named) if len(named) == len(CORE) else None
+
     # ---- headlines ----------------------------------------------------------
     headlines_full = []
 
@@ -924,6 +989,7 @@ def build(out_dir, verbose=True):
         "regime": regime,
         "sleeves": sleeves,
         "charts": charts,
+        "risk": risk,
         "crypto": crypto,
         "sectors": SECTORS,
         "headlines": short,
@@ -973,6 +1039,11 @@ def summary(s):
     if c.get("stables"):
         L.append("Stablecoins: $%.0fB, 30d %s, 90d %s" % (c["stables"]["usd"] / 1e9, f(c["stables"]["chg30"]), f(c["stables"]["chg90"])))
     L.append("Halving clock: %s months since %s" % (c["halving"]["monthsSince"], c["halving"]["last"]))
+    r = s.get("risk")
+    if r:
+        L.append("")
+        L.append("Risk, %s weeks to %s: yearly swing %s" % (r["weeks"], r["to"], "  ".join("%s %.0f%%" % (k, v * 100) for k, v in r["vol"].items())))
+        L.append("Correlation with US stocks: %s" % "  ".join("%s %+.2f" % (k, v) for k, v in r["corr"]["us"].items() if k != "us" and v is not None))
     L.append("")
     bad = [k for k, v in s["sources"].items() if not v["ok"]]
     L.append("Sources OK: %d/%d%s" % (len(s["sources"]) - len(bad), len(s["sources"]), ("  FAILED: " + ", ".join(bad)) if bad else ""))

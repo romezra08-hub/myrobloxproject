@@ -123,6 +123,49 @@ class Analysis(unittest.TestCase):
         self.assertEqual(r.combine(parts), 0.0)
 
 
+class Risk(unittest.TestCase):
+    def test_pearson_known_values(self):
+        self.assertAlmostEqual(r.pearson([1, 2, 3, 4], [2, 4, 6, 8]), 1.0)
+        self.assertAlmostEqual(r.pearson([1, 2, 3, 4], [8, 6, 4, 2]), -1.0)
+        self.assertAlmostEqual(r.pearson([1, 2, 3, 4, 5], [2, 1, 4, 3, 5]), 0.8)
+        self.assertIsNone(r.pearson([1, 1, 1], [1, 2, 3]))      # no variation: undefined
+        self.assertIsNone(r.pearson([1, 2], [1, 2]))            # too short to mean anything
+
+    def test_weekly_returns_align_series_with_different_calendars(self):
+        import datetime as dt
+        d0 = dt.date(2025, 1, 6)                                # a Monday
+        every = [(d0 + dt.timedelta(days=i)).isoformat() for i in range(140)]
+        weekdays = [d for d in every if dt.date.fromisoformat(d).weekday() < 5]
+        named = {"coin": (every, [100 * 1.01 ** i for i in range(len(every))]),
+                 "fund": (weekdays, [50 * 1.002 ** i for i in range(len(weekdays))])}
+        rets, first, last = r.weekly_log_returns(named, step=5)
+        self.assertEqual(len(rets["coin"]), len(rets["fund"]))
+        self.assertEqual(last, weekdays[-1])                    # anchored on the latest shared date
+        self.assertAlmostEqual(rets["fund"][-1], 5 * math.log(1.002), places=9)   # 5 trading days
+        self.assertAlmostEqual(rets["coin"][-1], 7 * math.log(1.01), places=9)    # the same 7 calendar days
+
+    def test_risk_table_recovers_volatility_and_correlation(self):
+        import random
+        rng = random.Random(7)
+        n = 5 * 260
+        a = [rng.gauss(0, 0.01) for _ in range(n)]
+        b = [0.5 * x + rng.gauss(0, 0.01) for x in a]           # built to correlate about 0.45 with a
+        dts = dates(n + 1)
+        def path(steps):
+            v = [100.0]
+            for s_ in steps:
+                v.append(v[-1] * math.exp(s_))
+            return v
+        t = r.risk_table({"a": (dts, path(a)), "b": (dts, path(b)), "c": (dts, path([-x for x in a]))})
+        self.assertEqual(t["weeks"], 260)
+        self.assertAlmostEqual(t["vol"]["a"], 0.01 * math.sqrt(5 * 52), delta=0.02)
+        self.assertEqual(t["corr"]["a"]["a"], 1.0)
+        self.assertAlmostEqual(t["corr"]["a"]["b"], 0.447, delta=0.1)
+        self.assertAlmostEqual(t["corr"]["a"]["c"], -1.0, places=3)
+        self.assertEqual(t["corr"]["a"]["b"], t["corr"]["b"]["a"])
+        self.assertIsNone(r.risk_table({"a": (dts[:60], path(a)[:60])}))   # under half a year: no table
+
+
 class Headlines(unittest.TestCase):
     def test_rank_prefers_newsrooms_and_drops_filler(self):
         self.assertEqual(r.headline_rank({"src": "Reuters", "title": "Fed holds rates"}), 0)

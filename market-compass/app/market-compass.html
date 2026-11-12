@@ -387,6 +387,18 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   var STYLE_K = { steady: 0, balanced: 0.35, active: 0.7 };
   // Worst peak-to-trough falls since 2000, used for the stress test (percent).
   var WORST = { us: -51, intl: -57, crypto: -80, gold: -45, bonds: -17, cash: 0 };
+  // Long-run yearly swings (standard deviation). Recent calm is never allowed to
+  // make a part look safer than its history: the higher of live and long-run is used.
+  var LONG_RUN_VOL = { us: 0.16, intl: 0.17, crypto: 0.65, gold: 0.16, bonds: 0.06, cash: 0.01 };
+  // How the parts have tended to move together, used only when no live reading exists.
+  var LONG_RUN_CORR = {
+    us:     { us: 1, intl: 0.85, crypto: 0.35, gold: 0.05, bonds: 0.10, cash: 0 },
+    intl:   { us: 0.85, intl: 1, crypto: 0.30, gold: 0.15, bonds: 0.15, cash: 0 },
+    crypto: { us: 0.35, intl: 0.30, crypto: 1, gold: 0.10, bonds: 0.05, cash: 0 },
+    gold:   { us: 0.05, intl: 0.15, crypto: 0.10, gold: 1, bonds: 0.25, cash: 0 },
+    bonds:  { us: 0.10, intl: 0.15, crypto: 0.05, gold: 0.25, bonds: 1, cash: 0 },
+    cash:   { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 1 }
+  };
   var BRIEF_MAX_AGE_H = 96;     // an event read older than four days no longer moves the plan
   var EVENT_WEIGHT = 0.2;       // events are a fifth of each part's reading; prices are the rest
 
@@ -587,6 +599,57 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     return { pct: loss, worst: WORST };
   }
 
+  /**
+   * How much of the mix's risk each part carries.
+   * Portfolio variance is the sum over every pair of weight x weight x swing x swing x correlation;
+   * a part's share is its own row of that sum. Shares add to 1. A part that tends to move
+   * against the rest can carry a negative share, which means it is lowering total risk.
+   */
+  function riskShares(weights, risk) {
+    var live = !!(risk && risk.vol && risk.corr);
+    var vol = {};
+    SLEEVES.forEach(function (k) {
+      var v = live && typeof risk.vol[k] === 'number' && isFinite(risk.vol[k]) ? risk.vol[k] : 0;
+      vol[k] = Math.max(v, LONG_RUN_VOL[k]);
+    });
+    function corr(a, b) {
+      if (a === b) return 1;
+      var c = live && risk.corr[a] ? risk.corr[a][b] : null;
+      return typeof c === 'number' && isFinite(c) ? clamp(c, -1, 1) : LONG_RUN_CORR[a][b];
+    }
+    var rows = {}, variance = 0;
+    SLEEVES.forEach(function (a) {
+      var row = 0;
+      SLEEVES.forEach(function (b) { row += (weights[b] || 0) / 100 * vol[a] * vol[b] * corr(a, b); });
+      rows[a] = (weights[a] || 0) / 100 * row;
+      variance += rows[a];
+    });
+    var shares = {};
+    SLEEVES.forEach(function (k) { shares[k] = variance > 0 ? rows[k] / variance : 0; });
+    return { vol: Math.sqrt(Math.max(0, variance)), shares: shares, vols: vol, live: live };
+  }
+
+  /**
+   * What a starting sum plus a steady monthly deposit grows to at a yearly rate.
+   * Deposits land at the end of each month and compound monthly at the rate that
+   * matches the yearly one, so twelve months at 6% is exactly 6%.
+   */
+  function futureValue(start, monthly, years, rate) {
+    start = Math.max(0, num(start, 0)); monthly = Math.max(0, num(monthly, 0));
+    years = Math.max(0, num(years, 0)); rate = num(rate, 0);
+    var months = Math.round(years * 12);
+    var i = Math.pow(1 + rate, 1 / 12) - 1;
+    var grown = start * Math.pow(1 + i, months);
+    var stream = Math.abs(i) < 1e-12 ? monthly * months : monthly * (Math.pow(1 + i, months) - 1) / i;
+    return { value: grown + stream, paidIn: start + monthly * months, months: months };
+  }
+
+  /** Share of final wealth a yearly fee takes: 1 - ((1 + r - fee) / (1 + r)) ^ years, for a single sum. */
+  function feeDrag(years, rate, fee) {
+    years = Math.max(0, num(years, 0));
+    return 1 - Math.pow((1 + rate - fee) / (1 + rate), years);
+  }
+
   /** Everything the page shows for one person at one moment. */
   function plan(profile, snapshot, brief, now) {
     var p = normalizeProfile(profile);
@@ -618,6 +681,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     return {
       profile: p, base: base, baseRounded: baseR, target: target, rows: rows,
       scores: scores, buy: buy, pacing: pacing(p, target, snapshot), stress: stressTest(target),
+      risk: riskShares(target, snapshot && snapshot.risk),
       checks: checks, style: p.style, k: STYLE_K[p.style],
       eventsUsed: briefIsFresh(brief, now), riskName: RISK_NAMES[p.risk]
     };
@@ -629,7 +693,9 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     EVENT_WEIGHT: EVENT_WEIGHT, BRIEF_MAX_AGE_H: BRIEF_MAX_AGE_H, STANCE_TEXT: STANCE_TEXT,
     normalizeProfile: normalizeProfile, horizonCap: horizonCap, baseAllocation: baseAllocation,
     briefIsFresh: briefIsFresh, blendScores: blendScores, tilt: tilt, roundWeights: roundWeights,
-    stanceFor: stanceFor, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest, plan: plan
+    stanceFor: stanceFor, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest, plan: plan,
+    LONG_RUN_VOL: LONG_RUN_VOL, LONG_RUN_CORR: LONG_RUN_CORR, riskShares: riskShares,
+    futureValue: futureValue, feeDrag: feeDrag
   };
 });
 
