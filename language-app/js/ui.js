@@ -145,5 +145,28 @@
     return true;
   }
 
-  root.LSUI = { saveFile, h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
+  // Tiny game sounds made with WebAudio (no files needed) + a little vibration.
+  let actx = null;
+  function sfx(kind) {
+    const prof = root.LSApp && root.LSApp.profile();
+    if (prof && prof.sfx === false) return;
+    try {
+      actx = actx || new (root.AudioContext || root.webkitAudioContext)();
+      const notes = { right: [660, 880], wrong: [220, 175], combo: [660, 880, 1175], done: [523, 659, 784, 1047], tap: [520] }[kind] || [600];
+      notes.forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = kind === "wrong" ? "triangle" : "sine";
+        o.frequency.value = f;
+        const t0 = actx.currentTime + i * 0.09;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(kind === "tap" ? 0.05 : 0.16, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+        o.connect(g); g.connect(actx.destination);
+        o.start(t0); o.stop(t0 + 0.25);
+      });
+      if (navigator.vibrate) navigator.vibrate(kind === "wrong" ? [40, 60, 40] : kind === "right" ? 15 : 0);
+    } catch (e) {}
+  }
+
+  root.LSUI = { sfx, saveFile, h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
 })(window);

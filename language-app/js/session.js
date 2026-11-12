@@ -13,7 +13,7 @@
     const prog = ST.progress(profile.id);
     const steps = opts.steps.slice();
     const started = Date.now();
-    let idx = 0, right = 0, wrong = 0, xp = 0, ended = false;
+    let idx = 0, right = 0, wrong = 0, xp = 0, ended = false, combo = 0, bestCombo = 0;
     let checkFn = null;
     const results = [];
 
@@ -98,6 +98,14 @@
 
       const correct = !!res.correct;
       if (correct) right++; else wrong++;
+      combo = correct ? combo + 1 : 0;
+      bestCombo = Math.max(bestCombo, combo);
+      if (correct && combo >= 3 && combo % (combo >= 10 ? 5 : 3) === 0) {
+        root.LSUI.sfx("combo");
+        xp += 5;
+        const c = h("div.combo", "🔥 " + combo + " " + { he: "ברצף! +5", en: "in a row! +5", ru: "подряд! +5" }[root.LSI18n.getLang()]);
+        screen.appendChild(c); setTimeout(() => c.remove(), 1000);
+      } else root.LSUI.sfx(correct ? "right" : "wrong");
       xp += correct ? 10 : 2;
       results.push({ step, correct });
 
@@ -203,10 +211,12 @@
         h("div.stat-row",
           h("div.stat", h("div.stat-num", "+" + xp), h("div.stat-lbl", t("xp"))),
           h("div.stat", h("div.stat-num", acc + "%"), h("div.stat-lbl", t("accuracy"))),
-          h("div.stat", h("div.stat-num", "🔥 " + streak), h("div.stat-lbl", t("streak")))),
+          h("div.stat", h("div.stat-num", "🔥 " + streak), h("div.stat-lbl", t("streak"))),
+          bestCombo >= 3 ? h("div.stat", h("div.stat-num", "⚡ " + bestCombo), h("div.stat-lbl", { he: "רצף הכי ארוך", en: "best combo", ru: "лучшая серия" }[root.LSI18n.getLang()])) : null),
         opts.summaryExtra ? opts.summaryExtra({ right, wrong, xp }) : null,
         root.LSHabits ? root.LSHabits.mysteryBonus(profile) : null));
       confetti();
+      root.LSUI.sfx("done");
       mainBtn.disabled = false;
       mainBtn.textContent = t(opts.back && opts.back !== "#/home" ? "back" : "backHome");
       mainBtn.dataset.mode = "next";
