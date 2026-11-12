@@ -25,6 +25,8 @@
     phrases: { he: "משפטים", en: "Phrases", ru: "Фразы" },
     surprise: { he: "תפתיעו אותי", en: "Surprise me", ru: "Удивите меня" },
     tapSound: { he: "הקישו כדי להפעיל צליל 🔊", en: "Tap to turn on sound 🔊", ru: "Нажмите, чтобы включить звук 🔊" },
+    say: { he: "להגיד", en: "Say it", ru: "Скажи" },
+    saySentence: { he: "עכשיו נסו את המשפט", en: "Now try the sentence", ru: "Теперь скажите фразу" },
     quizScore: { he: "חידונים נכונים", en: "Quizzes right", ru: "Верных ответов" },
   };
   const tx = (k) => pick(TXT[k]);
@@ -128,6 +130,44 @@
       const isPhrase = it._type === "phrase";
       const know = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); know.classList.add("on"); again.classList.remove("on"); grade(it, true); } }, h("span", "❤️"), h("small", tx("know")));
       const again = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); again.classList.add("on"); know.classList.remove("on"); grade(it, false); } }, h("span", "🔁"), h("small", tx("again")));
+      // 🎤 Say it: word first, then (for words) the example sentence.
+      const sayBox = h("div.reel-say", { hidden: true, "aria-live": "polite" });
+      let sayTarget = word, sayingSentence = false;
+      const sayLbl = h("small", tx("say"));
+      const mic = h("button.rail-btn.mic", { type: "button", onclick: (e) => {
+        e.stopPropagation();
+        if (!SP.canListen()) { sayBox.hidden = false; sayBox.textContent = t("noSpeech"); return; }
+        mic.classList.add("on"); sayLbl.textContent = t("listening");
+        sayBox.hidden = false; sayBox.innerHTML = "";
+        mic.closest(".reel").classList.add("saying");
+        sayBox.appendChild(h("div.say-prompt", "🎤 ", L(sayTarget, T)));
+        SP.listen(T).then((res) => {
+          mic.classList.remove("on"); sayLbl.textContent = tx("say");
+          sayBox.innerHTML = "";
+          if (!res.ok) { sayBox.appendChild(h("div", res.error === "not-allowed" ? t("micDenied") : t("notHeard"))); root.LSUI.sfx("wrong"); return; }
+          const m = SP.bestMatch(res.alternatives, sayTarget, T);
+          const pct = Math.round(m.score * 100);
+          const good = m.score >= 0.8;
+          sayBox.append(
+            h("div.say-score" + (good ? ".good" : ""), (m.score >= 0.99 ? "🌟 " : good ? "✅ " : "💪 ") + pct + "%"),
+            h("div.word-marks", { dir: "ltr" }, m.words.map((w) => h("span." + (w.ok ? "ok" : "miss"), w.w))),
+            h("div.say-heard", t("youSaid") + " ", L(m.heard, T)));
+          root.LSUI.sfx(good ? "right" : "wrong");
+          if (good) {
+            ST.addXp(profile.id, sayingSentence ? 8 : 5);
+            if (!sayingSentence) { grade(it, true); know.classList.add("on"); }
+            if (!sayingSentence && !isPhrase && exT) {
+              sayBox.appendChild(h("button.say-next", { type: "button", onclick: (ev) => {
+                ev.stopPropagation(); sayTarget = exT; sayingSentence = true;
+                sayBox.innerHTML = ""; sayBox.appendChild(h("div.say-prompt", "🎤 ", L(exT, T)));
+                SP.speak(exT, T, { rate: app.ttsRate() });
+              } }, "➡️ " + tx("saySentence")));
+            }
+          } else {
+            sayBox.appendChild(h("button.say-next", { type: "button", onclick: (ev) => { ev.stopPropagation(); SP.speak(sayTarget, T, { rate: 0.7 }); } }, "🔊 " + t("listen")));
+          }
+        });
+      } }, h("span", "🎤"), sayLbl);
       const slow = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); SP.speak(isPhrase ? word : (exT || word), T, { rate: 0.55 }); } }, h("span", "🐢"), h("small", t("slow")));
       const el = h("section.reel", { "data-kind": "item" },
         h("div.reel-bg", { "aria-hidden": "true" }, it.emoji || "💬"),
@@ -139,7 +179,8 @@
         !isPhrase && exT ? h("div.reel-captions",
           h("div.cap-t", highlight(exT, word, T)),
           exH ? h("div.cap-h", L(exH, H)) : null) : null,
-        h("div.reel-rail", know, again, slow));
+        h("div.reel-rail", mic, know, again, slow),
+        sayBox);
       el.addEventListener("click", () => { soundOk = true; soundHint.remove(); play(c); });
       c.play = () => SP.speak(isPhrase || !exT ? word : word + ". " + exT, T, { rate: app.ttsRate() });
       // the card counts as "seen": create the SRS card if new

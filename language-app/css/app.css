@@ -537,3 +537,17 @@ h1, h2, .hero-title, .st-title, .target-word, .reel-word { font-family: "Rubik",
 .letter-tile { box-shadow: 0 4px 0 var(--line); border: 2px solid var(--line); }
 .letter-tile.known { box-shadow: 0 4px 0 var(--good); }
 .letter-tile.seen { box-shadow: 0 4px 0 var(--primary); }
+.rail-btn.mic span { background: linear-gradient(135deg, #ff6b4a, #f0428c); box-shadow: 0 4px 12px rgba(240, 66, 140, .5); width: 60px; height: 60px; font-size: 1.7em; }
+.rail-btn.mic.on span { animation: pulse 1s infinite; background: #f03e5e; }
+.reel-say { position: absolute; left: 16px; right: 84px; bottom: 170px; background: rgba(20, 10, 40, .78); backdrop-filter: blur(6px); border-radius: 18px; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; gap: 6px; animation: rise .2s ease; z-index: 3; }
+[dir="rtl"] .reel-say { left: 84px; right: 16px; }
+.say-prompt { font-weight: 800; font-size: 1.1em; }
+.say-score { font-size: 1.8em; font-weight: 900; color: #ffd43b; }
+.say-score.good { color: #38d9a9; }
+.say-heard { opacity: .8; font-size: .9em; }
+.say-next { align-self: center; background: #fff; color: #3a2050; border: none; border-radius: 99px; padding: 8px 16px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.reel .word-marks .ok { background: rgba(56, 217, 169, .25); color: #8ff0d0; }
+.reel .word-marks .miss { background: rgba(255, 102, 128, .25); color: #ffb3c0; }
+.reel .reel-main { transition: transform .3s ease; }
+.reel.saying .reel-main { transform: translateY(-110px) scale(.9); }
+.reel.saying .reel-bg { opacity: .04; }
