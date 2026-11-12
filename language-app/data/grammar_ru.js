@@ -844,10 +844,10 @@ LS_DATA.grammar.push({
       why: { he: "б בסוף מילה נשמע כמו п.", en: "Final б sounds like п." } },
     { type: "order", answer: "Здра́вствуйте, как дела́?",
       tr: { he: "שלום, מה שלומך?", en: "Hello, how are you?" } },
-    { type: "fix", q: "моло́ко", answer: ["молоко́"],
+    { type: "choice", q: "___", options: ["моло́ко", "молоко́"], answer: 1,
       tr: { he: "חלב (תקנו את ההטעמה)", en: "milk (fix the stress)" },
       why: { he: "ההטעמה על ה־о האחרונה: молоко́.", en: "The stress is on the last о: молоко́." } },
-    { type: "fix", q: "хо́рошо", answer: ["хорошо́"],
+    { type: "choice", q: "___", options: ["хо́рошо", "хорошо́"], answer: 1,
       tr: { he: "טוב (תקנו את ההטעמה)", en: "good (fix the stress)" },
       why: { he: "ההטעמה בסוף: хорошо́.", en: "The stress is at the end: хорошо́." } }
   ]
