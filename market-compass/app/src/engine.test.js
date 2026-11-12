@@ -569,6 +569,34 @@ test('the home goal adds up the cash needed and measures the gap', () => {
   assert.equal(E.homeGoal({ homePrice: 1000000, horizon: 3, monthly: 0 }, rules, 0).yearsAtPace, null);
 });
 
+test('forecasts are scored against a coin and against the naive rule', () => {
+  const f = (pUp, up, base, inRange) => ({ pUp, up, base, inRange, horizonDays: 7 });
+  const none = E.scoreForecasts([]);
+  assert.equal(none.n, 0);
+  assert.equal(none.brier, null);
+  assert.equal(none.verdict, 'early');
+  const s = E.scoreForecasts([f(0.7, true, 0.55, true), f(0.4, false, 0.55, false), f(0.6, false, 0.55, true), f(0.5, true, 0.55, null)]);
+  assert.equal(s.n, 4);
+  assert.equal(s.calls, 3);                       // a flat 50% is not a call either way
+  assert.equal(s.hits, 2);
+  near(s.brier, (0.09 + 0.16 + 0.36 + 0.25) / 4);
+  near(s.baseBrier, (0.2025 + 0.3025 + 0.3025 + 0.2025) / 4);
+  near(s.skill, 1 - s.brier / s.baseBrier);
+  near(s.inRange, 2 / 3);
+  assert.equal(s.verdict, 'early');               // four forecasts prove nothing
+  // perfect calls beat the naive rule once there are enough of them; confident wrong ones lose to it
+  const good = Array.from({ length: 60 }, (_, i) => f(i % 2 ? 0.9 : 0.1, i % 2 === 1, 0.5, true));
+  assert.equal(E.scoreForecasts(good).verdict, 'ahead');
+  const bad = Array.from({ length: 60 }, (_, i) => f(i % 2 ? 0.1 : 0.9, i % 2 === 1, 0.5, true));
+  assert.equal(E.scoreForecasts(bad).verdict, 'behind');
+  const same = Array.from({ length: 60 }, (_, i) => f(0.55, i % 2 === 1, 0.55, true));
+  assert.equal(E.scoreForecasts(same).verdict, 'level');
+  // broken rows are ignored rather than counted
+  assert.equal(E.scoreForecasts([{ pUp: 'high', up: true }, { pUp: 0.6 }, null, f(0.6, true, null, null)]).n, 1);
+  assert.equal(E.scoreForecasts([f(0.6, true, null, null)]).skill, null);
+  assert.equal(Object.keys(E.scoreForecasts([f(0.6, true, 0.5, true), Object.assign(f(0.6, true, 0.5, true), { horizonDays: 30 })]).byHorizon).length, 2);
+});
+
 test('the "too small to split" line follows the currency', () => {
   const target = { us: 60, intl: 0, crypto: 0, gold: 0, bonds: 40, cash: 0 };
   const P = (o) => E.normalizeProfile(o);

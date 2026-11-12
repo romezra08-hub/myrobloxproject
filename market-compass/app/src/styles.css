@@ -246,6 +246,7 @@ th, td { padding: 7px 8px; text-align: right; white-space: nowrap; border-top: 1
 th:first-child, td:first-child { text-align: left; padding-left: 0; }
 th:last-child, td:last-child { padding-right: 0; }
 th.txt, td.txt { text-align: left; white-space: normal; }
+table.fc td.txt { min-width: 240px; max-width: 420px; color: var(--ink-2); }
 thead th { border-top: 0; color: var(--muted); font-weight: 600; font-size: 12px; }
 tbody th { font-weight: 600; }
 tr.group th { padding-top: 16px; border-top: 0; color: var(--muted); font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase; }

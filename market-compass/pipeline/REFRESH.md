@@ -7,7 +7,9 @@ The page renders two documents from its artifact database:
 | `market/snapshot` | Prices, yields, valuation, crypto data and every score | `refresh.py`, unchanged |
 | `market/brief` | A plain-English read of the news, scored against each part of the plan | Claude, following the rules below |
 
-A refresh replaces both. Nothing else about the page changes.
+| `market/forecasts` | Probability forecasts and how earlier ones turned out | `forecasts.py`, from numbers Claude supplies |
+
+A refresh replaces all three. Nothing else about the page changes.
 
 ## Procedure
 
@@ -25,6 +27,24 @@ A refresh replaces both. Nothing else about the page changes.
 4. **Write `brief.json`** to the schema below.
 5. **Save both** in one batch of two `set` writes, each pinned with the `version` from step 2.
 6. **Read `market/brief` back** to confirm the new `generatedAt`, then report in three lines.
+
+## Forecasts
+
+The owner asked for explicit predictions. They are made daily, shown on the Forecasts tab and scored
+mechanically, so that whether they are worth anything is a matter of record. They never move the plan.
+
+1. `python3 forecasts.py resolve --snapshot <dir>/snapshot.json --in <saved market/forecasts> --out resolved.json`
+   scores every forecast that has come due, from the snapshot's prices.
+2. Claude writes `new_forecasts.json`: for each of `SPY`, `^TA125.TA`, `BTC-USD`, `IAU` and `ILS=X`, an object
+   `{asset, horizonDays: 7, pUp, low, high, why}`, and on Mondays a second with `horizonDays: 30`. `pUp` is the
+   probability that the price is higher at the due date; `low` and `high` bound an 80% range.
+3. `python3 forecasts.py add --snapshot ... --in resolved.json --new new_forecasts.json --out forecasts.json`
+   fills in the starting price, the due date and the naive base rate, and refuses a second forecast for the same
+   asset, horizon and day.
+
+The forecaster supplies a probability, a range and a reason, and nothing else. It starts from the naive rule in
+the digest's "Forecast guide" (how often the asset rose over such a stretch in the last two years) and moves only
+as far as the evidence justifies. It does not read its earlier forecasts first.
 
 ## Brief schema
 

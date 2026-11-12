@@ -556,6 +556,43 @@
     };
   }
 
+  /**
+   * How a set of scored forecasts did. Each said "the chance the price is higher is p".
+   * The Brier score is the squared gap between p and what happened (1 for a rise, 0 otherwise),
+   * averaged: 0 is perfect, and always saying 50% earns 0.25. `skill` compares the forecaster
+   * with the naive rule, which quotes how often that asset rose over such a stretch in the
+   * past: above zero the forecasts added something, below zero silence would have done better.
+   * No verdict is given on fewer than 60 forecasts.
+   */
+  function scoreForecasts(closed) {
+    var list = (closed || []).filter(function (f) {
+      return f && isNum(f.pUp) && f.pUp >= 0 && f.pUp <= 1 && typeof f.up === 'boolean';
+    });
+    var one = function (set) {
+      var n = set.length, sum = 0, hits = 0, calls = 0, bSum = 0, bMine = 0, bN = 0, inR = 0, rN = 0;
+      set.forEach(function (f) {
+        var o = f.up ? 1 : 0, e = (f.pUp - o) * (f.pUp - o);
+        sum += e;
+        if (f.pUp !== 0.5) { calls++; if ((f.pUp > 0.5) === f.up) hits++; }
+        if (isNum(f.base) && f.base >= 0 && f.base <= 1) { bSum += (f.base - o) * (f.base - o); bMine += e; bN++; }
+        if (typeof f.inRange === 'boolean') { rN++; if (f.inRange) inR++; }
+      });
+      var base = bN ? bSum / bN : null;
+      return {
+        n: n, hits: hits, calls: calls, brier: n ? sum / n : null, baseBrier: base,
+        // compared on the same forecasts, and only where a base rate was recorded
+        skill: bN && base > 0 ? 1 - (bMine / bN) / base : null,
+        inRange: rN ? inR / rN : null
+      };
+    };
+    var out = one(list);
+    out.verdict = out.n < 60 || out.skill === null ? 'early' : out.skill > 0.05 ? 'ahead' : out.skill < -0.05 ? 'behind' : 'level';
+    out.byHorizon = {};
+    list.forEach(function (f) { out.byHorizon[f.horizonDays] = true; });
+    Object.keys(out.byHorizon).forEach(function (k) { out.byHorizon[k] = one(list.filter(function (f) { return String(f.horizonDays) === k; })); });
+    return out;
+  }
+
   return {
     SLEEVES: SLEEVES, RISKY: RISKY, LABELS: LABELS, DEFAULTS: DEFAULTS, RISK_GROWTH: RISK_GROWTH,
     RISK_NAMES: RISK_NAMES, CRYPTO_CAP: CRYPTO_CAP, STYLE: STYLE, WORST: WORST, SCENARIOS: SCENARIOS,
@@ -567,6 +604,7 @@
     riskShares: riskShares, futureValue: futureValue, feeDrag: feeDrag, expectedReal: expectedReal,
     outlook: outlook, threeFund: threeFund, firstThings: firstThings, plan: plan,
     purchaseTax: purchaseTax, homeGoal: homeGoal,
+    scoreForecasts: scoreForecasts,
     DEBT_FIRST_RATE: DEBT_FIRST_RATE, STATUSES: STATUSES
   };
 });

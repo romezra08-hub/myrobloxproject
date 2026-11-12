@@ -68,6 +68,15 @@ Shekel bonds get their own reading (`snapshot.israel.bonds`), built like the US 
 US bond readings and the US news brief are never applied to shekel bonds. If the Israeli feeds fail, that part
 stays at its baseline.
 
+## Forecasts
+
+The owner asked for predictions made from the news. The Forecasts tab carries them: each weekday, the chance that
+US stocks, the Tel Aviv 125, Bitcoin, gold and the dollar in shekels will be higher in a week, and on Mondays in
+a month, each with an 80% range and a reason. `pipeline/forecasts.py` sets the starting price and due date and
+scores every call from prices, so the forecaster never marks its own work. The page compares the record with a
+coin flip and with the naive rule (each asset's own base rate), and gives no verdict on fewer than 60 calls.
+Forecasts are deliberately kept out of the plan.
+
 ## A home as the goal
 
 Choosing "A home" tells the engine the money has a date. The ceiling on stocks and crypto is then lower for each
@@ -101,6 +110,7 @@ readings N trading days early, and `--late FILE` on the backtest reports such a 
 |---|---|
 | `pipeline/refresh.py` | Data fetch, indicators and scoring |
 | `pipeline/test_refresh.py` | Offline tests for the maths |
+| `pipeline/forecasts.py`, `test_forecasts.py` | The forecast record: adding, scoring, and its tests |
 | `pipeline/REFRESH.md` | Refresh procedure and the brief's schema |
 | `app/src/engine.js` | Allocation engine: pure functions, shared by the page and the tests |
 | `app/src/engine.test.js` | Engine tests |
@@ -115,6 +125,10 @@ readings N trading days early, and `--late FILE` on the backtest reports such a 
 
 ```bash
 python3 market-compass/pipeline/test_refresh.py
+```
+
+```bash
+python3 market-compass/pipeline/test_forecasts.py
 ```
 
 ```bash

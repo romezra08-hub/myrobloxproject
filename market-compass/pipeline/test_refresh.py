@@ -235,6 +235,31 @@ class Risk(unittest.TestCase):
         self.assertIsNone(r.risk_table({"a": (dts[:60], path(a)[:60])}))   # under half a year: no table
 
 
+class BaseRates(unittest.TestCase):
+    def test_share_up_counts_rising_stretches(self):
+        self.assertEqual(r.share_up(ramp(300), 5), 1.0)
+        self.assertEqual(r.share_up(ramp(300, daily=-0.001), 5), 0.0)
+        zig = [100 + (i % 2) for i in range(301)]                 # up one day, down the next
+        self.assertAlmostEqual(r.share_up(zig, 1), 0.5)
+        self.assertEqual(r.share_up(zig, 2), 0.0)                 # two days on, it is always back where it was
+        self.assertIsNone(r.share_up(ramp(40), 5))                # too little history to call a base rate
+
+    def test_typical_range_widens_with_time_and_swing(self):
+        lo7, hi7 = r.typical_range(100.0, 0.20, 7)
+        lo30, hi30 = r.typical_range(100.0, 0.20, 30)
+        self.assertTrue(lo30 < lo7 < 100.0 < hi7 < hi30)
+        sd = 0.20 * math.sqrt(7 / 365.0)
+        self.assertAlmostEqual(hi7, 100.0 * math.exp(1.2816 * sd), places=2)
+        self.assertAlmostEqual(lo7 * hi7, 100.0 ** 2, delta=0.5)        # even odds either side, in ratio terms
+        self.assertGreater(r.typical_range(100.0, 0.40, 7)[1], hi7)
+        self.assertIsNone(r.typical_range(100.0, None, 7))
+        self.assertIsNone(r.typical_range(None, 0.2, 7))
+
+    def test_analyze_reports_weekly_and_monthly_base_rates(self):
+        a = r.analyze(dates(400), ramp(400))
+        self.assertEqual((a["up1w"], a["up1m"]), (1.0, 1.0))
+
+
 class Israel(unittest.TestCase):
     def test_bond_index_earns_the_yield_when_nothing_moves(self):
         idx = r.bond_index([4.0] * 13, 4.8)

@@ -111,6 +111,7 @@ NEWS_DROP_TITLE = re.compile(r"price prediction|prediction market|releases? q\d|
                              r"how to play|trade setup|price on nov|price target", re.I)
 
 LAST_HALVING = dt.date(2024, 4, 20)  # fourth Bitcoin halving
+FORECAST_ASSETS = ["SPY", "^TA125.TA", "BTC-USD", "IAU", "ILS=X"]   # the same five as forecasts.py
 
 
 def headline_rank(item):
@@ -342,7 +343,29 @@ def analyze(dates, px, tr=None, ppy=252):
     out["vol20"] = rnd(realized_vol(tr, 20, ppy))
     out["vol60"] = rnd(realized_vol(tr, 60, ppy))
     out["spark"] = [sig(v, 5) for v in downsample(px[-k3m:], 48)]
+    # How often the price was higher a week and a month later, over the history we hold.
+    # This is the naive forecast that any prediction on the Forecasts tab has to beat.
+    out["up1w"], out["up1m"] = rnd(share_up(px, k1w), 3), rnd(share_up(px, k1m), 3)
     return out
+
+
+def typical_range(px, vol, days, ppy=252):
+    """The band a price lands in about 80% of the time after `days` calendar days, given its yearly
+    swing: 1.28 standard deviations either side, with no drift assumed. A starting point for a
+    forecaster to widen or shift, not a forecast."""
+    if px is None or not vol or vol <= 0:
+        return None
+    bars = days * ppy / 365.0
+    sd = vol * math.sqrt(bars / ppy)
+    return sig(px * math.exp(-1.2816 * sd), 5), sig(px * math.exp(1.2816 * sd), 5)
+
+
+def share_up(series, k):
+    """The share of k-bar stretches over which the series rose. None with fewer than 60 stretches."""
+    if series is None or len(series) - k < 60:
+        return None
+    ups = sum(1 for i in range(len(series) - k) if series[i + k] > series[i])
+    return ups / float(len(series) - k)
 
 
 def _part_adder(parts):
@@ -1413,6 +1436,21 @@ def summary(s):
             L.append("%-22s %-18s score %s" % (ib["label"], ib["stance"], ib["score"]))
             for p in ib["parts"]:
                 L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
+    L.append("")
+    L.append("Forecast guide (the naive rule and a typical 80% range; see forecasts.py):")
+    for k in FORECAST_ASSETS:
+        a = s["assets"].get(k)
+        if not a:
+            continue
+        vols = [v for v in (a.get("vol20"), a.get("vol60")) if v]
+        vol = sum(vols) / len(vols) if vols else None
+        ppy = 365 if k.endswith("-USD") else 252
+        r7, r30 = typical_range(a["px"], vol, 7, ppy), typical_range(a["px"], vol, 30, ppy)
+        L.append("   %-10s %-22s price %-9s rose in %s of weeks, %s of months | 1w %s 1m %s vs200d %s | typical range 1w %s, 1m %s" % (
+            k, a["name"][:22], a["px"],
+            "n/a" if a.get("up1w") is None else "%.0f%%" % (a["up1w"] * 100), "n/a" if a.get("up1m") is None else "%.0f%%" % (a["up1m"] * 100),
+            f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs200")),
+            "n/a" if not r7 else "%s to %s" % r7, "n/a" if not r30 else "%s to %s" % r30))
     c = s["crypto"]
     L.append("")
     if c.get("btc"):

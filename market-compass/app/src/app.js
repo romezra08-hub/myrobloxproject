@@ -6,7 +6,7 @@
   var E = window.MCEngine;
   var CFG = window.MC_CONFIG || {};
   var RESEARCH = window.MC_RESEARCH || null;   // results of the history test, put in at build time
-  var VIEWS = ['plan', 'markets', 'crypto', 'events', 'ask', 'learn', 'method'];
+  var VIEWS = ['plan', 'markets', 'crypto', 'events', 'forecasts', 'ask', 'learn', 'method'];
   var MINUS = '−';
   var STALE_H = 30;            // older than this, prices are flagged as out of date
   var IGNORE_SIGNALS_D = 14;   // older than this, signals no longer move the plan
@@ -1302,6 +1302,86 @@
     roBucket = null;
   }
 
+  // ---------------------------------------------------------------- forecasts
+  /* Explicit calls made from the news, and what became of them. The refresh script sets the
+     starting price and scores each call from prices; the forecaster supplies only a probability,
+     a range and a reason. Nothing here moves the plan. */
+  var FC_VERDICT = {
+    early: ['Too early to say', '', 'Fewer than 60 calls have been scored. Until then a good or bad run is mostly luck.'],
+    ahead: ['Ahead of the naive rule', 'pos', 'So far these calls have done better than simply quoting how often each asset usually rises. That can still be luck: calls made on neighbouring days overlap, so they count for fewer than they look.'],
+    level: ['No better than the naive rule', '', 'So far these calls have added nothing over simply quoting how often each asset usually rises. That is what the research predicts.'],
+    behind: ['Worse than the naive rule', 'neg', 'So far you would have done better by ignoring these calls and quoting how often each asset usually rises.']
+  };
+  function fcPrice(f, x) {
+    if (!isNum(x)) return '–';
+    return f.asset === 'ILS=X' ? '₪' + nf(x, 3) : f.asset === '^TA125.TA' ? nf(x, 0) : '$' + price(x);
+  }
+  function renderForecasts() {
+    var root = clear($('view-forecasts'));
+    var d = S.forecasts;
+    var open = d && Array.isArray(d.open) ? d.open : [], closed = d && Array.isArray(d.closed) ? d.closed : [];
+    var sc = E.scoreForecasts(closed);
+    var v = FC_VERDICT[sc.verdict];
+    var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '–'; };
+    var head = h('section', { class: 'card stack' },
+      h('span', { class: 'eyebrow' }, 'Calls made from the news' + (d && d.updatedAt ? ' · updated ' + dateTime(d.updatedAt) : '')),
+      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely each market is to be higher in a week, and each Monday in a month. Every call is scored against what happened.'),
+      h('p', { class: 'prose' }, 'You asked for predictions, so here they are, with nowhere to hide. The research on this page says calls like these are right about half the time. This record will show whether these do any better. They do not move your plan.'));
+    if (sc.n > 0) {
+      head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored')));
+      head.appendChild(h('div', { class: 'tiles' },
+        tile('Right way round', sc.calls ? sc.hits + ' of ' + sc.calls : '–', sc.calls ? pc0(sc.hits / sc.calls) + '; a coin gets 50%' : ''),
+        tile('Score', isNum(sc.brier) ? sc.brier.toFixed(3) : '–', 'lower is better; always saying 50% scores 0.250'),
+        tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
+        tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
+      head.appendChild(h('p', { class: 'note' }, v[2]));
+    } else {
+      head.appendChild(h('p', { class: 'note' }, open.length ? 'Nothing has come due yet. The first one-week calls are scored a week after they were made.' : 'No calls have been made yet. They start with the next refresh.'));
+    }
+    root.appendChild(head);
+
+    if (open.length) {
+      var tb = h('tbody');
+      open.slice().sort(function (a, b) { return a.dueAt < b.dueAt ? -1 : a.dueAt > b.dueAt ? 1 : 0; }).forEach(function (f) {
+        tb.appendChild(h('tr', null,
+          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, f.horizonDays === 7 ? '1 week' : '1 month')),
+          h('td', { class: 'num' }, pc0(f.pUp)),
+          h('td', { class: 'num' }, isNum(f.base) ? pc0(f.base) : '–'),
+          h('td', { class: 'num' }, fcPrice(f, f.startPx)),
+          h('td', { class: 'num' }, isNum(f.low) && isNum(f.high) ? fcPrice(f, f.low) + ' to ' + fcPrice(f, f.high) : '–'),
+          h('td', { class: 'num' }, dateShort(f.dueAt)),
+          h('td', { class: 'txt' }, str(f.why, 320))));
+      });
+      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made.',
+        h('div', { class: 'table-scroll' }, h('table', { class: 'fc' },
+          h('thead', null, h('tr', null, ['Market', 'Chance higher', 'Usually', 'Price then', '80% range', 'Due', 'Why'].map(function (t, i) { return h('th', { scope: 'col', class: i === 6 ? 'txt' : null }, t); }))), tb)),
+        h('p', { class: 'note' }, '"Usually" is how often that market rose over a stretch this long in the last two years. A call close to it means the news changed little.')));
+    }
+    if (closed.length) {
+      var tc = h('tbody');
+      closed.slice(-40).reverse().forEach(function (f) {
+        var called = f.pUp > 0.5 ? 'up' : f.pUp < 0.5 ? 'down' : null;
+        var right = called === null ? null : (called === 'up') === !!f.up;
+        tc.appendChild(h('tr', null,
+          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, f.horizonDays === 7 ? '1 week' : '1 month')),
+          h('td', { class: 'num' }, dateShort(f.madeAt)),
+          h('td', { class: 'num' }, pc0(f.pUp) + ' up'),
+          h('td', { class: 'num ' + dirClass(f.change) }, pct(f.change)),
+          h('td', null, right === null ? chip('No call', '') : right ? chip('Right', 'pos') : chip('Wrong', 'neg')),
+          h('td', { class: 'num' }, isNum(f.brier) ? f.brier.toFixed(2) : '–')));
+      });
+      root.appendChild(card('Scored calls', 'The latest 40, newest first.',
+        h('div', { class: 'table-scroll' }, h('table', null,
+          h('thead', null, h('tr', null, ['Market', 'Made', 'Said', 'What happened', 'Call', 'Score'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tc))));
+    }
+    root.appendChild(card('How to read this', null,
+      h('ul', { class: 'bullets' },
+        h('li', null, h('b', null, 'A call is a probability, not a promise. '), 'Saying 60% and being wrong four times in ten is what 60% means. The score rewards being confident when right and punishes being confident when wrong.'),
+        h('li', null, h('b', null, 'Claude does not mark its own work. '), 'The starting price, the due date and the result are set by a script from market prices. Claude supplies only the probability, the range and the reason, and a call cannot be changed after it is made.'),
+        h('li', null, h('b', null, 'Give it months, not days. '), 'Markets rise more often than they fall, so anyone who always says "up" looks clever for a while. The fair test is against the naive rule, over at least 60 calls.'),
+        h('li', null, h('b', null, 'Do not put money on a call. '), 'A week is mostly noise, and 80% ranges are wide for a reason. If the record after a few months is no better than the naive rule, that is the answer to whether news can be traded.'))));
+  }
+
   // ------------------------------------------------------------------- events
   function impactChips(impact) {
     var out = [];
@@ -1727,7 +1807,7 @@
   }
 
   function renderData() {
-    renderFresh(); renderPlan(); renderMarkets(); renderCrypto(); renderEvents(); renderMethod();
+    renderFresh(); renderPlan(); renderMarkets(); renderCrypto(); renderEvents(); renderForecasts(); renderMethod();
     if (!S.learnBuilt) { renderLearn(); S.learnBuilt = true; }
   }
 
@@ -1797,6 +1877,7 @@
       renderData();
     }, onErr);
     db.doc('market/brief').onSnapshot(function (d) { S.brief = d.exists ? d.data() : null; renderData(); }, function () {});
+    db.doc('market/forecasts').onSnapshot(function (d) { S.forecasts = d.exists ? d.data() : null; renderForecasts(); }, function () {});
   }
 
   function boot() {
