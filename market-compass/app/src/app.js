@@ -1316,6 +1316,43 @@
     if (!isNum(x)) return '–';
     return f.asset === 'ILS=X' ? '₪' + nf(x, 3) : f.asset === '^TA125.TA' ? nf(x, 0) : '$' + price(x);
   }
+  function fcSpan(f) { return { 1: '1 day', 7: '1 week', 30: '1 month' }[f.horizonDays] || (f.horizonDays + ' days'); }
+  /* The blind test of 12 November 2026: anonymous cases dated after the model's training ended. */
+  function blindCard() {
+    var B = RESEARCH && RESEARCH.blind;
+    if (!B || !B.all || !B.all['1']) return null;
+    var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '\u2013'; };
+    var a1 = B.all['1'], a5 = B.all['5'] || {}, band = isNum(B.luckBand) ? B.luckBand : 0.08;
+    var lucky = function (s) { return isNum(s.hitRate) && Math.abs(s.hitRate - 0.5) > band; };
+    var flat = !lucky(a1) && !lucky(a5) && Math.abs(a1.skill || 0) < 0.03 && Math.abs(a5.skill || 0) < 0.03;
+    var tb = h('tbody');
+    [['Hot stocks', B.stock], ['Hot coins', B.crypto], ['All', B.all]].forEach(function (g) {
+      [['1', 'next day'], ['5', '5 days on']].forEach(function (hh) {
+        var s = g[1] && g[1][hh[0]];
+        if (!s) return;
+        tb.appendChild(h('tr', null, h('th', { scope: 'row' }, g[0], h('span', { class: 'sym' }, hh[1])),
+          h('td', { class: 'num' }, s.hits + ' of ' + s.calls), h('td', { class: 'num' }, pc0(s.hitRate)),
+          h('td', { class: 'num' }, isNum(s.brier) ? s.brier.toFixed(3) : '\u2013'), h('td', { class: 'num' }, isNum(s.baseBrier) ? s.baseBrier.toFixed(3) : '\u2013'),
+          h('td', { class: 'num' }, pc0(s.momentumHitRate))));
+      });
+    });
+    var af = B.after || {};
+    return card(flat ? 'A blind test on hot names: no better than a coin' : 'A blind test on hot names',
+      'On 12 November 2026 two fresh copies of Claude were each shown 75 anonymous cases: a hot share or coin on one day between ' + dateShort(B.from) + ' and ' + dateShort(B.to) + ', after Claude\u2019s training ended, with the name and date removed. They gave the chance the price would be higher one day and five days later. Only then were the answers looked up.',
+      h('div', { class: 'tiles' },
+        tile('Next day, right way round', a1.hits + ' of ' + a1.calls, pc0(a1.hitRate) + '; a coin would land within ' + Math.round(band * 100) + ' points of 50%'),
+        tile('Five days on', a5.hits + ' of ' + a5.calls, pc0(a5.hitRate)),
+        tile('Score, next day', isNum(a1.brier) ? a1.brier.toFixed(3) : '\u2013', 'the naive rule scored ' + (isNum(a1.baseBrier) ? a1.baseBrier.toFixed(3) : '\u2013') + '; lower is better'),
+        tile('Score, five days', isNum(a5.brier) ? a5.brier.toFixed(3) : '\u2013', 'the naive rule scored ' + (isNum(a5.baseBrier) ? a5.baseBrier.toFixed(3) : '\u2013'))),
+      h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['', 'Right way round', 'Share', 'Score', 'Naive rule', '"Up if the last five days were up"'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tb)),
+      h('ul', { class: 'bullets' },
+        h('li', null, h('b', null, flat ? 'Claude could not tell tomorrow\u2019s winners from price behaviour. ' : 'What it showed. '), 'Its calls scored the same as simply quoting how often each asset usually rises, and a one-line momentum rule did no better. Both forecasters said afterwards that they had found little reason to move away from the usual figures.'),
+        isNum(af.hotStocks) && isNum(af.allStocks) ? h('li', null, h('b', null, 'Being hot did not carry on. '), 'The ten shares with the best twelve months on ' + dateShort(B.from) + ' went on to return ' + pct(af.hotStocks) + ' by ' + dateShort(af.to) + ', against ' + pct(af.allStocks) + ' for all 40 well-known shares they were chosen from.' + (isNum(af.hotCoins) && isNum(af.allCoins) ? ' The eight best coins returned ' + pct(af.hotCoins) + ' against ' + pct(af.allCoins) + ' for all 18, and one coin that doubled accounts for most of that.' : '')) : null,
+        h('li', null, h('b', null, 'What this test could not include. '), 'News. The cases had to be anonymous, so the forecasters saw prices only. The daily calls above are made with the news and with the names known, which is the fairer test of what you asked for. It will take weeks.'),
+        h('li', null, h('b', null, 'How much to read into it. '), 'A hundred and fifty cases can show that there is no large edge. They cannot rule out a small one. Nothing in the published research suggests there is one to find at a horizon of days.')),
+      h('p', { class: 'note' }, 'The test can be re-run from the research folder of the source. The assets were the best performers of the twelve months before the window opened, chosen without hindsight.'));
+  }
   function renderForecasts() {
     var root = clear($('view-forecasts'));
     var d = S.forecasts;
@@ -1325,7 +1362,7 @@
     var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '–'; };
     var head = h('section', { class: 'card stack' },
       h('span', { class: 'eyebrow' }, 'Calls made from the news' + (d && d.updatedAt ? ' · updated ' + dateTime(d.updatedAt) : '')),
-      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely each market is to be higher in a week, and each Monday in a month. Every call is scored against what happened.'),
+      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the ten hottest shares and coins are to be higher tomorrow. Every call is scored against what happened.'),
       h('p', { class: 'prose' }, 'You asked for predictions, so here they are, with nowhere to hide. The research on this page says calls like these are right about half the time. This record will show whether these do any better. They do not move your plan.'));
     if (sc.n > 0) {
       head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored')));
@@ -1335,8 +1372,17 @@
         tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
         tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
       head.appendChild(h('p', { class: 'note' }, v[2]));
+      var spans = Object.keys(sc.byHorizon).sort(function (a, b) { return Number(a) - Number(b); });
+      if (spans.length > 1) head.appendChild(h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['By length of call', 'Scored', 'Right way round', 'Score', 'Naive rule'].map(function (t) { return h('th', { scope: 'col' }, t); }))),
+        h('tbody', null, spans.map(function (k) {
+          var s = sc.byHorizon[k];
+          return h('tr', null, h('th', { scope: 'row' }, fcSpan({ horizonDays: Number(k) })), h('td', { class: 'num' }, String(s.n)),
+            h('td', { class: 'num' }, s.calls ? s.hits + ' of ' + s.calls + ' (' + pc0(s.hits / s.calls) + ')' : '\u2013'),
+            h('td', { class: 'num' }, isNum(s.brier) ? s.brier.toFixed(3) : '\u2013'), h('td', { class: 'num' }, isNum(s.baseBrier) ? s.baseBrier.toFixed(3) : '\u2013'));
+        })))));
     } else {
-      head.appendChild(h('p', { class: 'note' }, open.length ? 'Nothing has come due yet. The first one-week calls are scored a week after they were made.' : 'No calls have been made yet. They start with the next refresh.'));
+      head.appendChild(h('p', { class: 'note' }, open.length ? 'Nothing has come due yet. One-day calls are scored at the next weekday refresh, and one-week calls a week after they were made.' : 'No calls have been made yet. They start with the next refresh.'));
     }
     root.appendChild(head);
 
@@ -1344,7 +1390,7 @@
       var tb = h('tbody');
       open.slice().sort(function (a, b) { return a.dueAt < b.dueAt ? -1 : a.dueAt > b.dueAt ? 1 : 0; }).forEach(function (f) {
         tb.appendChild(h('tr', null,
-          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, f.horizonDays === 7 ? '1 week' : '1 month')),
+          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, fcSpan(f))),
           h('td', { class: 'num' }, pc0(f.pUp)),
           h('td', { class: 'num' }, isNum(f.base) ? pc0(f.base) : '–'),
           h('td', { class: 'num' }, fcPrice(f, f.startPx)),
@@ -1352,10 +1398,10 @@
           h('td', { class: 'num' }, dateShort(f.dueAt)),
           h('td', { class: 'txt' }, str(f.why, 320))));
       });
-      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made.',
+      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made. One-day calls are on the five shares and five coins with the best twelve months.',
         h('div', { class: 'table-scroll' }, h('table', { class: 'fc' },
           h('thead', null, h('tr', null, ['Market', 'Chance higher', 'Usually', 'Price then', '80% range', 'Due', 'Why'].map(function (t, i) { return h('th', { scope: 'col', class: i === 6 ? 'txt' : null }, t); }))), tb)),
-        h('p', { class: 'note' }, '"Usually" is how often that market rose over a stretch this long in the last two years. A call close to it means the news changed little.')));
+        h('p', { class: 'note' }, '"Usually" is how often that market rose over a stretch this long in the recent past. A call close to it means the news changed little. A one-day call made on a Friday is scored on Monday.')));
     }
     if (closed.length) {
       var tc = h('tbody');
@@ -1363,7 +1409,7 @@
         var called = f.pUp > 0.5 ? 'up' : f.pUp < 0.5 ? 'down' : null;
         var right = called === null ? null : (called === 'up') === !!f.up;
         tc.appendChild(h('tr', null,
-          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, f.horizonDays === 7 ? '1 week' : '1 month')),
+          h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, fcSpan(f))),
           h('td', { class: 'num' }, dateShort(f.madeAt)),
           h('td', { class: 'num' }, pc0(f.pUp) + ' up'),
           h('td', { class: 'num ' + dirClass(f.change) }, pct(f.change)),
@@ -1374,6 +1420,8 @@
         h('div', { class: 'table-scroll' }, h('table', null,
           h('thead', null, h('tr', null, ['Market', 'Made', 'Said', 'What happened', 'Call', 'Score'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tc))));
     }
+    var blind = blindCard();
+    if (blind) root.appendChild(blind);
     root.appendChild(card('How to read this', null,
       h('ul', { class: 'bullets' },
         h('li', null, h('b', null, 'A call is a probability, not a promise. '), 'Saying 60% and being wrong four times in ten is what 60% means. The score rewards being confident when right and punishes being confident when wrong.'),

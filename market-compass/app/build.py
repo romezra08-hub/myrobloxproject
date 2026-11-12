@@ -38,7 +38,12 @@ def main():
     res_path = os.path.join(HERE, "..", "research", "results.json")
     if os.path.exists(res_path):
         with open(res_path, encoding="utf-8") as f:
-            research = json.dumps(json.load(f), separators=(",", ":"))
+            data = json.load(f)
+        blind_path = os.path.join(HERE, "..", "research", "blind_results.json")   # the blind forecasting test
+        if os.path.exists(blind_path):
+            with open(blind_path, encoding="utf-8") as f:
+                data["blind"] = json.load(f)
+        research = json.dumps(data, separators=(",", ":"))
     if page.count("/*{{RESEARCH}}*/null") != 1:
         sys.exit("placeholder /*{{RESEARCH}}*/null must appear exactly once")
     page = page.replace("/*{{RESEARCH}}*/null", research)

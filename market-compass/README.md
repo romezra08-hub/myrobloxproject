@@ -77,6 +77,15 @@ scores every call from prices, so the forecaster never marks its own work. The p
 coin flip and with the naive rule (each asset's own base rate), and gives no verdict on fewer than 60 calls.
 Forecasts are deliberately kept out of the plan.
 
+The owner also asked for a very short test on "hot" names. Each day the pipeline ranks 40 well-known shares and
+18 coins by their last twelve months (`HOT_STOCKS`, `HOT_COINS` in `refresh.py`) and the top five of each get a
+one-day forecast, scored at the next refresh.
+
+`research/blind_test.py` is a test that could be scored at once. It builds anonymous cases from hot names on
+dates after the model's training ended, hands them to fresh forecasters, and scores the answers only afterwards.
+On 12 November 2026, over 150 cases, the calls were right way round 47% of the time for the next day and 53% for
+five days on, the same score as the naive rule. The cases, key and answers are kept beside the script.
+
 ## A home as the goal
 
 Choosing "A home" tells the engine the money has a date. The ceiling on stocks and crypto is then lower for each
@@ -119,6 +128,7 @@ readings N trading days early, and `--late FILE` on the backtest reports such a 
 | `research/history_fetch.py` | Replays the pipeline's readings on history |
 | `research/backtest.js`, `backtest.test.js` | Runs the engine over that history; its tests |
 | `research/history.json`, `results.json` | The replayed history and the results the page shows |
+| `research/blind_test.py`, `blind_*.json` | The blind forecasting test: cases, key, answers and results |
 | `app/market-compass.html` | The built page |
 
 ## Working on it

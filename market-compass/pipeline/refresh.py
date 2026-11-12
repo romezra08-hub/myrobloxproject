@@ -113,6 +113,32 @@ NEWS_DROP_TITLE = re.compile(r"price prediction|prediction market|releases? q\d|
 LAST_HALVING = dt.date(2024, 4, 20)  # fourth Bitcoin halving
 FORECAST_ASSETS = ["SPY", "^TA125.TA", "BTC-USD", "IAU", "ILS=X"]   # the same five as forecasts.py
 
+# Well-known shares and coins from which the "hot names" are drawn: each day the five of each
+# with the best twelve months. They exist only for the one-day forecasts on the Forecasts tab,
+# which the owner asked for as a test. Nothing in the plan uses them.
+HOT_STOCKS = {
+    "NVDA": "Nvidia", "AVGO": "Broadcom", "AMD": "AMD", "TSM": "TSMC", "MU": "Micron", "PLTR": "Palantir", "TSLA": "Tesla",
+    "META": "Meta", "GOOGL": "Alphabet", "AMZN": "Amazon", "MSFT": "Microsoft", "AAPL": "Apple", "NFLX": "Netflix",
+    "ORCL": "Oracle", "CRWD": "CrowdStrike", "NET": "Cloudflare", "SHOP": "Shopify", "UBER": "Uber", "COIN": "Coinbase",
+    "HOOD": "Robinhood", "MSTR": "Strategy", "APP": "AppLovin", "RKLB": "Rocket Lab", "IONQ": "IonQ", "SOFI": "SoFi",
+    "CVNA": "Carvana", "ARM": "Arm", "SMCI": "Super Micro", "LLY": "Eli Lilly", "COST": "Costco", "JPM": "JPMorgan",
+    "GE": "GE Aerospace", "VST": "Vistra", "CEG": "Constellation Energy", "ANET": "Arista", "DELL": "Dell",
+    "SNOW": "Snowflake", "RBLX": "Roblox", "SPOT": "Spotify", "DASH": "DoorDash",
+}
+HOT_COINS = {
+    "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "XRP-USD": "XRP", "BNB-USD": "BNB", "DOGE-USD": "Dogecoin",
+    "ADA-USD": "Cardano", "TRX-USD": "Tron", "AVAX-USD": "Avalanche", "LINK-USD": "Chainlink", "HBAR-USD": "Hedera",
+    "XLM-USD": "Stellar", "LTC-USD": "Litecoin", "BCH-USD": "Bitcoin Cash", "DOT-USD": "Polkadot", "SHIB-USD": "Shiba Inu",
+    "AAVE-USD": "Aave", "NEAR-USD": "Near",
+}
+HOT_KEEP = ("px", "asOf", "chg1d", "ret1w", "ret1m", "ret3m", "ret12m", "vs50", "vs200", "vol20", "up1d", "up1w")
+
+
+def hot_picks(table, symbols, n=5):
+    """The n symbols with the best twelve months, best first. Ones with no 12-month figure are left out."""
+    ranked = sorted(((table[s]["ret12m"], s) for s in symbols if s in table and table[s].get("ret12m") is not None), reverse=True)
+    return [s for _, s in ranked[:n]]
+
 
 def headline_rank(item):
     """0 = keep and prefer, 1 = keep, None = drop."""
@@ -346,6 +372,7 @@ def analyze(dates, px, tr=None, ppy=252):
     # How often the price was higher a week and a month later, over the history we hold.
     # This is the naive forecast that any prediction on the Forecasts tab has to beat.
     out["up1w"], out["up1m"] = rnd(share_up(px, k1w), 3), rnd(share_up(px, k1m), 3)
+    out["up1d"] = rnd(share_up(px[-(k12m + 1):], 1), 3)
     return out
 
 
@@ -1181,6 +1208,35 @@ def build(out_dir, verbose=True):
                            "note": "Trend here is worked out from the Bank of Israel's monthly average yields for a 5-year "
                                    "government bond. It models what a bond fund would have earned and is not a fund price"}
 
+    # ---- hot names, for the one-day forecast test -----------------------------
+    hot = {"stocks": [], "coins": [], "assets": {}}
+
+    def fetch_hot():
+        want = [s for s in list(HOT_STOCKS) + list(HOT_COINS) if s not in series]
+        got = yahoo_spark(want)
+        still = [s for s in want if s not in got]
+        if still and got:
+            time.sleep(3)
+            got.update(yahoo_spark(still))
+        for s in list(HOT_STOCKS) + list(HOT_COINS):
+            ppy = 365 if s in HOT_COINS else 252
+            if s in series:
+                info = assets[s]
+            elif s in got:
+                info = analyze(got[s][0], got[s][1], None, ppy)
+            else:
+                continue
+            row = {k: info.get(k) for k in HOT_KEEP}
+            row["name"] = HOT_COINS.get(s) or HOT_STOCKS.get(s)
+            row["kind"] = "crypto" if s in HOT_COINS else "stock"
+            hot["assets"][s] = row
+        if len(hot["assets"]) < 20:
+            raise RuntimeError("only %d of the hot-name series loaded" % len(hot["assets"]))
+        hot["stocks"] = hot_picks(hot["assets"], HOT_STOCKS)
+        hot["coins"] = hot_picks(hot["assets"], HOT_COINS)
+        return True
+    source("hot", fetch_hot, "Yahoo Finance: 58 well-known shares and coins, for the one-day forecast test")
+
     # ---- crypto -------------------------------------------------------------
     crypto = {}
     btc_t, btc_tp = trend_block("BTC-USD", 365)
@@ -1379,6 +1435,7 @@ def build(out_dir, verbose=True):
         "risk": risk,
         "crypto": crypto,
         "israel": israel,
+        "hot": hot,
         "sectors": SECTORS,
         "headlines": short,
         "sources": sources,
@@ -1451,6 +1508,17 @@ def summary(s):
             "n/a" if a.get("up1w") is None else "%.0f%%" % (a["up1w"] * 100), "n/a" if a.get("up1m") is None else "%.0f%%" % (a["up1m"] * 100),
             f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs200")),
             "n/a" if not r7 else "%s to %s" % r7, "n/a" if not r30 else "%s to %s" % r30))
+    hot = s.get("hot") or {}
+    if hot.get("stocks") or hot.get("coins"):
+        L.append("")
+        L.append("Hot names: the five shares and five coins with the best 12 months (one-day forecasts; see forecasts.py):")
+        for k in (hot.get("stocks") or []) + (hot.get("coins") or []):
+            a = hot["assets"][k]
+            r1 = typical_range(a["px"], a.get("vol20"), 1, 365 if a.get("kind") == "crypto" else 252)
+            L.append("   %-9s %-14s price %-9s 12m %s | rose on %s of days | today %s 1w %s 1m %s vs50d %s | typical range tomorrow %s" % (
+                k, (a.get("name") or "")[:14], a["px"], f(a.get("ret12m")),
+                "n/a" if a.get("up1d") is None else "%.0f%%" % (a["up1d"] * 100),
+                f(a.get("chg1d")), f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs50")), "n/a" if not r1 else "%s to %s" % r1))
     c = s["crypto"]
     L.append("")
     if c.get("btc"):

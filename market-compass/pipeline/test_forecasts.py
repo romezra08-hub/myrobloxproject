@@ -59,6 +59,49 @@ class Adding(unittest.TestCase):
         self.assertIsNone(rec["open"][0]["high"])
 
 
+class HotNames(unittest.TestCase):
+    def snap(self, when, **px):
+        s = snap(when, SPY=750.0)
+        s["hot"] = {"stocks": ["MU"], "coins": ["TRX-USD"],
+                    "assets": {"MU": {"px": px.get("MU", 400.0), "name": "Micron", "kind": "stock", "up1d": 0.56, "up1w": 0.6},
+                               "TRX-USD": {"px": px.get("TRX", 0.3), "name": "Tron", "kind": "crypto", "up1d": 0.5},
+                               "NVDA": {"px": 180.0, "name": "Nvidia", "kind": "stock", "up1d": 0.55}}}
+        return s
+
+    def test_one_day_calls_are_for_todays_hot_names_only(self):
+        s = self.snap("2026-11-12T21:10:00Z")
+        rec, problems = fc.add(fc.empty(), [
+            {"asset": "MU", "horizonDays": 1, "pUp": 0.58},
+            {"asset": "TRX-USD", "horizonDays": 1, "pUp": 0.48},
+            {"asset": "NVDA", "horizonDays": 1, "pUp": 0.6},        # priced, but not one of today's hot names
+            {"asset": "SPY", "horizonDays": 1, "pUp": 0.6},         # a market, not a hot name
+            {"asset": "MU", "horizonDays": 7, "pUp": 0.6},          # hot names get one-day calls only
+            {"asset": "MU", "horizonDays": 1.5, "pUp": 0.6},
+        ], s)
+        self.assertEqual(sorted(f["asset"] for f in rec["open"]), ["MU", "TRX-USD"])
+        self.assertEqual(len(problems), 4)
+        mu = [f for f in rec["open"] if f["asset"] == "MU"][0]
+        self.assertEqual((mu["name"], mu["kind"], mu["base"], mu["startPx"]), ("Micron", "stock", 0.56, 400.0))
+        self.assertEqual(mu["dueAt"], "2026-11-13T21:10:00Z")
+
+    def test_a_one_day_call_is_scored_at_the_next_refresh_even_if_the_name_has_cooled(self):
+        rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.58}], self.snap("2026-11-12T21:10:00Z"))
+        nxt = self.snap("2026-11-13T21:09:00Z", MU=390.0)
+        nxt["hot"]["stocks"] = ["NVDA"]                               # no longer a hot name, but still priced
+        out = fc.resolve(rec, nxt)
+        self.assertEqual(len(out["closed"]), 1)
+        self.assertFalse(out["closed"][0]["up"])
+        self.assertAlmostEqual(out["closed"][0]["brier"], 0.58 ** 2, places=4)
+        self.assertIn(" 1-day calls: right way round 0 of 1", fc.summary(out))
+
+    def test_a_friday_call_waits_for_monday(self):
+        rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.58}], self.snap("2026-11-13T21:10:00Z"))
+        self.assertEqual(len(fc.resolve(rec, self.snap("2026-11-14T09:00:00Z"))["closed"]), 0)
+        out = fc.resolve(rec, self.snap("2026-11-16T21:09:00Z", MU=410.0))
+        self.assertTrue(out["closed"][0]["up"])
+        self.assertFalse(out["closed"][0]["late"])
+
+
 class Loading(unittest.TestCase):
     def test_a_missing_or_wrapped_record_loads(self):
         import json, os, tempfile

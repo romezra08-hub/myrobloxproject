@@ -12,7 +12,9 @@ The forecaster never grades itself.
 `--in` may name a file that does not exist yet; the record then starts empty.
 
 A forecast says: "the chance that this asset's price is higher after N days is p, and I am
-80% sure it will lie between low and high". It is scored when the first refresh on or after
+80% sure it will lie between low and high". Five markets are forecast a week and a month
+ahead. The day's "hot names" (the shares and coins with the best twelve months, listed in the
+snapshot) are forecast one day ahead: the very short test the owner asked for. It is scored when the first refresh on or after
 its due date runs, against the price in that refresh. A call due on a weekend is therefore
 scored on the Monday.
 """
@@ -29,7 +31,8 @@ ASSETS = {            # what may be forecast: snapshot key -> name shown on the 
     "IAU": "Gold (IAU fund)",
     "ILS=X": "US dollar in shekels",
 }
-HORIZONS = (7, 30)    # days
+HORIZONS = (7, 30)    # days, for the five markets above
+HOT_HORIZON = 1       # days, for the snapshot's hot names
 P_MIN, P_MAX = 0.05, 0.95
 KEEP_CLOSED = 400
 GRACE = dt.timedelta(hours=6)   # the refresh a week later may run a minute earlier than the one that made the call
@@ -60,16 +63,31 @@ def load(path):
     return out
 
 
+def info_of(snapshot, asset):
+    """An asset's figures: from the main table, or from the wider hot-names table."""
+    a = (snapshot.get("assets") or {}).get(asset)
+    if not a:
+        a = ((snapshot.get("hot") or {}).get("assets") or {}).get(asset)
+    return a or {}
+
+
+def hot_info(snapshot, asset):
+    return ((snapshot.get("hot") or {}).get("assets") or {}).get(asset) or {}
+
+
+def hot_names(snapshot):
+    hot = snapshot.get("hot") or {}
+    return [s for s in (hot.get("stocks") or []) + (hot.get("coins") or []) if isinstance(s, str)]
+
+
 def price_of(snapshot, asset):
-    a = (snapshot.get("assets") or {}).get(asset) or {}
-    px = a.get("px")
-    return float(px) if isinstance(px, (int, float)) and px > 0 else None
+    px = info_of(snapshot, asset).get("px")
+    return float(px) if isinstance(px, (int, float)) and not isinstance(px, bool) and px > 0 else None
 
 
 def base_rate(snapshot, asset, horizon):
-    """How often this asset rose over a stretch this long in the last two years: the naive forecast."""
-    a = (snapshot.get("assets") or {}).get(asset) or {}
-    v = a.get("up1w" if horizon <= 7 else "up1m")
+    """How often this asset rose over a stretch this long in the recent past: the naive forecast."""
+    v = info_of(snapshot, asset).get("up1d" if horizon <= 1 else "up1w" if horizon <= 7 else "up1m")
     return round(float(v), 3) if isinstance(v, (int, float)) and 0 <= v <= 1 else None
 
 
@@ -104,9 +122,14 @@ def clean_new(item, snapshot):
     if not isinstance(item, dict):
         return None, "not an object"
     asset, horizon = item.get("asset"), item.get("horizonDays")
-    if asset not in ASSETS:
+    if isinstance(horizon, bool) or not isinstance(horizon, int):
+        return None, "%r: horizonDays must be a whole number" % (asset,)
+    if horizon == HOT_HORIZON:
+        if asset not in hot_names(snapshot):
+            return None, "%r: one-day forecasts are only for today's hot names" % (asset,)
+    elif asset not in ASSETS:
         return None, "unknown asset %r" % (asset,)
-    if horizon not in HORIZONS:
+    elif horizon not in HORIZONS:
         return None, "%s: horizon must be one of %s" % (asset, list(HORIZONS))
     p = item.get("pUp")
     if not isinstance(p, (int, float)) or isinstance(p, bool) or not (0 <= p <= 1):
@@ -123,7 +146,9 @@ def clean_new(item, snapshot):
     why = " ".join(str(item.get("why") or "").split())[:WHY_MAX]
     return {
         "id": "%s:%d:%s" % (asset, horizon, made[:10]),
-        "asset": asset, "name": ASSETS[asset], "horizonDays": horizon,
+        "asset": asset, "name": ASSETS.get(asset) if horizon != HOT_HORIZON else (str(hot_info(snapshot, asset).get("name") or asset)[:40]),
+        "kind": hot_info(snapshot, asset).get("kind") if horizon == HOT_HORIZON else None,
+        "horizonDays": horizon,
         "madeAt": made, "dueAt": due, "startPx": px,
         "pUp": round(min(P_MAX, max(P_MIN, float(p))), 3),     # never certain
         "low": low, "high": high, "base": base_rate(snapshot, asset, horizon), "why": why,
@@ -157,6 +182,10 @@ def summary(record):
         based = [f for f in c if f.get("baseBrier") is not None]
         L.append("  right way round %d of %d | Brier %.3f (coin flip 0.250%s)" % (
             hits, calls, brier, "" if not based else ", naive base rate %.3f" % (sum(f["baseBrier"] for f in based) / len(based))))
+        for h in sorted({f["horizonDays"] for f in c}):
+            hs = [f for f in c if f["horizonDays"] == h and f["pUp"] != 0.5]
+            if hs:
+                L.append("  %2d-day calls: right way round %d of %d" % (h, sum(1 for f in hs if (f["pUp"] > 0.5) == f["up"]), len(hs)))
         for f in c[-8:]:
             L.append("  %-22s %2dd made %s  said %2.0f%% up  %s %+.1f%%" % (
                 f["name"][:22], f["horizonDays"], f["madeAt"][:10], f["pUp"] * 100, "rose" if f["up"] else "fell", f["change"] * 100))

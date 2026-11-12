@@ -255,9 +255,17 @@ class BaseRates(unittest.TestCase):
         self.assertIsNone(r.typical_range(100.0, None, 7))
         self.assertIsNone(r.typical_range(None, 0.2, 7))
 
+    def test_hot_picks_are_the_best_twelve_months(self):
+        table = {"A": {"ret12m": 0.5}, "B": {"ret12m": 2.0}, "C": {"ret12m": None}, "D": {"ret12m": -0.1}, "E": {}}
+        self.assertEqual(r.hot_picks(table, ["A", "B", "C", "D", "E", "missing"], 2), ["B", "A"])
+        self.assertEqual(r.hot_picks(table, ["A", "B", "C", "D"], 5), ["B", "A", "D"])
+        self.assertEqual(r.hot_picks({}, ["A"]), [])
+        self.assertFalse(set(r.HOT_STOCKS) & set(r.HOT_COINS))
+        self.assertTrue(all(k.endswith("-USD") for k in r.HOT_COINS))
+
     def test_analyze_reports_weekly_and_monthly_base_rates(self):
         a = r.analyze(dates(400), ramp(400))
-        self.assertEqual((a["up1w"], a["up1m"]), (1.0, 1.0))
+        self.assertEqual((a["up1w"], a["up1m"], a["up1d"]), (1.0, 1.0, 1.0))
 
 
 class Israel(unittest.TestCase):
