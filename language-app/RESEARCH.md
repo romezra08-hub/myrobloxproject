@@ -96,3 +96,7 @@ Sources: https://www.degruyterbrill.com/document/doi/10.1515/iral-2023-0232/html
 ## Round 9
 - **Discriminative contrast:** interleaving helps most when categories are highly similar, because seeing them side by side highlights the differences (Birnbaum, Kornell, Bjork & Bjork 2013; Carvalho & Goldstone). → Letter quizzes now include look-alike letters as answer options (Ш/Щ, И/Й, Ь/Ъ/Ы, b/d/p/q, m/n, u/v/w…).
 Sources: https://link.springer.com/content/pdf/10.3758/s13421-013-0371-0.pdf ; https://pcl.sitehost.iu.edu/papers/cueCategorySequence.pdf ; https://link.springer.com/10.3758/s13421-020-01074-w
+
+## Round 10
+- **Elaborated feedback:** in computer-based learning, explanations (g≈0.49) beat just giving the correct answer (≈0.32) and plain right/wrong (≈0.05) (Van der Kleij, Feskens & Eggen 2015, 40 studies). Elaboration helps most after *incorrect* answers (Attali & van der Kleij 2017). → Wrong answers now show what the chosen option really means and an example sentence with the correct word. Grammar mistakes already show a "why" line.
+Sources: https://scite.ai/authors/fabienne-van-der-kleij-5G8ErD ; https://acuresearchbank.acu.edu.au/item/8610z/effects-of-feedback-elaboration-and-feedback-timing-during-computer-based-practice-in-mathematics-problem-solving

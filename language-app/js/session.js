@@ -162,6 +162,12 @@
       }
       if (res.sub && (!correct || res.close)) lines.push(h("div.fb-sub", L(res.sub, app.profile().help)));
       if (res.why && !correct) lines.push(h("div.fb-why", L(res.why, app.profile().help)));
+      // Elaborated feedback: what the learner's choice really means + the right word in context.
+      if (!correct && res.picked) {
+        const pr = app.profile();
+        lines.push(h("div.fb-why", "↔️ " + { he: "בחרת:", en: "You chose:", ru: "Вы выбрали:" }[I()] + " ", L(res.picked[pr.target] || "", pr.target, "strong"), " = ", L(res.picked[pr.help] || "", pr.help)));
+      }
+      if (!correct && res.example) lines.push(h("div.fb-why", "💬 ", L(res.example, app.profile().target)));
       lines.forEach((l) => fb.appendChild(l));
       if (!correct && res.answer && res.answerLang && !res.silentAnswer) SP.speak(res.answer, res.answerLang, { rate: app.ttsRate() });
       mainBtn.disabled = false;

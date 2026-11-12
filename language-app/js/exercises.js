@@ -108,7 +108,7 @@
         const ok = o.id === it.id;
         btn.classList.add(ok ? "right" : "wrong");
         if (!ok) [...list.children].forEach((b, i) => { if (opts[i].id === it.id) b.classList.add("right"); });
-        ctx.finish({ correct: ok, answer: tgt(it, ctx), answerLang: T, sub: hlp(it, ctx) });
+        ctx.finish({ correct: ok, answer: tgt(it, ctx), answerLang: T, sub: hlp(it, ctx), picked: ok ? null : o, example: it[T + "Ex"] });
       });
       list.appendChild(btn);
     });
