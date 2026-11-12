@@ -131,7 +131,8 @@ HOT_COINS = {
     "XLM-USD": "Stellar", "LTC-USD": "Litecoin", "BCH-USD": "Bitcoin Cash", "DOT-USD": "Polkadot", "SHIB-USD": "Shiba Inu",
     "AAVE-USD": "Aave", "NEAR-USD": "Near",
 }
-HOT_KEEP = ("px", "asOf", "chg1d", "ret1w", "ret1m", "ret3m", "ret12m", "vs50", "vs200", "vol20", "up1d", "up1w")
+HOT_KEEP = ("px", "asOf", "chg1d", "ret1w", "ret1m", "ret3m", "ret12m", "vs50", "vs200", "vol20", "up1d", "up1w",
+            "annAll", "volAll", "mdd")
 
 
 def hot_picks(table, symbols, n=5):
@@ -374,6 +375,11 @@ def analyze(dates, px, tr=None, ppy=252):
     out["up1w"], out["up1m"] = rnd(share_up(px, k1w), 3), rnd(share_up(px, k1m), 3)
     out["up1d"] = rnd(share_up(px[-(k12m + 1):], 1), 3)
     out["up3m"] = rnd(share_up(px, k3m), 3)
+    # The whole history we hold (about two years), for comparing options by return and risk.
+    span = len(tr) - 1
+    out["annAll"] = rnd((tr[-1] / tr[0]) ** (float(ppy) / span) - 1) if span >= ppy and tr[0] > 0 else None
+    out["volAll"] = rnd(realized_vol(tr, span, ppy)) if span >= 60 else None
+    out["mdd"] = rnd(max_drawdown(tr))
     return out
 
 
@@ -386,6 +392,17 @@ def typical_range(px, vol, days, ppy=252):
     bars = days * ppy / 365.0
     sd = vol * math.sqrt(bars / ppy)
     return sig(px * math.exp(-1.2816 * sd), 5), sig(px * math.exp(1.2816 * sd), 5)
+
+
+def max_drawdown(series):
+    """The deepest fall from an earlier high, as a negative fraction (0 when the series never fell)."""
+    peak, worst = None, 0.0
+    for v in series or []:
+        if peak is None or v > peak:
+            peak = v
+        elif peak > 0:
+            worst = min(worst, v / peak - 1.0)
+    return worst
 
 
 def share_up(series, k):

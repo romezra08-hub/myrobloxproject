@@ -98,6 +98,16 @@ dates after the model's training ended, hands them to fresh forecasters, and sco
 On 12 November 2026, over 150 cases, the calls were right way round 47% of the time for the next day and 53% for
 five days on, the same score as the naive rule. The cases, key and answers are kept beside the script.
 
+## Options
+
+The Options tab puts many ways to invest side by side. Ten ready-made mixes (the engine's five baselines plus
+cash, bonds, 60/40, world stocks and US stocks) are measured over June 1997 to October 2026 by `backtest.js`:
+yearly return, worst fall, worst and best year, share of losing years, longest wait to recover, and return
+above cash for each point of yearly swing. A chart plots return against worst fall and marks the mixes nothing
+else beat on both. "Use this mix" sets the risk answer on the Plan tab. Below, every fund, share and coin the
+pipeline follows is ranked on the two years of prices it holds (`annAll`, `volAll` and `mdd` per asset), with a
+warning that such a ranking describes the past.
+
 ## A home as the goal
 
 Choosing "A home" tells the engine the money has a date. The ceiling on stocks and crypto is then lower for each

@@ -6,7 +6,7 @@
   var E = window.MCEngine;
   var CFG = window.MC_CONFIG || {};
   var RESEARCH = window.MC_RESEARCH || null;   // results of the history test, put in at build time
-  var VIEWS = ['plan', 'markets', 'crypto', 'events', 'forecasts', 'ask', 'learn', 'method'];
+  var VIEWS = ['plan', 'options', 'markets', 'forecasts', 'events', 'crypto', 'ask', 'learn', 'method'];
   var MINUS = '−';
   var STALE_H = 30;            // older than this, prices are flagged as out of date
   var IGNORE_SIGNALS_D = 14;   // older than this, signals no longer move the plan
@@ -193,7 +193,7 @@
   }
 
   /* Chart observers are tracked per view so a re-render can release the old ones. */
-  var ROS = { plan: [], markets: [], crypto: [], method: [] }, roBucket = null;
+  var ROS = { plan: [], markets: [], crypto: [], method: [], options: [] }, roBucket = null;
   function dropObservers(name) { ROS[name].forEach(function (r) { r.disconnect(); }); ROS[name] = []; }
 
   /* Line chart with a crosshair readout, drawn at its real pixel width so text never scales.
@@ -661,13 +661,16 @@
       h('fieldset', { class: 'field' }, h('legend', null, 'Where you live'), radioSet('country', [['IL', 'Israel'], ['other', 'Elsewhere']], p.country, 'seg-ctl')),
       h('div', { class: 'field' }, h('label', { for: 'f-s-status' }, 'Work'),
         h('select', { id: 'f-s-status', class: 'select' }, works.map(function (o) { return h('option', { value: o[0], selected: s.status === o[0] }, o[1]); }))),
-      moneyField('f-s-income', 'Monthly income before tax', s.income || ''),
-      moneyField('f-s-spending', 'Monthly spending', s.spending || ''),
-      moneyField('f-s-savings', 'Savings you can reach quickly', s.savings || ''),
-      h('div', { class: 'hold-grid' },
-        moneyField('f-s-debt', 'Costliest debt', s.debt || ''),
-        h('div', { class: 'field' }, h('label', { for: 'f-s-rate' }, 'Its yearly interest'),
-          h('div', { class: 'money' }, h('input', { id: 'f-s-rate', type: 'number', inputmode: 'decimal', min: '0', max: '100', step: '0.5', value: s.debtRate || '', style: { 'padding-left': '10px' } }), h('span', { 'aria-hidden': 'true', style: { padding: '0 10px 0 2px' } }, '%')))),
+      h('details', { class: 'plain', id: 'sit-details', open: !!(s.income || s.spending || s.savings || s.debt) || S.sitOpen === true, ontoggle: function () { S.sitOpen = this.open; } },
+        h('summary', null, 'Add your income, spending, savings and debt'),
+        h('div', { class: 'stack', style: { 'margin-top': '10px' } },
+          moneyField('f-s-income', 'Monthly income before tax', s.income || ''),
+          moneyField('f-s-spending', 'Monthly spending', s.spending || ''),
+          moneyField('f-s-savings', 'Savings you can reach quickly', s.savings || ''),
+          h('div', { class: 'hold-grid' },
+            moneyField('f-s-debt', 'Costliest debt', s.debt || ''),
+            h('div', { class: 'field' }, h('label', { for: 'f-s-rate' }, 'Its yearly interest'),
+              h('div', { class: 'money' }, h('input', { id: 'f-s-rate', type: 'number', inputmode: 'decimal', min: '0', max: '100', step: '0.5', value: s.debtRate || '', style: { 'padding-left': '10px' } }), h('span', { 'aria-hidden': 'true', style: { padding: '0 10px 0 2px' } }, '%')))))),
       il ? h('fieldset', { class: 'field' }, h('legend', null, 'Does an employer pay into a Keren Hishtalmut for you?'), radioSet('studyFund', tri, s.studyFund, 'seg-ctl')) : null,
       il ? h('fieldset', { class: 'field' }, h('legend', null, 'Is a pension being paid in for you?'), radioSet('pension', tri, s.pension, 'seg-ctl')) : null,
       h('p', { class: 'note' }, 'Never enter account numbers, ID numbers or passwords. Nothing here needs them.'),
@@ -691,7 +694,7 @@
       p.goal === 'home' ? moneyField('f-homePrice', 'Price of the home you have in mind', p.homePrice || '', (isIL() ? 'The average flat in Israel cost about \u20AA2.4 million in 2026. ' : '') + 'Leave it empty if you do not know yet.') : null,
       h('fieldset', { class: 'field' }, h('legend', { id: 'risk-legend' }, riskQuestion(p)),
         radioSet('risk', [[1, 'Sell everything'], [2, 'Sell some to feel safer'], [3, 'Hold, and lose sleep'], [4, 'Hold without much worry'], [5, 'Buy more']], p.risk, 'opt-list'),
-        h('span', { class: 'hint' }, 'Answer for the worst day, not today. People tend to feel braver while prices are rising.')),
+        h('span', { class: 'hint' }, 'Answer for the worst day, not today. People tend to feel braver while prices are rising. ', h('a', { href: '#options' }, 'See what each answer has meant in practice.'))),
       h('fieldset', { class: 'field' }, h('legend', null, 'Crypto, at most'),
         radioSet('crypto', [['none', 'None'], ['small', '2%'], ['medium', '5%'], ['high', '10%']], p.crypto, 'seg-ctl'),
         h('span', { class: 'hint' }, 'A ceiling, not a target. Large banks suggest 1 to 5% for those who want any.')),
@@ -928,6 +931,7 @@
           ft.toSavings > 0 ? tile('To your cushion', money(Math.round(ft.toSavings)), 'aim: ' + ft.months + ' months of spending') : null,
           tile('Invested', money(Math.round(ft.invest)), ft.invest > 0 ? 'split as below' : 'next time'))));
     }
+    hero.appendChild(glanceStrip());
     if (p.goal === 'home') hero.appendChild(homeGoalBlock(pl));
     var live = pl.rows.filter(function (r) { return r.target > 0; });
     hero.appendChild(h('div', { class: 'twobars' },
@@ -1071,6 +1075,22 @@
     if (hint) hint.textContent = STYLE_HINT[p.style];
     ['chk-efund', 'chk-debt'].forEach(function (id) { var el = $(id); if (el) el.hidden = ft.known; });
     roBucket = null;
+  }
+
+  /* Shortcuts under the plan's headline: what the other tabs are saying, one tap away. */
+  function glanceStrip() {
+    var s = S.snap, b = S.brief, d = S.forecasts, items = [];
+    var go = function (view, label, value, note) {
+      return h('a', { class: 'glance', href: '#' + view }, h('span', { class: 'tile-label' }, label), h('span', { class: 'glance-value' }, value), note ? h('span', { class: 'tile-note' }, note) : null);
+    };
+    if (s && s.regime) items.push(go('markets', 'Markets today', scoreWord(s.regime.score), 'risk conditions'));
+    if (b && b.headline && E.briefIsFresh(b, Date.now())) items.push(go('events', 'Top story', str(b.headline, 64) + (String(b.headline).length > 64 ? '\u2026' : ''), null));
+    if (d && Array.isArray(d.open)) {
+      var sc = E.scoreForecasts(d.closed);
+      items.push(go('forecasts', 'Claude\u2019s calls', sc.calls ? sc.hits + ' of ' + sc.calls + ' right' : d.open.length + ' open', sc.calls ? 'so far' : 'none scored yet'));
+    }
+    if (RESEARCH && RESEARCH.mixes) items.push(go('options', 'Compare options', RESEARCH.mixes.length + ' mixes', 'by return and risk'));
+    return items.length ? h('nav', { class: 'glances', 'aria-label': 'Shortcuts' }, items) : null;
   }
 
   function buildPlan() {
@@ -1299,6 +1319,201 @@
       h('li', null, 'Where you hold it can fail even if Bitcoin does not. A spot fund avoids that. On an exchange, keep only what you could lose.'),
       h('li', null, 'Selling coins is taxable in the US. To cut back, point new money elsewhere first.'),
       h('li', null, 'Trim back to target if the slice grows past one and a half times its size. Left alone, a winning crypto slice can come to steer the whole portfolio.'))));
+    roBucket = null;
+  }
+
+  // ------------------------------------------------------------------ options
+  /* Many ways to invest, side by side: ready-made mixes measured over 29 years, and the
+     individual funds, shares and coins measured over the two years of prices we hold.
+     Everything here describes the past. The plan itself is still set on the Plan tab. */
+  var OPT = { kind: 'all', sort: 'perRisk', all: false };
+  var MIX_NOTE = {
+    cash: 'Never falls, and barely beats inflation.',
+    bonds: 'Steadier than stocks, yet its longest spell below an earlier high lasted more than six years.',
+    r1: 'For money needed in a few years, or for anyone who would sell in a fall.',
+    r2: 'Half in bonds. Falls are real but shallow.',
+    r3: 'The middle road, spread across the world.',
+    r4: 'Mostly stocks, with a small cushion.',
+    r5: 'Nearly all stocks. The biggest swings this app will suggest.',
+    '6040': 'The textbook mix, in US funds only. It led the world mix because US stocks led the world, which nobody could count on in advance.',
+    world: 'Every stock market, no cushion.',
+    us: 'The best return of the period and one of the deepest falls. One country, no cushion.'
+  };
+  function scatterChart(o) {
+    var H = o.height || 280, L = 46, R = 18, T = 14, B = 36;
+    var xs = o.points.map(function (p) { return p.x; }), ys = o.points.map(function (p) { return p.y; });
+    var xStep = niceStep(Math.max.apply(null, xs) - Math.min(0, Math.min.apply(null, xs)) || 1, 5), yStep = niceStep(Math.max.apply(null, ys) - Math.min(0, Math.min.apply(null, ys)) || 1, 4);
+    var x0 = 0, x1 = Math.ceil(Math.max.apply(null, xs) / xStep) * xStep + xStep * 0.4, y0 = 0, y1 = Math.ceil(Math.max.apply(null, ys) / yStep) * yStep;
+    var wrap = h('div', { class: 'chart', style: { 'min-height': H + 'px' } }), drawn = 0;
+    function draw(width) {
+      var W = Math.max(260, Math.round(width));
+      if (Math.abs(W - drawn) < 2) return;
+      drawn = W;
+      var X = function (v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }, Y = function (v) { return T + (1 - (v - y0) / (y1 - y0)) * (H - T - B); };
+      var svg = sv('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': o.label });
+      for (var v = y0; v <= y1 + yStep / 1e6; v += yStep) {
+        svg.appendChild(sv('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: v === 0 ? 'axis-line' : 'grid-line' }));
+        svg.appendChild(sv('text', { x: L - 6, y: Y(v) + 3.5, 'text-anchor': 'end' }, o.yFmt(v)));
+      }
+      for (var u = x0; u <= x1; u += xStep) svg.appendChild(sv('text', { x: X(u), y: H - B + 14, 'text-anchor': 'middle' }, o.xFmt(u)));
+      svg.appendChild(sv('text', { x: (L + W - R) / 2, y: H - 4, 'text-anchor': 'middle' }, o.xLabel));
+      // the line joining the options nothing else beat on both counts
+      var best = o.points.filter(function (p) { return p.strong; }).sort(function (a, b) { return a.x - b.x; });
+      if (best.length > 1) svg.appendChild(sv('path', { d: best.map(function (p, i) { return (i ? 'L' : 'M') + X(p.x).toFixed(1) + ' ' + Y(p.y).toFixed(1); }).join(''), fill: 'none', 'stroke-width': 1.5, 'stroke-dasharray': '4 4', style: { stroke: 'var(--muted)' } }));
+      var narrow = W < 520, used = [];
+      o.points.slice().sort(function (a, b) { return a.x - b.x; }).forEach(function (p) {
+        var cx = X(p.x), cy = Y(p.y);
+        var dot = sv('circle', { cx: cx, cy: cy, r: p.you ? 7 : 5, 'stroke-width': 2, style: { fill: p.strong ? 'var(--accent)' : 'var(--surface)', stroke: p.you ? 'var(--needle)' : 'var(--accent)' } });
+        dot.appendChild(sv('title', null, p.name + ': ' + o.yFmt(p.y) + ' a year, worst fall ' + o.xFmt(p.x)));
+        svg.appendChild(dot);
+        // Labels sit above and to the left of the mixes on the dashed line, clear of it, and to the
+        // right of the others. A light halo keeps them readable where a line passes behind.
+        var text = narrow && p.short ? p.short : p.name, wide = text.length * 6.2, lx, ly, anchor;
+        if (p.strong && cx - wide - 8 > L) { lx = cx - 8; ly = cy - 8; anchor = 'end'; }
+        else if (p.strong) { lx = cx + 8; ly = cy - 9; anchor = 'start'; }
+        else { lx = cx + 10; ly = cy + 4; anchor = 'start'; if (lx + wide > W - 2) { lx = cx - 10; anchor = 'end'; } }
+        used.forEach(function (q) { if (Math.abs(q.y - ly) < 12 && Math.abs(q.x - lx) < 80) ly = q.y + (ly >= q.y ? 12 : -12); });
+        used.push({ x: lx, y: ly });
+        svg.appendChild(sv('text', { x: lx, y: ly, 'text-anchor': anchor, style: { fill: 'var(--ink-2)', 'font-weight': p.you ? 700 : 500, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': '3px', 'stroke-linejoin': 'round' } }, text));
+      });
+      clear(wrap);
+      wrap.appendChild(svg);
+    }
+    if (typeof ResizeObserver === 'function') {
+      var ro = new ResizeObserver(function (entries) { var w = entries[0].contentRect.width; if (w > 0) draw(w); });
+      ro.observe(wrap);
+      if (roBucket) roBucket.push(ro);
+    } else draw(340);
+    return wrap;
+  }
+  function mixParts(w) {
+    return E.SLEEVES.filter(function (k) { return w[k] > 0; }).map(function (k) { return Math.round(w[k] * 100) + '% ' + E.LABELS[k].toLowerCase().replace('us ', 'US ').replace(' and t-bills', ''); }).join(', ');
+  }
+  function useMix(risk) {
+    S.profile = E.normalizeProfile(Object.assign({}, S.profile, { risk: risk }));
+    writeControls(); renderPlan(); renderOptions(); saveProfileSoon();
+    location.hash = 'plan';
+  }
+  function renderOptions() {
+    dropObservers('options');
+    var root = clear($('view-options'));
+    roBucket = ROS.options;
+    var R = RESEARCH, mixes = R && Array.isArray(R.mixes) ? R.mixes : [];
+    var pc = function (x, d) { return isNum(x) ? (x * 100).toFixed(d === undefined ? 1 : d) + '%' : '–'; };
+    var fall = function (x) { return isNum(x) ? (x === 0 ? '0%' : MINUS + Math.abs(x * 100).toFixed(0) + '%') : '–'; };
+    var p = S.profile, pl = currentPlan();
+    root.appendChild(h('section', { class: 'card stack' },
+      h('span', { class: 'eyebrow' }, 'Options'),
+      h('p', { class: 'lede' }, 'Every way to invest gives up something. More return has always come with deeper falls, and the choice is how much of one you will trade for the other.'),
+      h('p', { class: 'prose' }, 'Below are ten ready-made mixes, measured on real prices from ' + (R ? dateShortMonth(str(R.from, 7)) + ' to ' + dateShortMonth(str(R.to, 7)) : 'the past') + ', and then every fund, share and coin this app follows. The past does not repeat, but how deep the falls went is the most useful thing it can tell you.')));
+
+    if (mixes.length) {
+      var yours = 'r' + p.risk, cashRate = (mixes.filter(function (m) { return m.id === 'cash'; })[0] || {}).cagr || 0;
+      var risky = mixes.filter(function (m) { return m.id !== 'cash'; });
+      var bestRatio = risky.slice().sort(function (a, b) { return (b.perRisk || 0) - (a.perRisk || 0); })[0];
+      var bestReturn = mixes.slice().sort(function (a, b) { return b.cagr - a.cagr; })[0];
+      var calmest = risky.slice().sort(function (a, b) { return b.maxDD - a.maxDD; })[0];
+      var ex = E.expectedReal(snapForEngine(), p.horizon, planOpts().local), infl = (planOpts().local && isNum(planOpts().local.inflation)) ? planOpts().local.inflation : E.INFLATION_ASSUMED;
+      var ahead = function (m) { var s = 0; E.SLEEVES.forEach(function (k) { s += (m.weights[k] || 0) * (isNum(ex[k]) ? ex[k] : 0); }); return s; };
+      var SHORT = { cash: 'Cash', bonds: 'Bonds', r1: 'V. cautious', r2: 'Cautious', r3: 'Balanced', r4: 'Growth', r5: 'Bold', '6040': '60/40', world: 'World', us: 'US' };
+      root.appendChild(card('Return against the worst fall', 'Each dot is one mix. Higher is more return; further right is a deeper fall on the way. The dashed line joins the mixes that nothing else beat on both counts.',
+        scatterChart({ label: 'Yearly return against worst fall for ten ready-made mixes', xLabel: 'Worst fall along the way', xFmt: function (v) { return Math.round(v) + '%'; }, yFmt: function (v) { return (Math.round(v * 10) / 10) + '%'; },
+          points: mixes.map(function (m) { return { x: Math.abs(m.maxDD * 100), y: m.cagr * 100, name: m.name, short: SHORT[m.id], strong: !!m.efficient, you: m.id === yours }; }) }),
+        h('p', { class: 'note' }, 'The ringed dot is the mix closest to your answers on the Plan tab. Returns are per year before inflation, with dividends and interest, after a small trading cost.')));
+
+      var listEl = h('div', { class: 'opts' });
+      mixes.forEach(function (m) {
+        var rows = E.SLEEVES.filter(function (k) { return m.weights[k] > 0; }).map(function (k) { return { key: k, label: E.LABELS[k], target: m.weights[k] * 100 }; });
+        var tags = [];
+        if (m.id === yours) tags.push(chip('Closest to your plan', 'warn'));
+        if (m === bestRatio) tags.push(chip('Most return for its risk', 'pos'));
+        if (m === bestReturn) tags.push(chip('Highest return', 'pos'));
+        if (m === calmest) tags.push(chip('Smallest falls', 'pos'));
+        var cap = m.risk ? E.horizonCap(p.horizon, p.goal) : null, capped = m.risk && E.RISK_GROWTH[m.risk] > cap;
+        listEl.appendChild(h('article', { class: 'opt' + (m.id === yours ? ' on' : '') },
+          h('div', { class: 'row' }, h('h3', { class: 'grow' }, m.name), tags),
+          h('p', { class: 'sub' }, mixParts(m.weights) + '. ' + (MIX_NOTE[m.id] || '')),
+          splitBar(rows, function (r) { return r.target; }, m.name + ': what is in it'),
+          h('div', { class: 'tiles' },
+            tile('Return a year', pc(m.cagr), '1 grew to ' + m.final.toFixed(1)),
+            tile('Worst fall', fall(m.maxDD), m.under ? 'longest wait to recover: ' + (m.under >= 24 ? (Math.round(m.under / 1.2) / 10) + ' years' : m.under + ' months') : 'never below its high'),
+            tile('Worst and best year', fall(m.worst12) + ' / +' + pc(m.best12, 0), pc(m.losing12, 0) + ' of 12-month stretches lost money'),
+            tile('Expected from here', pc((ahead(m) + infl) / 100), 'about ' + pc(ahead(m) / 100) + ' after inflation, from today’s yields and prices')),
+          m.risk ? h('div', { class: 'row' },
+            m.id === yours ? h('span', { class: 'sub' }, 'This is the mix your plan starts from.') : h('button', { class: 'btn small', type: 'button', onclick: function () { useMix(m.risk); } }, 'Use this mix in my plan'),
+            capped ? h('span', { class: 'note' }, 'With money needed in ' + years(p.horizon) + ', the plan would hold it to ' + cap + '% in stocks.') : null) : null));
+      });
+      root.appendChild(card('Ten ready-made mixes', 'From safest to boldest. "Expected from here" is this app’s estimate for the next ' + years(p.horizon) + ', which is lower than the past because stocks start from high prices.', listEl,
+        h('p', { class: 'note' }, 'Gold has no price history here before September 2000, so its small share waited in cash until then. Five of these are the starting mixes behind the risk question on the Plan tab; the others are yardsticks.')));
+
+      var c = R.crypto && R.crypto.styles;
+      if (c && c['none-steady'] && c['medium-steady']) {
+        var a = c['none-steady'], b = c['medium-steady'];
+        root.appendChild(card('And with a little Bitcoin?', 'Bitcoin has only existed through one kind of market, so it is measured apart, from ' + dateShortMonth(str(R.crypto.from, 7)) + ' to ' + dateShortMonth(str(R.crypto.to, 7)) + '.',
+          h('div', { class: 'table-scroll' }, h('table', null,
+            h('thead', null, h('tr', null, ['The balanced mix', 'Return a year', 'Worst fall', 'Worst year', 'Yearly swing'].map(function (t) { return h('th', { scope: 'col' }, t); }))),
+            h('tbody', null,
+              h('tr', null, h('th', { scope: 'row' }, 'Without crypto'), h('td', { class: 'num' }, pc(a.cagr)), h('td', { class: 'num' }, fall(a.maxDD)), h('td', { class: 'num' }, fall(a.worst12)), h('td', { class: 'num' }, pc(a.vol))),
+              h('tr', null, h('th', { scope: 'row' }, 'With 5% in Bitcoin'), h('td', { class: 'num' }, pc(b.cagr)), h('td', { class: 'num' }, fall(b.maxDD)), h('td', { class: 'num' }, fall(b.worst12)), h('td', { class: 'num' }, pc(b.vol)))))),
+          h('p', { class: 'note' }, 'Those ten years hold most of Bitcoin’s rise from a few hundred dollars. The plan counts on none of it repeating, which is why it caps crypto and expects 0% from it.')));
+      }
+    }
+
+    // ---- building blocks: every fund, share and coin we follow
+    var s = S.snap, rows = [];
+    if (s && s.assets) {
+      var add = function (sym, a, kind, name) {
+        if (!a || !isNum(a.annAll) || !isNum(a.volAll) || a.volAll <= 0) return;
+        rows.push({ sym: sym, name: name || a.name, kind: kind, r1: a.ret12m, ann: a.annAll, vol: a.volAll, mdd: a.mdd });
+      };
+      Object.keys(s.assets).forEach(function (k) {
+        var a = s.assets[k], g = a.group;
+        if (g === 'stocks' || g === 'sector') add(k, a, 'funds', a.name);
+        else if (g === 'bonds' || g === 'real') add(k, a, 'steady', a.name);
+        else if (g === 'crypto') add(k, a, 'coins', a.name);
+      });
+      var hot = s.hot && s.hot.assets || {};
+      Object.keys(hot).forEach(function (k) { if (!s.assets[k]) add(k, hot[k], hot[k].kind === 'crypto' ? 'coins' : 'shares', hot[k].name); });
+    }
+    if (rows.length) {
+      var cashA = s.assets.SGOV && isNum(s.assets.SGOV.annAll) ? s.assets.SGOV.annAll : 0.04;
+      rows.forEach(function (r) { r.perRisk = (r.ann - cashA) / r.vol; });
+      var KINDS = [['all', 'All'], ['funds', 'Stock funds'], ['steady', 'Bonds, gold and more'], ['shares', 'Single shares'], ['coins', 'Coins']];
+      var SORTS = [['perRisk', 'Most return for its risk'], ['ann', 'Highest return'], ['mdd', 'Smallest worst fall'], ['vol', 'Calmest']];
+      var shown = rows.filter(function (r) { return OPT.kind === 'all' || r.kind === OPT.kind; });
+      shown.sort(function (a, b) { return OPT.sort === 'vol' ? a.vol - b.vol : OPT.sort === 'mdd' ? b.mdd - a.mdd : b[OPT.sort] - a[OPT.sort]; });
+      var total = shown.length, list = OPT.all ? shown : shown.slice(0, 12);
+      var seg = function (name, opts, cur, cls) {
+        var box = h('div', { class: cls, role: 'group', 'aria-label': name });
+        opts.forEach(function (o) {
+          box.appendChild(h('button', { type: 'button', class: 'pill' + (cur === o[0] ? ' on' : ''), 'aria-pressed': cur === o[0] ? 'true' : 'false', onclick: function () { OPT[name] = o[0]; OPT.all = false; renderOptions(); var el = $('opt-blocks'); if (el) el.scrollIntoView({ block: 'nearest' }); } }, o[1]));
+        });
+        return box;
+      };
+      var KIND_NAME = { funds: 'Stock fund', steady: 'Bonds, gold, property', shares: 'Share', coins: 'Coin' };
+      var tb = h('tbody');
+      list.forEach(function (r, i) {
+        tb.appendChild(h('tr', null,
+          h('th', { scope: 'row' }, (i + 1) + '. ' + str(r.name, 40), h('span', { class: 'sym' }, r.sym.replace('-USD', '').replace('=F', '').replace('^', '').replace('.TA', ''))),
+          h('td', { class: 'txt' }, KIND_NAME[r.kind]),
+          h('td', { class: 'num ' + dirClass(r.r1) }, pct(r.r1)),
+          h('td', { class: 'num ' + dirClass(r.ann) }, pct(r.ann)),
+          h('td', { class: 'num' }, pc(r.vol, 0)),
+          h('td', { class: 'num' }, fall(r.mdd)),
+          h('td', { class: 'num' }, r.perRisk.toFixed(2))));
+      });
+      var blocks = card('Every fund, share and coin, ranked', 'Measured over the two years of prices this app holds (' + rows.length + ' in all). Pick what to rank by.',
+        h('div', { class: 'stack tight' }, h('span', { class: 'eyebrow' }, 'Show'), seg('kind', KINDS, OPT.kind, 'pills')),
+        h('div', { class: 'stack tight' }, h('span', { class: 'eyebrow' }, 'Best by'), seg('sort', SORTS, OPT.sort, 'pills')),
+        h('div', { class: 'table-scroll' }, h('table', null,
+          h('thead', null, h('tr', null, ['', 'Kind', 'Last 12 months', 'A year, over 2 years', 'Yearly swing', 'Worst fall', 'Return for its risk'].map(function (t, i) { return h('th', { scope: 'col', class: i === 1 ? 'txt' : null }, t); }))), tb)),
+        total > list.length ? h('button', { class: 'btn small', type: 'button', onclick: function () { OPT.all = true; renderOptions(); } }, 'Show all ' + total) : null,
+        callout('info', 'A ranking of the past, not a tip', 'Two years is short, and the top of this list is whatever has just had a good run. In this app’s own blind test the hottest shares did no better afterwards than the rest. Use the list to see how rough each ride has been: a coin with a worst fall of 70% will do that again. "Return for its risk" is the yearly return above cash for each point of yearly swing.'),
+        h('p', { class: 'note' }, 'Prices are in dollars' + (isIL() ? ', so for you the shekel’s moves come on top' : '') + '. Funds include dividends where available; single shares and coins are price only.'));
+      blocks.id = 'opt-blocks';
+      root.appendChild(blocks);
+    }
+    if (!mixes.length && !rows.length) root.appendChild(emptyState('The comparison appears here once market data has loaded.'));
     roBucket = null;
   }
 
@@ -1868,11 +2083,13 @@
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       if (t.getAttribute('data-view') === v) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
+    var cur = document.querySelector('.tab[aria-current="page"]'), strip = cur && cur.parentNode;
+    if (cur && strip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2);
     try { localStorage.setItem('mc.view', v); } catch (e) { /* storage is optional */ }
   }
 
   function renderData() {
-    renderFresh(); renderPlan(); renderMarkets(); renderCrypto(); renderEvents(); renderForecasts(); renderMethod();
+    renderFresh(); renderPlan(); renderOptions(); renderMarkets(); renderCrypto(); renderEvents(); renderForecasts(); renderMethod();
     if (!S.learnBuilt) { renderLearn(); S.learnBuilt = true; }
   }
 

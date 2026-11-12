@@ -263,6 +263,19 @@ class BaseRates(unittest.TestCase):
         self.assertFalse(set(r.HOT_STOCKS) & set(r.HOT_COINS))
         self.assertTrue(all(k.endswith("-USD") for k in r.HOT_COINS))
 
+    def test_max_drawdown_is_the_deepest_fall_from_a_high(self):
+        self.assertEqual(r.max_drawdown([100, 110, 120]), 0.0)
+        self.assertAlmostEqual(r.max_drawdown([100, 120, 90, 130, 117]), 90 / 120.0 - 1)
+        self.assertAlmostEqual(r.max_drawdown([100, 50, 200, 100]), -0.5)
+        self.assertEqual(r.max_drawdown([]), 0.0)
+
+    def test_analyze_reports_two_year_return_swing_and_worst_fall(self):
+        a = r.analyze(dates(505), ramp(505))                     # two years at 0.1% a day
+        self.assertAlmostEqual(a["annAll"], 1.001 ** 252 - 1, places=3)
+        self.assertEqual(a["mdd"], 0.0)
+        self.assertLess(a["volAll"], 0.001)
+        self.assertIsNone(r.analyze(dates(120), ramp(120))["annAll"])   # under a year: no yearly figure
+
     def test_analyze_reports_weekly_and_monthly_base_rates(self):
         a = r.analyze(dates(400), ramp(400))
         self.assertEqual((a["up1w"], a["up1m"], a["up1d"], a["up3m"]), (1.0, 1.0, 1.0, 1.0))

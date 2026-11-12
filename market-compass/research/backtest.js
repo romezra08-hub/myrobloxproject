@@ -57,11 +57,19 @@ function simulate(rows, profile, opts) {
   const n = monthly.length, years = n / 12;
   const mean = monthly.reduce((a, b) => a + b, 0) / n;
   const sd = Math.sqrt(monthly.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1));
-  let worst12 = 0;
-  for (let i = 12; i < curve.length; i++) worst12 = Math.min(worst12, curve[i].v / curve[i - 12].v - 1);
+  let worst12 = 0, best12 = 0, losing = 0, spans = 0;
+  for (let i = 12; i < curve.length; i++) {
+    const r12 = curve[i].v / curve[i - 12].v - 1;
+    worst12 = Math.min(worst12, r12); best12 = Math.max(best12, r12);
+    spans++; if (r12 < 0) losing++;
+  }
+  // the longest stretch spent below an earlier high, in months
+  let under = 0, run = 0, top = 1;
+  curve.forEach((p) => { if (p.v >= top) { top = p.v; run = 0; } else { run++; under = Math.max(under, run); } });
   const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
   return {
-    cagr: Math.pow(value, 1 / years) - 1, vol: sd * Math.sqrt(12), maxDD: maxDD, worst12: worst12, final: value,
+    cagr: Math.pow(value, 1 / years) - 1, vol: sd * Math.sqrt(12), maxDD: maxDD, worst12: worst12, best12: best12, final: value,
+    losing12: spans ? losing / spans : 0, under: under,
     turnover: turnover / years, growth: avg(growthShare), cash: avg(cashShare), curve: curve, monthly: monthly
   };
 }
@@ -160,6 +168,25 @@ function run(file) {
     sixtyForty: summary(simulate(rows, {}, { fixed: { us: 0.6, bonds: 0.4 } })),
     cash: summary(simulate(rows, {}, { fixed: { cash: 1 } }))
   };
+  // Ready-made mixes for the Options tab: the engine's five baselines and some yardsticks, each held
+  // at fixed weights and reset monthly. `perRisk` is return above cash for each point of yearly swing.
+  const cashCagr = out.yardsticks.cash.cagr;
+  const mix = (id, name, weights, risk) => {
+    const s = summary(simulate(rows, {}, { fixed: weights }));
+    s.id = id; s.name = name; s.weights = weights; s.risk = risk || null;
+    s.perRisk = s.vol > 0.005 ? +((s.cagr - cashCagr) / s.vol).toFixed(3) : null;
+    return s;
+  };
+  const NAMES = { 1: 'Very cautious', 2: 'Cautious', 3: 'Balanced', 4: 'Growth', 5: 'Bold' };
+  out.mixes = [mix('cash', 'All in cash', { cash: 1 }), mix('bonds', 'All in bonds', { bonds: 1 })];
+  [1, 2, 3, 4, 5].forEach((risk) => {
+    const w = E.roundWeights(E.baseAllocation({ horizon: 20, risk: risk, crypto: 'none' }).weights), f = {};
+    KEYS.forEach((k) => { if (w[k] > 0) f[k] = w[k] / 100; });
+    out.mixes.push(mix('r' + risk, NAMES[risk], f, risk));
+  });
+  out.mixes.push(mix('6040', 'Classic 60/40', { us: 0.6, bonds: 0.4 }), mix('world', 'All stocks, world', { us: 0.65, intl: 0.35 }), mix('us', 'All US stocks', { us: 1 }));
+  // an option is "efficient" when no other one had both a higher return and a smaller worst fall
+  out.mixes.forEach((m) => { m.efficient = !out.mixes.some((o) => o !== m && o.cagr >= m.cagr && o.maxDD >= m.maxDD && (o.cagr > m.cagr || o.maxDD > m.maxDD)); });
   // crypto, over the years it has existed: the same middle person with and without a 5% ceiling
   const since = rows.filter((r) => r.next >= '2016-01');
   out.crypto = { from: since[0].next, to: since[since.length - 1].next, styles: {} };
@@ -170,7 +197,8 @@ function run(file) {
 }
 function summary(s) {
   const r = (x, d) => +x.toFixed(d || 4);
-  return { cagr: r(s.cagr), vol: r(s.vol), maxDD: r(s.maxDD), worst12: r(s.worst12), final: r(s.final, 3), turnover: r(s.turnover, 3), growth: r(s.growth, 3), cash: r(s.cash, 3) };
+  return { cagr: r(s.cagr), vol: r(s.vol), maxDD: r(s.maxDD), worst12: r(s.worst12), best12: r(s.best12), losing12: r(s.losing12, 3), under: s.under,
+    final: r(s.final, 3), turnover: r(s.turnover, 3), growth: r(s.growth, 3), cash: r(s.cash, 3) };
 }
 
 if (require.main === module) {
