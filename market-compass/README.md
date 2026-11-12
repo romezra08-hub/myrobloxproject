@@ -44,6 +44,17 @@ lessons and the Method tab lists what changed.
 - **Beyond the mix.** Share of risk by part, a growth range built from today's yields, three real crisis
   scenarios, a three-fund version, and a one-page written plan.
 
+## Your situation, and Israel
+
+The plan can take a few private facts (income, spending, savings, the costliest debt, whether an employer pays
+into a study fund and a pension). With them it redirects money in order: debt costing 7% or more first, then a
+cushion of three months of spending, then investing. They are stored under the viewer's own private path.
+
+Country rules live in `COUNTRIES` in `app/src/app.js`. Israel is built in: amounts in shekels, tax year 2026
+figures for Keren Hishtalmut, Kupat Gemel LeHashkaa and capital gains, Israeli fund suggestions instead of
+US-listed ones, and the steady part held in shekels. US bond readings are not applied to shekel bonds, so that
+part stays at its baseline. The figures come from published summaries of the rules and need a yearly check.
+
 ## Layout
 
 | Path | What it is |

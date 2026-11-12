@@ -37,7 +37,8 @@ A refresh replaces both. Nothing else about the page changes.
     "fed":      { "lo": 3.75, "hi": 4.0, "stance": "Raising | Holding | Cutting", "note": "...", "next": "YYYY-MM-DD", "odds": "...", "src": "https://..." },
     "cpi":      { "period": "October 2026", "mom": 0.4, "coreMom": 0.3, "yoy": null, "lastYoy": { "period": "September 2026", "value": 3.7 }, "note": "...", "next": "YYYY-MM-DD", "src": "https://..." },
     "jobs":     { "period": "October 2026", "payrolls": 165000, "expected": 65000, "unemployment": 4.1, "wagesYoy": 3.1, "src": "https://..." },
-    "earnings": { "period": "Q3 2026", "growth": 31.4, "beat": 84, "reported": 88, "nextQuarter": 28.4, "src": "https://..." }
+    "earnings": { "period": "Q3 2026", "growth": 31.4, "beat": 84, "reported": 88, "nextQuarter": 28.4, "src": "https://..." },
+    "israel":   { "rate": 3.25, "next": "YYYY-MM-DD", "cpi": 1.6, "cpiPeriod": "September 2026", "note": "One sentence on what moved the shekel.", "src": "https://..." }
   },
   "events": [                                       // five to eight, most important first
     {
@@ -81,6 +82,9 @@ Part keys are `us`, `intl`, `bonds`, `gold` and `crypto`. Cash has no score.
   News can make the plan more careful and never bolder, so there is nothing to gain from a strong score.
 - **Stay neutral on people and politics.** Describe market consequences, not who is right. Leave personal
   details about individuals out unless the market reaction cannot be explained without them.
+- **Cover Israel.** The owner lives there. `facts.israel` carries the Bank of Israel policy rate, the date of its next
+  decision, and the latest 12-month inflation figure; the page uses them for the shekel part of the plan. Add an
+  event about Israel's economy or the shekel only when something material happened.
 - **Keep it small.** The whole document should stay under about 15 KB.
 - **Carry forward what still matters.** An event from last week that still drives prices stays in the list; one
   that has faded comes out.

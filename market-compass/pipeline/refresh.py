@@ -54,7 +54,7 @@ UNIVERSE = {
     "RSP": ("S&P 500 equal weight", "stocks", 252),
     # international
     "VXUS": ("International total", "stocks", 252), "VEA": ("Developed ex-US", "stocks", 252),
-    "VWO": ("Emerging markets", "stocks", 252),
+    "VWO": ("Emerging markets", "stocks", 252), "^TA125.TA": ("Tel Aviv 125", "stocks", 245),
     # bonds and cash
     "BND": ("US bond market", "bonds", 252), "SHY": ("1-3 yr Treasuries", "bonds", 252),
     "IEI": ("3-7 yr Treasuries", "bonds", 252),
@@ -76,7 +76,7 @@ UNIVERSE = {
     "^TNX": ("10-year Treasury yield", "rate", 252), "^TYX": ("30-year Treasury yield", "rate", 252),
     "^VIX": ("VIX volatility index", "vol", 252),
     "DX-Y.NYB": ("US dollar index", "fx", 252), "EURUSD=X": ("Euro / US dollar", "fx", 260),
-    "JPY=X": ("US dollar / yen", "fx", 260),
+    "JPY=X": ("US dollar / yen", "fx", 260), "ILS=X": ("US dollar / shekel", "fx", 260),
     # crypto
     "BTC-USD": ("Bitcoin", "crypto", 365), "ETH-USD": ("Ether", "crypto", 365),
     "SOL-USD": ("Solana", "crypto", 365),
@@ -695,6 +695,14 @@ def build(out_dir, verbose=True):
         macro["vixPct"] = rnd(percentile_rank(v[-504:], v[-1]), 0)
         macro["vixAvg1y"] = rnd(sum(v[-252:]) / len(v[-252:]), 2)
     macro["dxyVs200"] = A("DX-Y.NYB", "vs200")
+    # The dollar in shekels, for investors whose spending is in shekels.
+    if "ILS=X" in assets:
+        macro["usdils"] = rnd(assets["ILS=X"]["px"], 4)
+        macro["usdils3m"] = assets["ILS=X"].get("ret3m")
+        macro["usdils12m"] = assets["ILS=X"].get("ret12m")
+        ils = series["ILS=X"][1]
+        macro["usdils2yLow"] = rnd(min(ils), 4)
+        macro["usdils2yHigh"] = rnd(max(ils), 4)
 
     def fetch_valuation():
         cape_hist = multpl_history("shiller-pe")
@@ -1148,6 +1156,8 @@ def summary(s):
     L.append("")
     L.append("Rates: 3m %s  5y %s  10y %s  30y %s | curve 10y-3m %s | 10y 3m change %s" % (m.get("y3m"), m.get("y5y"), m.get("y10y"), m.get("y30y"), m.get("curve"), m.get("y10yChg3m")))
     L.append("VIX %s (pct rank %s) | Dollar index %s (vs 200d %s)" % (m.get("vix"), m.get("vixPct"), m.get("dxy"), f(m.get("dxyVs200"))))
+    ta = s["assets"].get("^TA125.TA") or {}
+    L.append("Israel: US dollar %s shekels (3m %s, 12m %s) | Tel Aviv 125 %s (12m %s)" % (m.get("usdils"), f(m.get("usdils3m")), f(m.get("usdils12m")), ta.get("px"), f(ta.get("ret12m"))))
     L.append("Valuation: CAPE %s (all-time pct %s, 40-year pct %s) | P/E %s | dividend yield %s" % (m.get("cape"), m.get("capePct"), m.get("capePct40"), m.get("pe"), m.get("divYield")))
     L.append("Inflation: CPI %s%% (%s), 3m ago %s%%, 6m ago %s%% | real cash %s | real 5y %s" % (m.get("cpi"), m.get("cpiAsOf"), m.get("cpi3mAgo"), m.get("cpi6mAgo"), m.get("realCash"), m.get("realBond")))
     ir = m.get("inflationRegime") or {}

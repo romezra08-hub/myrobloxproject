@@ -233,7 +233,7 @@ test('pacing: lump sum by default, steps only for a nervous answer, never becaus
   assert.equal(E.pacing(P({ amount: 10000, risk: 1 }), target).steps, 6);
   assert.equal(E.pacing(P({ amount: 300, risk: 1 }), target).why, 'small');
   assert.equal(E.pacing(P({ amount: 10000, risk: 3 }), { ...target, cash: 100 }).why, 'cash');
-  assert.equal(E.pacing.length, 2, 'takes no market data at all');
+  assert.equal(E.pacing.length, 3, 'profile, target and a currency threshold: no market data at all');
 });
 
 // ---------------------------------------------------------------------- risk
@@ -400,4 +400,112 @@ test('full plan is coherent and flags what needs attention first', () => {
   // an empty snapshot degrades to the baseline rather than throwing
   const bare = E.plan({ horizon: 12, risk: 3 }, null, null, NOW);
   assert.deepEqual(bare.target, bare.baseRounded);
+});
+
+// ------------------------------------------------------------ your situation
+
+test('costly debt is cleared first, then the cushion, then the rest is invested', () => {
+  const sit = (o) => ({ amount: 10000, situation: { spending: 4000, savings: 5000, debt: 3000, debtRate: 12, ...o } });
+  const f = E.firstThings(sit({}));
+  assert.equal(f.toDebt, 3000);                 // the whole overdraft goes first
+  assert.equal(f.toSavings, 7000);              // cushion is 3 x 4,000 = 12,000; 5,000 is there already
+  assert.equal(f.invest, 0);
+  assert.equal(f.gapLeft, 0);
+  assert.equal(f.known, true);
+  // cheap debt is left alone: a 4% loan costs less than the plan expects to earn
+  const cheap = E.firstThings(sit({ debtRate: 4 }));
+  assert.equal(cheap.toDebt, 0);
+  assert.equal(cheap.costly, false);
+  assert.equal(cheap.toSavings, 7000);
+  assert.equal(cheap.invest, 3000);
+  // exactly at the line counts as costly
+  assert.equal(E.firstThings(sit({ debtRate: E.DEBT_FIRST_RATE })).toDebt, 3000);
+  // a debt larger than the deposit takes all of it and reports what is left
+  const big = E.firstThings(sit({ debt: 25000 }));
+  assert.equal(big.toDebt, 10000);
+  assert.equal(big.debtLeft, 15000);
+  assert.equal(big.invest, 0);
+});
+
+test('the cushion is six months when income is irregular or self-employed', () => {
+  const base = { amount: 100000, situation: { spending: 5000, savings: 0 } };
+  assert.equal(E.firstThings(base).cushion, 15000);
+  assert.equal(E.firstThings({ ...base, unstable: true }).cushion, 30000);
+  assert.equal(E.firstThings({ ...base, situation: { ...base.situation, status: 'self' } }).cushion, 30000);
+  assert.equal(E.firstThings({ ...base, situation: { spending: 5000, savings: 20000 } }).toSavings, 0);
+  assert.equal(E.firstThings({ ...base, situation: { spending: 5000, savings: 10000 } }).monthsSaved, 2);
+});
+
+test('with no figures entered, nothing is redirected and the yes/no warnings still apply', () => {
+  const f = E.firstThings({ amount: 2000 });
+  assert.equal(f.known, false);
+  assert.equal(f.invest, 2000);
+  assert.equal(f.monthsSaved, null);
+  const warned = E.plan({ amount: 2000, debt: true, efund: false }, null, null, NOW);
+  assert.deepEqual(warned.checks.map((c) => c.id), ['debt', 'efund']);
+  // once real figures exist they replace the warnings
+  const real = E.plan({ amount: 2000, debt: true, efund: false, situation: { spending: 3000, savings: 20000 } }, null, null, NOW);
+  assert.ok(!real.checks.some((c) => c.id === 'debt' || c.id === 'efund'));
+});
+
+test('the plan invests only what is left after debt and cushion', () => {
+  const pl = E.plan({ amount: 10000, horizon: 10, risk: 3, situation: { spending: 2000, savings: 3000, debt: 1500, debtRate: 11 } }, null, null, NOW);
+  assert.equal(pl.first.toDebt, 1500);
+  assert.equal(pl.first.toSavings, 3000);
+  assert.equal(pl.first.invest, 5500);
+  near(sum(pl.buy.buys), 5500, 1e-6);
+  assert.equal(pl.outlook.start, 5500);
+  // nothing left to invest: every buy is zero and pacing has nothing to time
+  const none = E.plan({ amount: 1000, situation: { debt: 5000, debtRate: 15 } }, null, null, NOW);
+  assert.equal(sum(none.buy.buys), 0);
+  assert.equal(none.pacing.why, 'cash');
+});
+
+test('situation input is sanitised', () => {
+  const p = E.normalizeProfile({ country: 'mars', situation: { status: 'astronaut', income: 'lots', spending: -5, debtRate: 500, studyFund: 'maybe', pension: 'yes' } });
+  assert.equal(p.country, 'IL');
+  assert.equal(E.normalizeProfile({ country: 'other' }).country, 'other');
+  assert.equal(p.situation.status, 'employee');
+  assert.equal(p.situation.income, 0);
+  assert.equal(p.situation.spending, 0);
+  assert.equal(p.situation.debtRate, 100);
+  assert.equal(p.situation.studyFund, 'unsure');
+  assert.equal(p.situation.pension, 'yes');
+  assert.deepEqual(Object.keys(E.normalizeProfile({}).situation).sort(), ['debt', 'debtRate', 'income', 'pension', 'savings', 'spending', 'status', 'studyFund']);
+});
+
+test('local yields replace dollar ones for the steady part, and nothing else', () => {
+  const snap = { macro: { cape: 40, y5y: 4.95, y3m: 4.1 } };
+  const us = E.expectedReal(snap, 10);
+  const il = E.expectedReal(snap, 10, { cash: 3.25, bond: 4.0, inflation: 2 });
+  assert.equal(il.us, us.us);
+  assert.equal(il.gold, us.gold);
+  near(il.bonds, 2.0);
+  near(il.cash, 0.3 * 1.25 + 0.7 * 0.5);
+  assert.equal(il.inflation, 2);
+  assert.equal(us.inflation, E.INFLATION_ASSUMED);
+  const o = E.outlook({ us: 0, intl: 0, crypto: 0, gold: 0, bonds: 100, cash: 0 }, snap, { horizon: 10 }, 0.06, { bond: 4.0, inflation: 2 });
+  near(o.mid, 2.0);
+  assert.equal(o.inflation, 2);
+});
+
+test('a part with no usable signal stays at its baseline', () => {
+  const snap = { sleeves: { us: { score: 0.5 }, bonds: { score: -1 }, gold: { score: -1 } } };
+  const brief = { generatedAt: '2026-11-12T17:00:00Z', sleeveScores: { bonds: { score: -1 } } };
+  const prof = { horizon: 8, risk: 2, crypto: 'none' };
+  const withSignal = E.plan(prof, snap, brief, NOW);
+  const without = E.plan(prof, snap, brief, NOW, { noSignal: ['bonds'] });
+  const row = (pl, k) => pl.rows.find((r) => r.key === k);
+  assert.ok(row(withSignal, 'bonds').target < row(withSignal, 'bonds').base);
+  assert.equal(row(without, 'bonds').target, row(without, 'bonds').base);
+  assert.equal(row(without, 'bonds').unread, true);
+  assert.equal(row(without, 'gold').target, row(withSignal, 'gold').target);   // other parts are untouched
+});
+
+test('the "too small to split" line follows the currency', () => {
+  const target = { us: 60, intl: 0, crypto: 0, gold: 0, bonds: 40, cash: 0 };
+  const P = (o) => E.normalizeProfile(o);
+  assert.equal(E.pacing(P({ amount: 1000, risk: 1 }), target).steps, 6);            // 1,000 dollars: worth stepping in
+  assert.equal(E.pacing(P({ amount: 1000, risk: 1 }), target, 1800).why, 'small');  // 1,000 shekels: not worth it
+  assert.equal(E.pacing(P({ amount: 5000, risk: 1 }), target, 1800).steps, 6);
 });

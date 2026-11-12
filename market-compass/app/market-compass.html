@@ -135,7 +135,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 940px) {
   .plan-grid { grid-template-columns: 336px minmax(0, 1fr); grid-template-areas: "controls hero" "controls rest"; align-items: start; }
 }
-.plan-hero { grid-area: hero; } .plan-controls { grid-area: controls; } .plan-rest { grid-area: rest; }
+.plan-hero { grid-area: hero; } .plan-controls { grid-area: controls; display: flex; flex-direction: column; gap: 18px; min-width: 0; } .plan-rest { grid-area: rest; }
 .hero-title { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.12; letter-spacing: -0.02em; text-wrap: balance; font-stretch: 108%; }
 .segbar { display: flex; gap: 2px; height: 10px; }
 .seg { height: 100%; border-radius: 2px; min-width: 3px; }
@@ -183,6 +183,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .money span { padding: 0 2px 0 10px; color: var(--muted); }
 .money input { border: 0; background: none; padding: 8px 10px 8px 4px; width: 100%; min-width: 0; outline-offset: -2px; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
+.select { width: 100%; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
 .seg-ctl { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; background: var(--surface); }
 .seg-ctl label { text-align: center; padding: 7px 4px; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 1px solid var(--line); color: var(--ink-2); }
 .seg-ctl label:first-of-type { border-left: 0; }
@@ -444,10 +445,16 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   var BRIEF_MAX_AGE_H = 96;     // an event read older than four days no longer moves the plan
   var EVENT_WEIGHT = 0.1;       // news is a tenth of a reading at most, and only in the careful direction
 
+  // Debt costing at least this much a year is paid before anything is invested. The plan's
+  // own middle-case return is around 5% before inflation, so a sure saving above that wins.
+  var DEBT_FIRST_RATE = 7;
+  var STATUSES = ['employee', 'self', 'service', 'student'];
+  var SITUATION = { status: 'employee', income: 0, spending: 0, savings: 0, debt: 0, debtRate: 0, studyFund: 'unsure', pension: 'unsure' };
   var DEFAULTS = {
     amount: 1000, monthly: 0, horizon: 10, risk: 3, crypto: 'small', style: 'balanced',
-    efund: true, debt: false, unstable: false,
-    holdings: { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }
+    efund: true, debt: false, unstable: false, country: 'IL',
+    holdings: { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 },
+    situation: SITUATION
   };
 
   function num(x, d) { x = Number(x); return isFinite(x) ? x : d; }
@@ -467,9 +474,19 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       efund: p.efund === undefined ? DEFAULTS.efund : !!p.efund,
       debt: !!p.debt,
       unstable: !!p.unstable,
+      country: p.country === 'other' ? 'other' : (p.country === 'IL' ? 'IL' : DEFAULTS.country),
       holdings: {}
     };
     SLEEVES.forEach(function (k) { out.holdings[k] = clamp(num(h[k], 0), 0, 1e9); });
+    var s = p.situation || {};
+    var tri = function (v) { return v === 'yes' || v === 'no' ? v : 'unsure'; };
+    out.situation = {
+      status: STATUSES.indexOf(s.status) >= 0 ? s.status : SITUATION.status,
+      income: clamp(num(s.income, 0), 0, 1e8), spending: clamp(num(s.spending, 0), 0, 1e8),
+      savings: clamp(num(s.savings, 0), 0, 1e9), debt: clamp(num(s.debt, 0), 0, 1e9),
+      debtRate: clamp(num(s.debtRate, 0), 0, 100),
+      studyFund: tri(s.studyFund), pension: tri(s.pension)
+    };
     return out;
   }
 
@@ -517,6 +534,31 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       bonds: defensive - cash, cash: cash
     };
     return { weights: w, growth: growth, growthWanted: want, growthCap: cap, limitedBy: cap < want ? 'horizon' : 'risk' };
+  }
+
+  /**
+   * What new money should do before any of it is invested.
+   * 1. Debt costing 7% a year or more is cleared first: that is a certain return no investment matches.
+   * 2. Then a cushion of 3 months of spending (6 if income is irregular or you work for yourself),
+   *    so that a surprise bill never forces a sale at a bad moment.
+   * 3. What is left gets invested.
+   * Uses the figures in `situation` when they are filled in; `known` says whether they were.
+   */
+  function firstThings(profile) {
+    var p = normalizeProfile(profile), s = p.situation;
+    var left = p.amount, toDebt = 0, toSavings = 0;
+    var costly = s.debt > 0 && s.debtRate >= DEBT_FIRST_RATE;
+    if (costly) { toDebt = Math.min(left, s.debt); left -= toDebt; }
+    var months = (s.status === 'self' || p.unstable) ? 6 : 3;
+    var cushion = s.spending > 0 ? months * s.spending : 0;
+    var gap = Math.max(0, cushion - s.savings);
+    if (gap > 0) { toSavings = Math.min(left, gap); left -= toSavings; }
+    return {
+      known: s.spending > 0 || s.debt > 0, costly: costly, months: months, cushion: cushion,
+      toDebt: toDebt, debtLeft: costly ? s.debt - toDebt : 0,
+      toSavings: toSavings, gapLeft: gap - toSavings, invest: left,
+      monthsSaved: s.spending > 0 ? s.savings / s.spending : null
+    };
   }
 
   /** Is the news brief recent enough to count? */
@@ -656,10 +698,10 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
    * would shake them, as a fixed schedule decided in advance. Market conditions play
    * no part: waiting for calm is market timing.
    */
-  function pacing(p, target) {
+  function pacing(p, target, small) {
     var atRisk = p.amount * (100 - target.cash) / 100;
     if (atRisk <= 0) return { mode: 'now', steps: 1, why: 'cash' };
-    if (atRisk < 500) return { mode: 'now', steps: 1, why: 'small' };
+    if (atRisk < (isNum(small) ? small : 500)) return { mode: 'now', steps: 1, why: 'small' };
     if (p.risk === 1) return { mode: 'steps', steps: 6, why: 'nervous' };
     if (p.risk === 2) return { mode: 'steps', steps: 3, why: 'nervous' };
     return { mode: 'now', steps: 1, why: 'evidence' };
@@ -736,18 +778,25 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
    *   crypto  0%: it has no earnings or interest to build a forecast on, so the plan counts on nothing
    * International stocks have no live valuation feed, so they use 4.5%, close to their long-run record.
    */
-  function expectedReal(snapshot, years) {
+  function expectedReal(snapshot, years, local) {
     var m = (snapshot && snapshot.macro) || {};
+    local = local || {};
+    // `local` carries cash and bond yields and inflation for an investor whose steady money
+    // is not in dollars; stocks, gold and crypto are global and keep the same estimates.
+    var infl = isNum(local.inflation) ? local.inflation : INFLATION_ASSUMED;
+    var cashYield = isNum(local.cash) ? local.cash : m.y3m;
+    var bondYield = isNum(local.bond) ? local.bond : m.y5y;
     var fade = clamp(3 / Math.max(1, num(years, 10)), 0, 1);
-    var cashNow = isNum(m.y3m) ? m.y3m - INFLATION_ASSUMED : 0.5;
+    var cashNow = isNum(cashYield) ? cashYield - infl : 0.5;
     return {
       us: isNum(m.cape) && m.cape > 0 ? clamp(100 / m.cape, 1.5, 7) : 3.5,
       intl: 4.5,
       crypto: 0,
       gold: 1,
-      bonds: isNum(m.y5y) ? clamp(m.y5y - INFLATION_ASSUMED, -1, 5) : 2,
+      bonds: isNum(bondYield) ? clamp(bondYield - infl, -1, 5) : 2,
       cash: clamp(fade * cashNow + (1 - fade) * 0.5, -1, 3),
-      live: isNum(m.cape) && isNum(m.y5y)
+      inflation: infl,
+      live: isNum(m.cape) && isNum(bondYield)
     };
   }
 
@@ -757,9 +806,9 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
    * either side (swing / square root of years), which history suggests holds about two
    * times in three. It is a rough guide, not a promise: the worst outcomes lie outside it.
    */
-  function outlook(target, snapshot, profile, riskVol) {
+  function outlook(target, snapshot, profile, riskVol, local) {
     var p = normalizeProfile(profile);
-    var exp = expectedReal(snapshot, p.horizon);
+    var exp = expectedReal(snapshot, p.horizon, local);
     var mid = SLEEVES.reduce(function (a, k) { return a + target[k] * exp[k] / 100; }, 0);
     var years = Math.max(1, p.horizon);
     var spread = (isNum(riskVol) ? riskVol : 0.1) * 100 / Math.sqrt(years);
@@ -771,8 +820,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       start: start, monthly: p.monthly, years: p.horizon,
       paidIn: futureValue(start, p.monthly, p.horizon, 0).paidIn,
       value: { low: fv(mid - spread), mid: fv(mid), high: fv(mid + spread) },
-      feeDrag: feeDrag(p.horizon, (mid + INFLATION_ASSUMED) / 100, 0.01),
-      inflation: INFLATION_ASSUMED
+      feeDrag: feeDrag(p.horizon, (mid + exp.inflation) / 100, 0.01),
+      inflation: exp.inflation
     };
   }
 
@@ -784,16 +833,24 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   }
 
   /** Everything the page shows for one person at one moment. */
-  function plan(profile, snapshot, brief, now) {
+  function plan(profile, snapshot, brief, now, opts) {
     var p = normalizeProfile(profile);
     now = typeof now === 'number' ? now : Date.now();
+    opts = opts || {};
+    var first = firstThings(p);
     var base = baseAllocation(p);
     var scores = blendScores(snapshot, brief, now);
+    // A reading built on another market is no reading at all: parts named here stay at baseline.
+    (opts.noSignal || []).forEach(function (k) {
+      if (scores[k]) scores[k] = { signal: null, event: null, final: 0, eventUsed: false, eventEffect: 0, unread: true };
+    });
     var exact = tilt(base, scores, p);
     var baseR = roundWeights(base.weights);
     var target = roundWeights(exact);
-    var buy = buyPlan(target, p.holdings, p.amount);
+    var buy = buyPlan(target, p.holdings, first.invest);
     var risk = riskShares(target, snapshot && snapshot.risk);
+    var investing = {}; for (var key in p) investing[key] = p[key];
+    investing.amount = first.invest;
 
     var rows = SLEEVES.map(function (k) {
       var st = stanceFor(k, baseR[k], target[k]);
@@ -802,21 +859,23 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
         key: k, label: LABELS[k], base: baseR[k], target: target[k], tilt: target[k] - baseR[k],
         stance: st, stanceText: STANCE_TEXT[st], amount: buy.buys[k], riskShare: risk.shares[k],
         signal: sc ? sc.signal : null, event: sc ? sc.event : null, score: sc ? sc.final : null,
-        eventEffect: sc ? sc.eventEffect : 0
+        eventEffect: sc ? sc.eventEffect : 0, unread: !!(sc && sc.unread)
       };
     });
 
+    // With real figures the money is redirected above, so the yes/no warnings are only a fallback.
     var checks = [];
-    if (p.debt) checks.push({ id: 'debt', level: 'stop' });
-    if (!p.efund) checks.push({ id: 'efund', level: 'stop' });
+    if (!first.known && p.debt) checks.push({ id: 'debt', level: 'stop' });
+    if (!first.known && !p.efund) checks.push({ id: 'efund', level: 'stop' });
     if (p.horizon < 1) checks.push({ id: 'short', level: 'note' });
     else if (base.limitedBy === 'horizon') checks.push({ id: 'horizon', level: 'note' });
     if (risk.shares.crypto >= 0.20) checks.push({ id: 'crypto', level: 'warn' });   // a fifth of all the risk in one small slice
 
     return {
       profile: p, base: base, baseRounded: baseR, target: target, rows: rows,
-      scores: scores, buy: buy, pacing: pacing(p, target), stress: stressTest(target),
-      risk: risk, outlook: outlook(target, snapshot, p, risk.vol), simple: threeFund(target),
+      scores: scores, buy: buy, pacing: pacing(investing, target, opts.small), stress: stressTest(target),
+      risk: risk, outlook: outlook(target, snapshot, investing, risk.vol, opts.local), simple: threeFund(target),
+      first: first,
       checks: checks, style: p.style, lean: STYLE[p.style],
       eventsUsed: briefIsFresh(brief, now), riskName: RISK_NAMES[p.risk]
     };
@@ -831,7 +890,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     briefIsFresh: briefIsFresh, blendScores: blendScores, tilt: tilt, roundWeights: roundWeights,
     stanceFor: stanceFor, driftBand: driftBand, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest,
     riskShares: riskShares, futureValue: futureValue, feeDrag: feeDrag, expectedReal: expectedReal,
-    outlook: outlook, threeFund: threeFund, plan: plan
+    outlook: outlook, threeFund: threeFund, firstThings: firstThings, plan: plan,
+    DEBT_FIRST_RATE: DEBT_FIRST_RATE, STATUSES: STATUSES
   };
 });
 
@@ -923,14 +983,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   function money(x) {
     if (!isNum(x)) return '–';
     var a = Math.abs(x);
-    return (x < 0 ? MINUS : '') + '$' + nf(a, a > 0 && a < 100 && Math.round(a) !== a ? 2 : 0);
+    return (x < 0 ? MINUS : '') + C().cur + nf(a, a > 0 && a < 100 && Math.round(a) !== a ? 2 : 0);
   }
   function moneyShort(x) {
     if (!isNum(x)) return '';
     var a = Math.abs(x);
-    if (a >= 1e6) return '$' + nf(x / 1e6, a >= 1e7 ? 0 : 1) + 'M';
-    if (a >= 1e3) return '$' + nf(x / 1e3, a < 1e4 && Math.round(a) % 1000 !== 0 ? 1 : 0) + 'K';
-    return '$' + nf(x, 0);
+    var cur = C().cur;
+    if (a >= 1e6) return cur + nf(x / 1e6, a >= 1e7 ? 0 : 1) + 'M';
+    if (a >= 1e3) return cur + nf(x / 1e3, a < 1e4 && Math.round(a) % 1000 !== 0 ? 1 : 0) + 'K';
+    return cur + nf(x, 0);
   }
   function moneyBig(x) {
     if (!isNum(x)) return '–';
@@ -1190,7 +1251,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (!S.snap) return null;
     return ageHours(S.snap.generatedAt) > IGNORE_SIGNALS_D * 24 ? null : S.snap;
   }
-  function currentPlan() { return E.plan(S.profile, snapForEngine(), S.brief, Date.now()); }
+  function currentPlan() { return E.plan(S.profile, snapForEngine(), S.brief, Date.now(), planOpts()); }
 
   function renderFresh() {
     var el = clear($('fresh'));
@@ -1223,6 +1284,93 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     else b.hidden = true;
   }
 
+  // ---------------------------------------------------------------- situation
+  /* Country rules. Israel's figures are for tax year 2026 and come from published
+     summaries of the rules, not from the Tax Authority directly. The refresh brief
+     may supply a newer Bank of Israel rate and inflation figure. */
+  var COUNTRIES = {
+    IL: { name: 'Israel', cur: '₪', small: 1800, tiny: 90, taxYear: 2026,
+      rate: 3.25, rateAsOf: 'October 2026', cpi: 1.6, cpiAsOf: 'September 2026', inflation: 2, bondSpread: 0.75,
+      studyCeil: 15712, studySelfCap: 20566, studySelfDeduct: 13203, gemelCap: 83641,
+      brackets: [[7010, 10], [10060, 14], [19000, 20], [25100, 31], [46690, 35], [60130, 47], [Infinity, 50]],
+      creditPoint: 242, basePoints: 2.25 },
+    other: { name: 'Elsewhere', cur: '$', small: 500, tiny: 25 }
+  };
+  function C() { return COUNTRIES[S.profile.country] || COUNTRIES.other; }
+  function isIL() { return S.profile.country === 'IL'; }
+  function ilFacts() {
+    var c = COUNTRIES.IL;
+    var f = S.brief && E.briefIsFresh(S.brief, Date.now()) && S.brief.facts && S.brief.facts.israel;
+    var live = f && isNum(f.rate);
+    return {
+      rate: live ? f.rate : c.rate, rateAsOf: live ? dateShort(S.brief.generatedAt) : c.rateAsOf,
+      cpi: f && isNum(f.cpi) ? f.cpi : c.cpi, cpiAsOf: f && isNum(f.cpi) && f.cpiPeriod ? str(f.cpiPeriod, 30) : c.cpiAsOf,
+      next: f && f.next ? str(f.next, 12) : null
+    };
+  }
+  /* What the engine needs to know about where you live: the size below which splitting a
+     purchase is pointless, local yields for the steady part, and which parts have no usable
+     signal. US bond readings say nothing about shekel bonds, so that part stays at baseline. */
+  function planOpts() {
+    if (!isIL()) return { small: COUNTRIES.other.small };
+    var f = ilFacts(), c = COUNTRIES.IL;
+    return { small: c.small, noSignal: ['bonds'], local: { cash: f.rate, bond: f.rate + c.bondSpread, inflation: c.inflation } };
+  }
+  function ilIncomeTax(monthly) {
+    var c = COUNTRIES.IL, prev = 0, tax = 0, top = 0;
+    c.brackets.forEach(function (b) {
+      if (monthly > prev) { tax += (Math.min(monthly, b[0]) - prev) * b[1] / 100; top = b[1]; }
+      prev = b[0];
+    });
+    var credit = c.basePoints * c.creditPoint;
+    return { top: monthly > 0 ? top : 0, tax: Math.max(0, tax - credit), free: tax <= credit };
+  }
+
+  var HOLD_IL = {
+    us: 'An S&P 500 tracking fund (keren mehaka, קרן מחקה) on the Tel Aviv exchange, from a manager such as Harel, KSM, Tachlit, MTF or IBI. Or an Irish-domiciled fund such as CSPX through a foreign broker. Avoid US-listed funds like VOO: from Israel a quarter or more of their dividends is withheld, and US assets above $60,000 can face US estate tax.',
+    intl: 'A tracking fund on a world index outside the US. Or use one all-world fund (MSCI ACWI or FTSE All-World) for this row and the one above together. A Tel Aviv 125 fund can be part of it, but keep it modest: your job, home and pension already depend on Israel’s economy.',
+    crypto: 'An Israeli Bitcoin tracking fund, available on the Tel Aviv exchange since the end of 2024, keeps it inside your ordinary account and its tax reporting. If you buy coins directly, use a licensed Israeli provider and keep every record: gains are taxed at 25%, and banks may ask where the money came from.',
+    gold: 'A gold tracking fund on the Tel Aviv exchange, or an Irish-domiciled one such as SGLN or IGLN. Think of it as insurance against disorder: over the long run it has earned about 1% a year after inflation.',
+    cash: 'A shekel money-market fund (keren kaspit, קרן כספית) or Makam, which follow the Bank of Israel rate. A current account usually pays nothing.'
+  };
+
+  /* The order your money should move in, built from what you entered. Each step is [title, text]. */
+  function nextSteps(pl) {
+    var p = pl.profile, s = p.situation, f = pl.first, c = C(), il = isIL(), steps = [];
+    if (s.debt > 0) {
+      if (f.costly) steps.push([f.toDebt > 0 ? 'Pay ' + money(f.toDebt) + ' off your debt' : 'Clear your ' + s.debtRate + '% debt', 'A debt at ' + s.debtRate + '% is a certain ' + s.debtRate + '% saving, more than any part of this plan can promise.' + (f.debtLeft > 0 ? ' ' + money(f.debtLeft) + ' would still be owed, so the next deposits go there too.' : ' This clears it.')]);
+      else steps.push(['Your ' + s.debtRate + '% debt can wait', 'It costs less than the plan expects to earn before inflation, so paying it on schedule and investing alongside is reasonable.']);
+    }
+    if (s.spending > 0) {
+      if (f.gapLeft + f.toSavings > 0) steps.push([f.toSavings > 0 ? 'Put ' + money(f.toSavings) + ' into your cushion' : 'Build your cushion next', 'You have about ' + (Math.round(f.monthsSaved * 10) / 10) + ' months of spending set aside and the aim is ' + f.months + (f.months === 6 ? ' (six, because your income is irregular)' : '') + '. ' + (il ? 'Keep it in a shekel money-market fund, which follows the Bank of Israel rate of ' + ilFacts().rate + '%.' : 'Keep it in savings or T-bills.') + (f.gapLeft > 0 ? ' ' + money(f.gapLeft) + ' more is needed after this.' : '')]);
+      else steps.push(['Your cushion is in place', 'About ' + Math.round(f.monthsSaved) + ' months of spending is set aside. That is what lets you leave investments alone in a bad year.']);
+    }
+    if (il) {
+      if (s.status === 'employee') {
+        if (s.studyFund === 'yes') steps.push(['Keep your Keren Hishtalmut going', 'It is the strongest tax shelter in Israel: gains come out tax-free after six years. If the money will stay longer than that, choose a share-based or index-tracking track over the default.']);
+        else steps.push(['Ask your employer about a Keren Hishtalmut (קרן השתלמות)', 'Where it is offered, the employer typically adds 7.5% of your salary to your own 2.5%, free of tax on salary up to ' + money(c.studyCeil) + ' a month, and gains come out tax-free after six years. Nothing in this plan beats that, so take it first.']);
+        if (s.pension !== 'yes') steps.push(['Check that your pension is being paid', 'The law requires your employer to pay into a pension for you: about 6.5% of salary plus a severance share, with 6% from you. If your payslip does not show it, raise it.']);
+      } else if (s.status === 'self') {
+        steps.push(['Open a Keren Hishtalmut for the self-employed', 'Up to ' + money(c.studySelfCap) + ' a year grows tax-free, and up to ' + money(c.studySelfDeduct) + ' of it (4.5% of income) can be deducted. The self-employed must also pay into a pension.']);
+      } else if (s.status === 'service') {
+        steps.push(['Know what your discharge money can do', 'The discharge grant (ma’anak) is yours to use freely. The deposit (pikadon) is reserved for study or training, a home, a business or a wedding, and opens for any use about five years after discharge. Check your own amounts with the Fund for Discharged Soldiers.']);
+      } else {
+        steps.push(['Start small and make it automatic', 'With little income the habit matters more than the amount. A standing order into one tracking fund each month builds it.']);
+      }
+    }
+    if (f.invest > 0) steps.push(['Invest ' + money(f.invest) + ' as shown above', il
+      ? 'Two sensible homes in Israel. A trading account (at a bank or broker) holding tracking funds has the lowest fees and the most control. A Kupat Gemel LeHashkaa (קופת גמל להשקעה) takes up to ' + money(c.gemelCap) + ' a year and lets you switch tracks without tax, usually for a higher fee. Either works; compare the management fee before you choose.'
+      : 'Use a tax-sheltered account if your country offers one, then an ordinary account holding broad index funds.']);
+    else if (f.known) steps.push(['Nothing left to invest this time', 'That is the right outcome. The steps above pay more, and more surely, than anything on this page.']);
+    if (il) {
+      var t = s.income > 0 ? ilIncomeTax(s.income) : null;
+      steps.push(['Know the tax before you sell', 'Israel takes 25% of your gain after inflation when you sell, and nothing while you hold. So rebalance with new money instead of selling.' +
+        (t ? (t.free ? ' At ' + money(s.income) + ' a month your credit points cover your income tax, so you currently pay none.' : ' At ' + money(s.income) + ' a month your top income-tax rate is ' + t.top + '%.') : '') +
+        (t && t.free || s.status === 'service' || s.status === 'student' ? ' With little or no salary you may be able to reclaim tax withheld on gains by filing a return. Ask the Tax Authority or an adviser; this app could not confirm the rule.' : '')]);
+    }
+    return steps;
+  }
+
   // --------------------------------------------------------------------- plan
   function heldTotal(p) { return E.SLEEVES.reduce(function (a, k) { return a + (p.holdings[k] || 0); }, 0); }
   function riskQuestion(p) {
@@ -1236,24 +1384,48 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     active: 'A full reading can trim a part by half, or add 25%. Expect more changes, and more of them to be wrong.'
   };
 
+  function radioSet(name, options, current, cls) {
+    var box = h('div', { class: cls });
+    options.forEach(function (o) {
+      var id = 'f-' + name + '-' + o[0];
+      box.appendChild(h('input', { type: 'radio', name: name, id: id, value: o[0], checked: String(current) === String(o[0]) }));
+      box.appendChild(h('label', { for: id }, o[1]));
+    });
+    return box;
+  }
+  function moneyField(id, label, value, hint) {
+    return h('div', { class: 'field' }, h('label', { for: id }, label),
+      h('div', { class: 'money' }, h('span', { 'aria-hidden': 'true' }, C().cur), h('input', { id: id, type: 'number', inputmode: 'decimal', min: '0', step: '50', value: value })),
+      hint ? h('span', { class: 'hint' }, hint) : null);
+  }
+
+  function buildSituation() {
+    var p = S.profile, s = p.situation, il = isIL();
+    var tri = [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']];
+    var works = [['employee', 'Employee'], ['self', 'Self-employed'], ['service', il ? 'Army or national service' : 'Military or national service'], ['student', 'Student or not working']];
+    return h('section', { class: 'card stack', id: 'situation' },
+      h('h2', null, 'Your situation'),
+      h('p', { class: 'hint' }, 'Optional, and round numbers are enough. With these, the plan puts your money in the right order instead of only warning you.'),
+      h('fieldset', { class: 'field' }, h('legend', null, 'Where you live'), radioSet('country', [['IL', 'Israel'], ['other', 'Elsewhere']], p.country, 'seg-ctl')),
+      h('div', { class: 'field' }, h('label', { for: 'f-s-status' }, 'Work'),
+        h('select', { id: 'f-s-status', class: 'select' }, works.map(function (o) { return h('option', { value: o[0], selected: s.status === o[0] }, o[1]); }))),
+      moneyField('f-s-income', 'Monthly income before tax', s.income || ''),
+      moneyField('f-s-spending', 'Monthly spending', s.spending || ''),
+      moneyField('f-s-savings', 'Savings you can reach quickly', s.savings || ''),
+      h('div', { class: 'hold-grid' },
+        moneyField('f-s-debt', 'Costliest debt', s.debt || ''),
+        h('div', { class: 'field' }, h('label', { for: 'f-s-rate' }, 'Its yearly interest'),
+          h('div', { class: 'money' }, h('input', { id: 'f-s-rate', type: 'number', inputmode: 'decimal', min: '0', max: '100', step: '0.5', value: s.debtRate || '', style: { 'padding-left': '10px' } }), h('span', { 'aria-hidden': 'true', style: { padding: '0 10px 0 2px' } }, '%')))),
+      il ? h('fieldset', { class: 'field' }, h('legend', null, 'Does an employer pay into a Keren Hishtalmut for you?'), radioSet('studyFund', tri, s.studyFund, 'seg-ctl')) : null,
+      il ? h('fieldset', { class: 'field' }, h('legend', null, 'Is a pension being paid in for you?'), radioSet('pension', tri, s.pension, 'seg-ctl')) : null,
+      h('p', { class: 'note' }, 'Never enter account numbers, ID numbers or passwords. Nothing here needs them.'),
+      h('p', { class: 'note', id: 'save-note' }, ''));
+  }
+
   function buildControls() {
     var p = S.profile;
-    function radioSet(name, options, current, cls) {
-      var box = h('div', { class: cls });
-      options.forEach(function (o) {
-        var id = 'f-' + name + '-' + o[0];
-        box.appendChild(h('input', { type: 'radio', name: name, id: id, value: o[0], checked: String(current) === String(o[0]) }));
-        box.appendChild(h('label', { for: id }, o[1]));
-      });
-      return box;
-    }
-    function moneyField(id, label, value, hint) {
-      return h('div', { class: 'field' }, h('label', { for: id }, label),
-        h('div', { class: 'money' }, h('span', { 'aria-hidden': 'true' }, '$'), h('input', { id: id, type: 'number', inputmode: 'decimal', min: '0', step: '50', value: value })),
-        hint ? h('span', { class: 'hint' }, hint) : null);
-    }
     var horizonOut = h('output', { for: 'f-horizon', class: 'num', id: 'f-horizon-out' }, years(p.horizon));
-    var form = h('form', { class: 'card plan-controls stack', id: 'controls', autocomplete: 'off', onsubmit: function (e) { e.preventDefault(); } },
+    var about = h('section', { class: 'card stack' },
       h('h2', null, 'About you'),
       moneyField('f-amount', 'Money to invest now', p.amount),
       moneyField('f-monthly', 'Adding each month', p.monthly || '', 'Optional. In the early years, how much you add matters more than what it earns.'),
@@ -1270,18 +1442,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       h('fieldset', { class: 'field' }, h('legend', null, 'How much should market signals move the plan'),
         radioSet('style', [['steady', 'Not at all'], ['balanced', 'A little'], ['active', 'More']], p.style, 'seg-ctl'),
         h('span', { class: 'hint', id: 'style-hint' }, STYLE_HINT[p.style])),
-      h('label', { class: 'check', for: 'f-efund' }, h('input', { type: 'checkbox', id: 'f-efund', checked: p.efund }), h('span', null, 'I have 3 to 6 months of spending set aside')),
-      h('label', { class: 'check', for: 'f-debt' }, h('input', { type: 'checkbox', id: 'f-debt', checked: p.debt }), h('span', null, 'I have credit-card or other high-interest debt')),
+      h('label', { class: 'check', for: 'f-efund', id: 'chk-efund' }, h('input', { type: 'checkbox', id: 'f-efund', checked: p.efund }), h('span', null, 'I have 3 to 6 months of spending set aside')),
+      h('label', { class: 'check', for: 'f-debt', id: 'chk-debt' }, h('input', { type: 'checkbox', id: 'f-debt', checked: p.debt }), h('span', null, 'I have credit-card or other high-interest debt')),
       h('label', { class: 'check', for: 'f-unstable' }, h('input', { type: 'checkbox', id: 'f-unstable', checked: p.unstable }), h('span', null, 'My income is irregular, or rises and falls with the stock market')),
       h('details', { class: 'plain', id: 'hold-details', open: E.SLEEVES.some(function (k) { return p.holdings[k] > 0; }) },
         h('summary', null, 'Already invested? Add what you hold'),
         h('div', { class: 'stack', style: { 'margin-top': '10px' } },
           h('p', { class: 'hint note' }, 'New money then goes to whatever is furthest below target, so you rebalance by buying.'),
-          h('div', { class: 'hold-grid' }, E.SLEEVES.map(function (k) {
-            return h('div', { class: 'field' }, h('label', { for: 'f-h-' + k }, E.LABELS[k]),
-              h('div', { class: 'money' }, h('span', { 'aria-hidden': 'true' }, '$'), h('input', { id: 'f-h-' + k, type: 'number', inputmode: 'decimal', min: '0', step: '50', value: p.holdings[k] || '' })));
-          })))),
-      h('p', { class: 'note', id: 'save-note' }, ''));
+          h('div', { class: 'hold-grid' }, E.SLEEVES.map(function (k) { return moneyField('f-h-' + k, E.LABELS[k], p.holdings[k] || ''); })))));
+    var form = h('form', { class: 'plan-controls', id: 'controls', autocomplete: 'off', onsubmit: function (e) { e.preventDefault(); } }, about, buildSituation());
     form.addEventListener('input', readControls);
     form.addEventListener('change', readControls);
     return form;
@@ -1291,31 +1460,34 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var f = $('controls');
     if (!f) return;
     var pick = function (name) { var el = f.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : undefined; };
-    var holdings = {};
-    E.SLEEVES.forEach(function (k) { holdings[k] = Number($('f-h-' + k).value) || 0; });
+    var holdings = {}, was = S.profile.country;
+    var n = function (id) { var el = $(id); return el ? Number(el.value) || 0 : 0; };
+    E.SLEEVES.forEach(function (k) { holdings[k] = n('f-h-' + k); });
     S.profile = E.normalizeProfile({
-      amount: $('f-amount').value === '' ? 0 : Number($('f-amount').value), monthly: Number($('f-monthly').value) || 0,
+      amount: $('f-amount').value === '' ? 0 : Number($('f-amount').value), monthly: n('f-monthly'),
       horizon: Number($('f-horizon').value), risk: Number(pick('risk')), crypto: pick('crypto'), style: pick('style'),
-      efund: $('f-efund').checked, debt: $('f-debt').checked, unstable: $('f-unstable').checked, holdings: holdings
+      efund: $('f-efund').checked, debt: $('f-debt').checked, unstable: $('f-unstable').checked, holdings: holdings,
+      country: pick('country'),
+      situation: { status: $('f-s-status').value, income: n('f-s-income'), spending: n('f-s-spending'), savings: n('f-s-savings'),
+        debt: n('f-s-debt'), debtRate: n('f-s-rate'), studyFund: pick('studyFund') || S.profile.situation.studyFund, pension: pick('pension') || S.profile.situation.pension }
     });
-    $('f-horizon-out').textContent = years(S.profile.horizon);
-    $('risk-legend').textContent = riskQuestion(S.profile);
-    renderPlan();
+    if (S.profile.country !== was) {          // currency and the questions asked both depend on the country
+      f.replaceWith(buildControls());
+      S.learnBuilt = false;
+      renderData();
+    } else {
+      $('f-horizon-out').textContent = years(S.profile.horizon);
+      $('risk-legend').textContent = riskQuestion(S.profile);
+      renderPlan();
+    }
     saveProfileSoon();
   }
 
+  /* Saved answers arrive after the first paint. Rebuilding the form is simpler than setting
+     every field, and it also picks up the right currency and questions for the country. */
   function writeControls() {
-    var p = S.profile, f = $('controls');
-    if (!f) return;
-    if (document.activeElement !== $('f-amount')) $('f-amount').value = p.amount;
-    if (document.activeElement !== $('f-monthly')) $('f-monthly').value = p.monthly || '';
-    $('f-horizon').value = p.horizon;
-    $('f-horizon-out').textContent = years(p.horizon);
-    $('risk-legend').textContent = riskQuestion(p);
-    [['risk', p.risk], ['crypto', p.crypto], ['style', p.style]].forEach(function (x) { var el = $('f-' + x[0] + '-' + x[1]); if (el) el.checked = true; });
-    $('f-efund').checked = p.efund; $('f-debt').checked = p.debt; $('f-unstable').checked = p.unstable;
-    E.SLEEVES.forEach(function (k) { if (document.activeElement !== $('f-h-' + k)) $('f-h-' + k).value = p.holdings[k] || ''; });
-    if (E.SLEEVES.some(function (k) { return p.holdings[k] > 0; })) $('hold-details').open = true;
+    var f = $('controls');
+    if (f) f.replaceWith(buildControls());
   }
 
   function topDriver(parts, final) {
@@ -1327,6 +1499,11 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
 
   /* How to hold each part. Bonds depend on the timeline and on whether inflation is driving markets. */
   function holdWith(key, pl) {
+    if (isIL()) {
+      if (key !== 'bonds') return HOLD_IL[key];
+      if (pl.profile.horizon < 3) return 'Shekels, and short: Makam or a shekel money-market fund only, for money needed this soon.';
+      return 'Shekel bonds, so the steady part of your money is in the currency you spend. An Israeli government bond tracking fund, with CPI-linked bonds (tzamud madad, \u05E6\u05DE\u05D5\u05D3 \u05DE\u05D3\u05D3) as the share that protects against inflation.';
+    }
     if (key !== 'bonds') return HOLD_WITH[key];
     var snap = snapForEngine(), ir = snap && snap.macro && snap.macro.inflationRegime, mode = ir && ir.mode;
     if (pl.profile.horizon < 3) return 'Short-term only for money needed this soon: T-bills or a short Treasury fund, such as SGOV, SHY or BSV.';
@@ -1340,8 +1517,10 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (row.key === 'cash') {
       var y = sl && sl.parts && sl.parts[0] ? str(sl.parts[0].text, 200) : '';
       var lead = row.stance === 'extra' ? 'Holds what the signals trimmed elsewhere. ' : row.stance === 'less' ? 'Drawn on to fund stronger parts. ' : '';
+      if (isIL()) { var il = ilFacts(); return lead + 'Shekel money-market funds follow the Bank of Israel rate, ' + il.rate + '%, about ' + (il.rate - il.cpi).toFixed(1) + ' points above inflation.'; }
       return lead + (y && y !== 'No reading' ? y + '.' : 'Your steady anchor.');
     }
+    if (row.unread && row.target > 0) return 'Kept at its baseline. The bond readings on this page are for US bonds, and yours should be shekel bonds.';
     if (row.stance === 'none') {
       if (row.key === 'crypto') {
         if (S.profile.crypto === 'none') return 'You chose to hold none.';
@@ -1364,12 +1543,13 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       (moved !== 0 ? ' (' + (moved > 0 ? '+' : MINUS) + Math.abs(moved) + (Math.abs(moved) === 1 ? ' point).' : ' points).') : '.');
     if (row.target > 0) line += ' It holds ' + row.target + '% of your money and carries about ' + Math.max(0, Math.round(row.riskShare * 100)) + '% of the risk.';
     box.appendChild(h('p', { class: 'sub' }, line));
-    if (row.key !== 'cash' && isNum(row.score)) {
+    if (row.unread) box.appendChild(h('p', { class: 'sub' }, 'No reading is applied here. The bond signals on this page are built on US bonds and US inflation, and yours should be shekel bonds, which follow the Bank of Israel. That bank was holding its rate while the US was raising, so borrowing the US reading would mislead. This part stays at its baseline.'));
+    if (row.key !== 'cash' && isNum(row.score) && !row.unread) {
       box.appendChild(h('p', { class: 'sub' }, pl.lean.down > 0
         ? 'Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1. At your setting, a full negative reading trims a part by ' + Math.round(pl.lean.down * 100) + '% of its size and a full positive one adds ' + Math.round(pl.lean.up * 100) + '%.'
         : 'Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1. Readings are shown for information and do not move your plan.'));
     }
-    if (sl && sl.parts && row.key !== 'cash') {
+    if (sl && sl.parts && row.key !== 'cash' && !row.unread) {
       var parts = h('div', { class: 'parts' });
       sl.parts.forEach(function (p) {
         parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, str(p.label, 60) + ' · ' + Math.round((p.weight || 0) * 100) + '%'), dv(p.score), h('span', { class: 'part-text' }, str(p.text, 260))));
@@ -1477,6 +1657,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       h('h1', { class: 'hero-title' }, 'Where your next ' + money(p.amount) + ' goes'),
       h('p', { class: 'sub' }, summarySentence(pl))));
 
+    var ft = pl.first;
+    if (ft.known && (ft.toDebt > 0 || ft.toSavings > 0)) {
+      hero.appendChild(h('div', { class: 'stack tight' },
+        h('span', { class: 'eyebrow' }, 'First things first'),
+        h('div', { class: 'tiles' },
+          ft.toDebt > 0 ? tile('To your debt', money(Math.round(ft.toDebt)), 'at ' + p.situation.debtRate + '% a year') : null,
+          ft.toSavings > 0 ? tile('To your cushion', money(Math.round(ft.toSavings)), 'aim: ' + ft.months + ' months of spending') : null,
+          tile('Invested', money(Math.round(ft.invest)), ft.invest > 0 ? 'split as below' : 'next time'))));
+    }
     var live = pl.rows.filter(function (r) { return r.target > 0; });
     hero.appendChild(h('div', { class: 'twobars' },
       h('span', { class: 'bar-cap' }, 'Your money'), splitBar(live, function (r) { return r.target; }, 'Where the money goes'),
@@ -1501,6 +1690,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     hero.appendChild(listEl);
     hero.appendChild(h('p', { class: 'note' }, 'The second bar shows where the risk sits, which is rarely where the money sits. ' + (pl.buy.held > 0 ? 'Percentages are the target for your whole portfolio; dollar figures split this deposit to move you toward it. ' : '') + 'Select a row to see every reading behind it.'));
 
+    // ---- your next steps, in order ----
+    var stepsList = (ft.known || isIL()) ? nextSteps(pl) : [];
+    if (stepsList.length) {
+      rest.appendChild(h('section', { class: 'card stack' },
+        h('h2', null, 'Your next steps, in order'),
+        h('ol', { class: 'steps' }, stepsList.map(function (st) { return h('li', null, h('h3', null, st[0]), h('p', null, st[1])); })),
+        isIL() ? h('p', { class: 'note' }, 'Israeli figures are for tax year ' + C().taxYear + ' and come from published summaries of the rules, not from the Tax Authority itself. Check a figure with the Authority or a licensed adviser before acting on it.') : null));
+    }
+
     // ---- how to put it in, and how often to look ----
     var pc = pl.pacing;
     var paceCopy = {
@@ -1509,7 +1707,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       cash: ['Nothing to time', 'Everything in this plan sits in cash, which you can add at any moment.'],
       nervous: ['Spread it over ' + pc.steps + ' monthly buys', 'You said a fall would be hard to sit through. Set the dates now and keep to them whatever the news says: ' + pc.steps + ' equal buys, one a month, with the cash part in today. On average this gives up a little return, which is a fair price for staying the course.']
     }[pc.why];
-    rest.appendChild(callout('info', paceCopy[0], paceCopy[1]));
+    if (!(ft.known && ft.invest <= 0)) rest.appendChild(callout('info', paceCopy[0], paceCopy[1]));
+    var sm = snapForEngine() && snapForEngine().macro;
+    if (isIL() && sm && isNum(sm.usdils) && pl.target.us + pl.target.intl + pl.target.gold + pl.target.crypto > 0) {
+      rest.appendChild(callout('info', 'Most of this plan is priced in dollars',
+        'One dollar buys ' + C().cur + sm.usdils.toFixed(2) + ' today' + (isNum(sm.usdils2yLow) && isNum(sm.usdils2yHigh) ? ', and in the last two years it has been as low as ' + C().cur + sm.usdils2yLow.toFixed(2) + ' and as high as ' + C().cur + sm.usdils2yHigh.toFixed(2) : '') + '. When the shekel strengthens your foreign holdings are worth less in shekels, and the reverse. Over decades this has mattered far less than what you own, but over a few years it can outweigh the market itself. That is why the steady part of your plan stays in shekels.'));
+    }
     if (p.monthly > 0) rest.appendChild(callout('info', 'Make the monthly ' + money(p.monthly) + ' automatic', 'Set a standing transfer for the day you are paid, split the same way as above. Investing money as soon as you have it is not timing the market. It is the habit that does most of the work.'));
     var cRow = pl.rows.filter(function (r) { return r.key === 'crypto'; })[0];
     if (cRow.amount >= 60) rest.appendChild(callout('info', 'Buy the crypto slice in pieces', 'Crypto swings three to four times as much as stocks. Split the ' + money(Math.round(cRow.amount)) + ' into at least three buys, a week or more apart.'));
@@ -1551,7 +1754,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
             { name: 'Cautious case', color: 'var(--line-2)', values: lo, width: 1.5 }, { name: 'Paid in', color: 'var(--ink-2)', values: paid, width: 1.5 }],
           labels: yrs, xLabels: ['Today', 'Year ' + p.horizon], tick: function (v) { return moneyShort(v); }, fmt: function (v) { return money(Math.round(v)); } }),
         h('p', { class: 'note' }, 'History suggests the result lands between the cautious and hopeful cases about two times in three; the worst outcomes lie outside them. Yearly returns assumed after ' + o.inflation + '% inflation: US stocks ' + ex.us.toFixed(1) + '%, international stocks ' + ex.intl.toFixed(1) + '%, bonds ' + ex.bonds.toFixed(1) + '%, cash ' + ex.cash.toFixed(1) + '%, gold ' + ex.gold.toFixed(1) + '%, crypto 0% (it has no earnings or interest to forecast from, so the plan counts on nothing).'),
-        h('p', { class: 'note' }, 'Cost matters as much as any of this. The funds suggested here charge about 0.05% a year. A fund or adviser charging 1% would take about ' + Math.round(o.feeDrag * 100) + '% of the final amount on money invested today.')));
+        isIL() ? h('p', { class: 'note' }, 'Bond and cash figures use the Bank of Israel rate of ' + ilFacts().rate + '%, with bonds assumed to yield ' + C().bondSpread + ' points more, and ' + o.inflation + '% inflation, the middle of the bank\u2019s target.') : null,
+        h('p', { class: 'note' }, 'Cost matters as much as any of this. ' + (isIL() ? 'Tracking funds are the cheap ones; compare the management fee (dmei nihul) before you buy.' : 'The funds suggested here charge about 0.05% a year.') + ' A fund or adviser charging 1% would take about ' + Math.round(o.feeDrag * 100) + '% of the final amount on money invested today.')));
     }
 
     // ---- how bad could it get ----
@@ -1570,16 +1774,18 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       h('p', { class: 'note' }, 'None of these is a floor. US stocks fell about 86% between 1929 and 1932, Japan’s market took 34 years to regain its 1989 high, and Bitcoin has fallen more than 75% four times. Crypto did not exist in 2008, so that row assumes it falls 80%. If the worst row would make you sell, choose a more cautious answer.')));
 
     // ---- simpler ----
-    var s3 = pl.simple, tiny = pl.rows.some(function (r) { return r.target > 0 && r.amount > 0 && r.amount < 25; });
+    var s3 = pl.simple, tiny = pl.rows.some(function (r) { return r.target > 0 && r.amount > 0 && r.amount < C().tiny; });
     if (s3.stocks > 0) {
       rest.appendChild(h('section', { class: 'card stack' },
         h('h2', null, 'A simpler way to hold it'),
         h('p', { class: 'sub' }, 'Six parts is more than most people need. The same balance of risk fits in three funds, or in one.'),
         h('div', { class: 'tiles' },
-          tile('US stock index fund', s3.us + '%', 'such as VTI or FSKAX'),
-          tile('International index fund', s3.intl + '%', 'such as VXUS'),
-          tile(p.horizon < 3 ? 'Short-term bonds and cash' : 'Bond index fund', s3.bonds + '%', p.horizon < 3 ? 'such as BSV or SGOV' : 'such as BND')),
-        h('p', { class: 'note' }, 'Or one all-in-one fund with about ' + s3.stocks + '% in stocks: a target-date fund, or a fixed-mix fund (iShares offers 30, 40, 60 and 80% versions as AOK, AOM, AOR and AOA). In the research, investors in all-in-one funds kept more of their funds’ returns than any other group.' + (tiny ? ' Some slices above are under $25. At this size, the three-fund version is the practical choice.' : ''))));
+          tile(isIL() ? 'S&P 500 tracking fund' : 'US stock index fund', s3.us + '%', isIL() ? 'keren mehaka, Tel Aviv' : 'such as VTI or FSKAX'),
+          tile(isIL() ? 'World ex-US tracking fund' : 'International index fund', s3.intl + '%', isIL() ? 'or one all-world fund for both' : 'such as VXUS'),
+          tile(isIL() ? (p.horizon < 3 ? 'Makam or money-market fund' : 'Shekel government bond fund') : (p.horizon < 3 ? 'Short-term bonds and cash' : 'Bond index fund'), s3.bonds + '%', isIL() ? 'in shekels' : (p.horizon < 3 ? 'such as BSV or SGOV' : 'such as BND'))),
+        h('p', { class: 'note' }, (isIL()
+          ? 'Simplest of all: one all-world tracking fund for the ' + s3.stocks + '% in stocks and one shekel bond fund for the rest. Tracking mutual funds in Israel usually carry no buy or sell commission, which matters at small amounts; check your bank\u2019s custody fee.'
+          : 'Or one all-in-one fund with about ' + s3.stocks + '% in stocks: a target-date fund, or a fixed-mix fund (iShares offers 30, 40, 60 and 80% versions as AOK, AOM, AOR and AOA).') + ' In the research, investors who held fewer, broader funds kept more of their returns than any other group.' + (tiny ? ' Some slices above are under ' + money(C().tiny) + '. At this size, the simpler version is the practical choice.' : ''))));
     }
 
     // ---- one-page plan ----
@@ -1598,6 +1804,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
 
     var hint = $('style-hint');
     if (hint) hint.textContent = STYLE_HINT[p.style];
+    ['chk-efund', 'chk-debt'].forEach(function (id) { var el = $(id); if (el) el.hidden = ft.known; });
     roBucket = null;
   }
 
@@ -1638,6 +1845,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (f.jobs && isNum(f.jobs.unemployment)) tiles.appendChild(tile('Unemployment', f.jobs.unemployment.toFixed(1) + '%', str(f.jobs.period, 30)));
     if (isNum(m.vix)) tiles.appendChild(tile('VIX', m.vix.toFixed(1), isNum(m.vixAvg1y) ? '1-year average ' + m.vixAvg1y.toFixed(1) : ''));
     if (isNum(m.dxy)) tiles.appendChild(tile('US dollar index', m.dxy.toFixed(1), isNum(m.dxyVs200) ? pct(m.dxyVs200) + ' vs 200-day average' : ''));
+    if (isIL()) {
+      var ilf = ilFacts();
+      tiles.appendChild(tile('Bank of Israel rate', ilf.rate.toFixed(2) + '%', ilf.next ? 'next decision ' + dateShort(ilf.next) : 'as of ' + ilf.rateAsOf));
+      tiles.appendChild(tile('Israeli inflation, 12 months', ilf.cpi.toFixed(1) + '%', ilf.cpiAsOf + ' \u00b7 target 1 to 3%'));
+      if (isNum(m.usdils)) tiles.appendChild(tile('One US dollar in shekels', '\u20AA' + m.usdils.toFixed(2), isNum(m.usdils12m) ? pct(m.usdils12m) + ' in 12 months' + (isNum(m.usdils3m) ? ', ' + pct(m.usdils3m) + ' in 3' : '') : ''));
+    }
     if (isNum(m.cape)) tiles.appendChild(tile('Shiller P/E (US stocks)', m.cape.toFixed(1), isNum(m.capePct40) ? 'higher than ' + Math.round(m.capePct40) + '% of the last 40 years' : isNum(m.capePct) ? 'higher than ' + Math.round(m.capePct) + '% of history' : ''));
     if (isNum(m.stockBondCorr)) tiles.appendChild(tile('Stocks and bonds, 3 months', signedNum(m.stockBondCorr, 2), m.stockBondCorr > 0.2 ? 'moving together: bonds are not cushioning' : m.stockBondCorr < -0.2 ? 'moving opposite: bonds are cushioning' : 'moving independently'));
     root.appendChild(h('section', { class: 'stack' }, h('h2', { class: 'section-title' }, 'Rates, inflation and valuation'), tiles));
@@ -1647,9 +1860,11 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       var verdict = { short: ['Yes: ' + ir.points + ' of 4 tests', 'neg', 'Inflation, not growth, is the main worry. In past inflation surges, stocks and ordinary bonds lost together while T-bills and short inflation-linked bonds held up. The plan therefore says to hold the bond part short. Some ordinary bonds stay, because a recession would lift them.'],
         mixed: ['Partly: ' + ir.points + ' of 4 tests', 'warn', 'The picture is mixed. The plan says to hold half the bond part in T-bills and short inflation-linked bonds until it clears.'],
         normal: ['No: ' + ir.points + ' of 4 tests', 'pos', 'Growth, not inflation, is the main driver, which is when ordinary bonds do their job of cushioning stock falls. The plan holds a broad bond fund.'] }[ir.mode];
-      root.appendChild(card('Is inflation driving markets?', 'This decides how the bond part of your plan should be held.',
+      var ilNote = { short: 'US inflation, not growth, is the main worry in American markets. It reaches you through stock prices and the dollar, not through your bonds.', mixed: 'The US picture is mixed. It reaches you through stock prices and the dollar, not through your bonds.', normal: 'Growth, not inflation, is driving American markets.' }[ir.mode];
+      root.appendChild(card(isIL() ? 'Is inflation driving US markets?' : 'Is inflation driving markets?',
+        isIL() ? 'These tests use US data and decide nothing in your plan. Your bond part is in shekels, and Israeli inflation is ' + ilFacts().cpi + '%.' : 'This decides how the bond part of your plan should be held.',
         h('div', { class: 'row' }, chip(verdict[0], verdict[1], verdict[1] === 'neg' ? 'stop' : null)),
-        h('p', { class: 'prose' }, verdict[2]),
+        h('p', { class: 'prose' }, isIL() ? ilNote : verdict[2]),
         h('div', { class: 'tests' }, ir.tests.map(function (t) {
           return h('div', { class: 'test' }, t.on === null ? chip('No data', '') : t.on ? chip('Yes', 'neg') : chip('No', 'pos'),
             h('span', null, h('b', null, str(t.label, 80)), h('span', { class: 'part-text' }, ' ' + str(t.text, 160))));
@@ -1675,8 +1890,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       .sort(function (a, b) { return b.value - a.value; });
     if (sectors.length) root.appendChild(card('US sectors, last 3 months', 'Which parts of the stock market are leading and lagging.', rankBars(sectors)));
 
-    var groups = [['Stocks', ['SPY', 'QQQ', 'IWM', 'RSP', 'VXUS', 'VEA', 'VWO']], ['Bonds and cash', ['BND', 'SHY', 'IEF', 'TLT', 'TIP', 'LQD', 'HYG', 'SGOV']],
-      ['Real assets', ['IAU', 'CL=F', 'DBC', 'VNQ']], ['Crypto', ['BTC-USD', 'ETH-USD', 'SOL-USD']], ['Currencies', ['DX-Y.NYB', 'EURUSD=X', 'JPY=X']]];
+    var groups = [['Stocks', ['SPY', 'QQQ', 'IWM', 'RSP', 'VXUS', 'VEA', 'VWO', '^TA125.TA']], ['Bonds and cash', ['BND', 'SHY', 'IEF', 'TLT', 'TIP', 'LQD', 'HYG', 'SGOV']],
+      ['Real assets', ['IAU', 'CL=F', 'DBC', 'VNQ']], ['Crypto', ['BTC-USD', 'ETH-USD', 'SOL-USD']], ['Currencies', ['DX-Y.NYB', 'EURUSD=X', 'JPY=X', 'ILS=X']]];
     var tb = h('tbody');
     groups.forEach(function (g) {
       var rows = g[1].filter(function (k) { return s.assets[k]; });
@@ -1685,7 +1900,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       rows.forEach(function (k) {
         var a = s.assets[k];
         var td = function (x) { return h('td', { class: 'num ' + dirClass(x) }, pct(x)); };
-        tb.appendChild(h('tr', null, h('th', { scope: 'row' }, str(a.name, 40), h('span', { class: 'sym' }, k.replace('=X', '').replace('=F', '').replace('-USD', '').replace('.NYB', ''))),
+        tb.appendChild(h('tr', null, h('th', { scope: 'row' }, str(a.name, 40), h('span', { class: 'sym' }, k.replace('=X', '').replace('=F', '').replace('-USD', '').replace('.NYB', '').replace('^', '').replace('.TA', ''))),
           h('td', { class: 'num' }, a.group === 'fx' && a.px < 10 ? nf(a.px, 4) : price(a.px)), td(a.chg1d), td(a.ret1m), td(a.ret3m), td(a.ret12m), td(a.vs200), h('td', null, sparkline(a.spark))));
       });
     });
@@ -1853,7 +2068,16 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   function askContext() {
     var pl = currentPlan(), s = S.snap, b = S.brief, L = [];
     L.push('PROFILE: investing ' + money(pl.profile.amount) + ', needs the money in ' + years(pl.profile.horizon) + ', risk answer ' + pl.profile.risk + '/5 (' + pl.riskName + '), crypto ceiling ' + E.CRYPTO_CAP[pl.profile.crypto] + '%, signal strength "' + pl.profile.style + '", emergency fund: ' + (pl.profile.efund ? 'yes' : 'no') + ', high-interest debt: ' + (pl.profile.debt ? 'yes' : 'no') + '.');
-    L.push('PLAN (baseline% -> target%, dollars of this deposit): ' + pl.rows.map(function (r) { return r.label + ' ' + r.base + '->' + r.target + '% ' + money(Math.round(r.amount)); }).join('; ') + '.');
+    var sit = pl.profile.situation, ft = pl.first;
+    L.push('COUNTRY: ' + C().name + '. All of the person\u2019s amounts are in ' + (isIL() ? 'Israeli shekels' : 'their own currency, shown with $') + '.');
+    L.push('SITUATION: work status ' + sit.status + '; monthly income before tax ' + (sit.income ? money(sit.income) : 'not given') + '; monthly spending ' + (sit.spending ? money(sit.spending) : 'not given') + '; quick savings ' + money(sit.savings) + '; costliest debt ' + (sit.debt ? money(sit.debt) + ' at ' + sit.debtRate + '%' : 'none entered') + (isIL() ? '; employer study fund (Keren Hishtalmut): ' + sit.studyFund + '; pension being paid: ' + sit.pension : '') + '.');
+    if (ft.known) L.push('ORDER FOR THIS DEPOSIT: ' + money(Math.round(ft.toDebt)) + ' to debt, ' + money(Math.round(ft.toSavings)) + ' to the cushion (aim ' + ft.months + ' months of spending), ' + money(Math.round(ft.invest)) + ' invested.');
+    if (isIL()) {
+      var ilf = ilFacts(), cc = C();
+      L.push('ISRAEL (tax year ' + cc.taxYear + ', from published summaries, not verified against the Tax Authority): Bank of Israel rate ' + ilf.rate + '%; inflation ' + ilf.cpi + '% (' + ilf.cpiAsOf + '); capital gains tax 25% of the gain after inflation, on sale; Keren Hishtalmut exempt salary ceiling ' + money(cc.studyCeil) + ' a month, tax-free after 6 years, self-employed cap ' + money(cc.studySelfCap) + ' a year; Kupat Gemel LeHashkaa cap ' + money(cc.gemelCap) + ' a year; US-listed funds are a poor fit for Israelis (dividend withholding, US estate tax above $60,000), so use Israeli tracking funds or Irish-domiciled funds; the bond and cash parts are held in shekels and US bond readings are not applied to them.' + (sit.income ? ' Top income-tax rate at this income: ' + ilIncomeTax(sit.income).top + '%.' : ''));
+      L.push('NEXT STEPS SHOWN TO THE PERSON: ' + nextSteps(pl).map(function (st, i) { return (i + 1) + '. ' + st[0]; }).join(' '));
+    }
+    L.push('PLAN (baseline% -> target%, amount of this deposit): ' + pl.rows.map(function (r) { return r.label + ' ' + r.base + '->' + r.target + '% ' + money(Math.round(r.amount)); }).join('; ') + '.');
     L.push('Share of risk by part: ' + pl.rows.filter(function (r) { return r.target > 0; }).map(function (r) { return r.label + ' ' + Math.round(r.riskShare * 100) + '%'; }).join(', ') + '. Expected yearly swing ' + pct(pl.risk.vol, 0, false) + '.');
     L.push('Scenarios for this mix: ' + pl.stress.scenarios.map(function (sc) { return sc.id + ' ' + pct(sc.pct / 100, 0); }).join(', ') + '. Suggested pacing: ' + (pl.pacing.mode === 'now' ? 'all at once' : pl.pacing.steps + ' monthly steps') + '.');
     L.push('Growth range in today\u2019s money over ' + years(pl.profile.horizon) + ': ' + money(Math.round(pl.outlook.value.low)) + ' to ' + money(Math.round(pl.outlook.value.high)) + ', middle ' + money(Math.round(pl.outlook.value.mid)) + ' (' + pl.outlook.mid.toFixed(1) + '% a year after inflation), paying in ' + money(Math.round(pl.outlook.paidIn)) + '.');
@@ -1876,7 +2100,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     }
     return L.join('\n');
   }
-  var ASK_RULES = 'You are the assistant inside Market Compass, a personal investing dashboard. Answer the question using the data below plus general, well-established investing knowledge. You cannot browse; if something is not in the data, say so. Write for a beginner: plain words, short paragraphs, no more than about 180 words unless asked for more, and define any jargon you use. Be direct about what the data says and honest about uncertainty. Never promise returns or tell the person a price will go up or down. If asked whether now is a good or bad time to buy or sell something, say plainly that nobody can know, and point back to the plan and its check-in rule. If the person wants to change their plan because of news or a recent price move, suggest waiting 48 hours first, and remind them that investors who trade on headlines have earned less than those who do nothing. If asked to pick individual stocks or small coins, explain briefly why the plan uses broad funds instead. Do not use markdown headings or tables.\n\n';
+  var ASK_RULES = 'You are the assistant inside Market Compass, a personal investing dashboard. Answer the question using the data below plus general, well-established investing knowledge. You cannot browse; if something is not in the data, say so. Write for a beginner: plain words, short paragraphs, no more than about 180 words unless asked for more, and define any jargon you use. Be direct about what the data says and honest about uncertainty. Never promise returns or tell the person a price will go up or down. If asked whether now is a good or bad time to buy or sell something, say plainly that nobody can know, and point back to the plan and its check-in rule. If the person wants to change their plan because of news or a recent price move, suggest waiting 48 hours first, and remind them that investors who trade on headlines have earned less than those who do nothing. If asked to pick individual stocks or small coins, explain briefly why the plan uses broad funds instead. Use the person\u2019s country, currency and situation from the data; do not give US-specific advice to someone in another country. For tax or legal questions, give the general rule from the data, say it should be checked with the tax authority or a licensed adviser, and never invent a threshold or rate that is not in the data. Do not use markdown headings or tables.\n\n';
   var ASK_ERR = {
     not_granted: 'Asking Claude is switched off for this page.', sampling_disabled: 'Claude is not available on this account.', rate_limited: 'Too many questions at once, or you have hit a usage limit. Try again later.',
     session_expired: 'Your session has expired. Sign in to Claude again.', refused: 'Claude declined that question. Try wording it differently.', prompt_too_large: 'That conversation is too long. Start a new one.',
@@ -2007,6 +2231,20 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       { t: 'Know what "enough" is.', d: 'A sum of about 25 times your yearly spending has historically supported that spending for 30 years.', src: 'Bengen (1994); Robin and Dominguez, Your Money or Your Life', s: 2, use: 'Set the horizon to when you want to reach it.' }
     ] }
   ];
+  var LIBRARY_IL = { theme: 'Investing from Israel', intro: 'Rules for tax year 2026, from published summaries. Check a figure with the Tax Authority or a licensed adviser before acting on it.', items: [
+    { t: 'Take the Keren Hishtalmut before anything else.', d: 'Where an employer offers it, they typically add 7.5% of your salary to your own 2.5%, free of tax on salary up to \u20AA15,712 a month, and gains come out tax-free after six years.', src: 'Israeli tax guides for 2026; The Jerusalem Post year-end tax guide', s: 3, use: 'It leads your next steps when you say you are an employee.' },
+    { t: 'Tax is 25% of the gain after inflation, and only when you sell.', d: 'Nothing is due while you hold. Dividends are taxed at 25% as well. A further surtax applies only above about \u20AA721,560 of yearly income.', src: 'PwC tax summary for Israel (2026)', s: 3, use: 'The plan rebalances with new money, so that selling is the last resort.' },
+    { t: 'Avoid US-listed funds.', d: 'An Irish-domiciled fund pays 15% US tax on dividends inside the fund. A US-listed fund held from Israel has a quarter or more withheld, and US assets above $60,000 can face US estate tax of up to 40%. Israel itself has no inheritance tax, which is why this catches people out.', src: 'Globes, The US estate tax trap for Israeli investors', s: 3, use: 'The examples are Israeli tracking funds or Irish-domiciled funds, never VOO or VTI.' },
+    { t: 'Tracking mutual funds usually cost nothing to buy or sell.', d: 'Israeli mutual funds, index trackers included, do not charge a separate trading commission, unlike exchange-traded funds. You still pay the yearly management fee, and a bank may charge for custody.', src: 'Meitav; Globes', s: 2, use: 'They are the first suggestion for small monthly amounts.' },
+    { t: 'Keep the steady part of your money in shekels.', d: 'The dollar has ranged from about \u20AA2.80 to \u20AA3.82 in two years. Your rent and bills are in shekels, so the part of the plan meant to be stable should be too.', src: 'Bank of Israel; exchange-rate data', s: 3, use: 'Bonds and cash are shekel instruments, and US bond readings are not applied to them.' },
+    { t: 'Your country is already a large bet.', d: 'Your salary, home and pension all depend on Israel\u2019s economy. A strong run at home (the Tel Aviv 125 rose about 70% in two years) tempts people to add more just when it is dearest.', src: 'Dimson, Marsh and Staunton on single-country risk', s: 2, use: 'Israeli shares are a modest part of the international slice, not the core.' },
+    { t: 'A Kupat Gemel LeHashkaa trades a higher fee for flexibility.', d: 'It takes up to \u20AA83,641 a year, lets you switch investment tracks without tax, and is taxed at 25% of the gain after inflation when you withdraw.', src: 'Globes, Changes that will affect personal finances in 2026', s: 2, use: 'Offered beside a trading account as one of two sensible homes for the plan.' },
+    { t: 'Crypto is taxed like any other asset.', d: 'Gains are taxed at 25%. Frequent trading can be treated as a business and taxed at up to 50%. Keep every record; banks may ask where the money came from.', src: 'Israeli court rulings and Tax Authority guidance, as reported', s: 2, use: 'The plan suggests a Bitcoin tracking fund inside your ordinary account.' },
+    { t: 'Rebalance rarely, by rule.', d: 'No schedule beats another. Checking once or twice a year and acting at a 5-point gap needed about 28 trades in 84 years.', src: 'Vanguard, Best Practices for Portfolio Rebalancing (2015); Bernstein, The Intelligent Asset Allocator', s: 3, use: 'The 5-point band in your plan.' },
+    { t: 'High returns with little risk is the classic sign of fraud.', d: 'So are pressure to act now, "everyone is buying it", and sellers who are not licensed. Check that anyone offering investments is licensed by the Israel Securities Authority.', src: 'SEC, investor.gov; Israel Securities Authority', s: 3, use: 'This app names only broad index funds from large managers.' },
+    { t: 'Know what "enough" is.', d: 'A sum of about 25 times your yearly spending has historically supported that spending for 30 years.', src: 'Bengen (1994); Robin and Dominguez, Your Money or Your Life', s: 2, use: 'Set the horizon to when you want to reach it.' }
+  ] };
+  function libraryThemes() { return isIL() ? LIBRARY.slice(0, -1).concat([LIBRARY_IL]) : LIBRARY; }
   var READING = [
     ['If You Can', 'William Bernstein', 'Sixteen free pages. The whole plan in one sitting.'],
     ['The Little Book of Common Sense Investing', 'John Bogle', 'Why owning everything cheaply beats trying to choose.'],
@@ -2021,12 +2259,13 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
 
   function renderLearn() {
     var root = clear($('view-learn'));
-    var count = LIBRARY.reduce(function (a, g) { return a + g.items.length; }, 0);
+    var themes = libraryThemes();
+    var count = themes.reduce(function (a, g) { return a + g.items.length; }, 0);
     root.appendChild(h('section', { class: 'card stack' },
       h('span', { class: 'eyebrow' }, count + ' lessons from the books and the research behind them'),
       h('p', { class: 'lede' }, 'What a century of investing writing agrees on, where it disagrees, and how this app uses each lesson.'),
       h('p', { class: 'note' }, 'Gathered in November 2026 across the major investing books and the studies they rest on. Figures come from published summaries and abstracts, not from the full texts, and a few are from memory. Treat them as a careful reader’s notes and check a number at its source before relying on it.')));
-    LIBRARY.forEach(function (g) {
+    themes.forEach(function (g) {
       var box = h('section', { class: 'card stack' }, h('h2', null, g.theme), h('p', { class: 'sub' }, g.intro));
       var listEl = h('div', { class: 'lessons' });
       g.items.forEach(function (it) {
@@ -2071,6 +2310,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
         h('li', null, h('b', null, 'The stress test uses real episodes. '), '2008, when bonds helped, and 2022, when they did not, alongside the harsh all-at-once case.'),
         h('li', null, h('b', null, 'Bonds change shape with inflation. '), 'When inflation is driving markets the plan says to hold shorter and inflation-linked bonds.'),
         h('li', null, h('b', null, 'Added: '), 'your share of risk by part, a growth range built from today’s yields, a three-fund version, a one-page written plan, and a check-once-a-month rule.'))));
+
+    if (isIL()) root.appendChild(card('What is different for Israel', 'The market readings are global. What you do with them is local.',
+      h('ul', { class: 'bullets' },
+        h('li', null, h('b', null, 'Amounts are in shekels. '), 'Prices of funds and coins on the Markets and Crypto tabs stay in dollars, because that is how they are quoted.'),
+        h('li', null, h('b', null, 'The steady part is in shekels. '), 'Bonds and cash mean Israeli government bonds, Makam and money-market funds. The readings for US bonds and the US inflation tests are not applied to them, so that part stays at its baseline.'),
+        h('li', null, h('b', null, 'Growth estimates use Israeli rates. '), 'Cash is expected to earn the Bank of Israel rate, bonds a little more, both measured against 2% inflation.'),
+        h('li', null, h('b', null, 'Your details change the order, not the mix. '), 'Debt costing 7% a year or more is paid first, then a cushion of three months of spending (six if your income is irregular), and only the rest is invested.'),
+        h('li', null, h('b', null, 'Currency is a risk the model does not hedge. '), 'Stocks, gold and crypto are priced in dollars. The plan shows the exchange rate and leaves it alone.'),
+        h('li', null, h('b', null, 'The tax figures are for 2026 '), 'and come from published summaries, not the Tax Authority. They will change.'))));
 
     root.appendChild(card('What it cannot do', null, h('ul', { class: 'bullets' },
       h('li', null, 'Predict. Every reading describes what has already happened. Markets regularly do the opposite of what the signals suggest.'),
@@ -2198,7 +2446,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       if (!uid || !S.caps.db) return;
       S.uid = uid;
       return S.caps.db.doc('data/users/' + uid + '/profile').get().then(function (d) {
-        if (d.exists) { S.profile = E.normalizeProfile(d.data()); writeControls(); renderPlan(); }
+        if (d.exists) { S.profile = E.normalizeProfile(d.data()); S.learnBuilt = false; writeControls(); renderData(); }
         var n = $('save-note'); if (n) n.textContent = 'Your answers are saved privately to your account.';
       });
     }).catch(function () { /* the page works without saved answers */ });

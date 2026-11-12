@@ -65,10 +65,16 @@
   var BRIEF_MAX_AGE_H = 96;     // an event read older than four days no longer moves the plan
   var EVENT_WEIGHT = 0.1;       // news is a tenth of a reading at most, and only in the careful direction
 
+  // Debt costing at least this much a year is paid before anything is invested. The plan's
+  // own middle-case return is around 5% before inflation, so a sure saving above that wins.
+  var DEBT_FIRST_RATE = 7;
+  var STATUSES = ['employee', 'self', 'service', 'student'];
+  var SITUATION = { status: 'employee', income: 0, spending: 0, savings: 0, debt: 0, debtRate: 0, studyFund: 'unsure', pension: 'unsure' };
   var DEFAULTS = {
     amount: 1000, monthly: 0, horizon: 10, risk: 3, crypto: 'small', style: 'balanced',
-    efund: true, debt: false, unstable: false,
-    holdings: { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }
+    efund: true, debt: false, unstable: false, country: 'IL',
+    holdings: { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 },
+    situation: SITUATION
   };
 
   function num(x, d) { x = Number(x); return isFinite(x) ? x : d; }
@@ -88,9 +94,19 @@
       efund: p.efund === undefined ? DEFAULTS.efund : !!p.efund,
       debt: !!p.debt,
       unstable: !!p.unstable,
+      country: p.country === 'other' ? 'other' : (p.country === 'IL' ? 'IL' : DEFAULTS.country),
       holdings: {}
     };
     SLEEVES.forEach(function (k) { out.holdings[k] = clamp(num(h[k], 0), 0, 1e9); });
+    var s = p.situation || {};
+    var tri = function (v) { return v === 'yes' || v === 'no' ? v : 'unsure'; };
+    out.situation = {
+      status: STATUSES.indexOf(s.status) >= 0 ? s.status : SITUATION.status,
+      income: clamp(num(s.income, 0), 0, 1e8), spending: clamp(num(s.spending, 0), 0, 1e8),
+      savings: clamp(num(s.savings, 0), 0, 1e9), debt: clamp(num(s.debt, 0), 0, 1e9),
+      debtRate: clamp(num(s.debtRate, 0), 0, 100),
+      studyFund: tri(s.studyFund), pension: tri(s.pension)
+    };
     return out;
   }
 
@@ -138,6 +154,31 @@
       bonds: defensive - cash, cash: cash
     };
     return { weights: w, growth: growth, growthWanted: want, growthCap: cap, limitedBy: cap < want ? 'horizon' : 'risk' };
+  }
+
+  /**
+   * What new money should do before any of it is invested.
+   * 1. Debt costing 7% a year or more is cleared first: that is a certain return no investment matches.
+   * 2. Then a cushion of 3 months of spending (6 if income is irregular or you work for yourself),
+   *    so that a surprise bill never forces a sale at a bad moment.
+   * 3. What is left gets invested.
+   * Uses the figures in `situation` when they are filled in; `known` says whether they were.
+   */
+  function firstThings(profile) {
+    var p = normalizeProfile(profile), s = p.situation;
+    var left = p.amount, toDebt = 0, toSavings = 0;
+    var costly = s.debt > 0 && s.debtRate >= DEBT_FIRST_RATE;
+    if (costly) { toDebt = Math.min(left, s.debt); left -= toDebt; }
+    var months = (s.status === 'self' || p.unstable) ? 6 : 3;
+    var cushion = s.spending > 0 ? months * s.spending : 0;
+    var gap = Math.max(0, cushion - s.savings);
+    if (gap > 0) { toSavings = Math.min(left, gap); left -= toSavings; }
+    return {
+      known: s.spending > 0 || s.debt > 0, costly: costly, months: months, cushion: cushion,
+      toDebt: toDebt, debtLeft: costly ? s.debt - toDebt : 0,
+      toSavings: toSavings, gapLeft: gap - toSavings, invest: left,
+      monthsSaved: s.spending > 0 ? s.savings / s.spending : null
+    };
   }
 
   /** Is the news brief recent enough to count? */
@@ -277,10 +318,10 @@
    * would shake them, as a fixed schedule decided in advance. Market conditions play
    * no part: waiting for calm is market timing.
    */
-  function pacing(p, target) {
+  function pacing(p, target, small) {
     var atRisk = p.amount * (100 - target.cash) / 100;
     if (atRisk <= 0) return { mode: 'now', steps: 1, why: 'cash' };
-    if (atRisk < 500) return { mode: 'now', steps: 1, why: 'small' };
+    if (atRisk < (isNum(small) ? small : 500)) return { mode: 'now', steps: 1, why: 'small' };
     if (p.risk === 1) return { mode: 'steps', steps: 6, why: 'nervous' };
     if (p.risk === 2) return { mode: 'steps', steps: 3, why: 'nervous' };
     return { mode: 'now', steps: 1, why: 'evidence' };
@@ -357,18 +398,25 @@
    *   crypto  0%: it has no earnings or interest to build a forecast on, so the plan counts on nothing
    * International stocks have no live valuation feed, so they use 4.5%, close to their long-run record.
    */
-  function expectedReal(snapshot, years) {
+  function expectedReal(snapshot, years, local) {
     var m = (snapshot && snapshot.macro) || {};
+    local = local || {};
+    // `local` carries cash and bond yields and inflation for an investor whose steady money
+    // is not in dollars; stocks, gold and crypto are global and keep the same estimates.
+    var infl = isNum(local.inflation) ? local.inflation : INFLATION_ASSUMED;
+    var cashYield = isNum(local.cash) ? local.cash : m.y3m;
+    var bondYield = isNum(local.bond) ? local.bond : m.y5y;
     var fade = clamp(3 / Math.max(1, num(years, 10)), 0, 1);
-    var cashNow = isNum(m.y3m) ? m.y3m - INFLATION_ASSUMED : 0.5;
+    var cashNow = isNum(cashYield) ? cashYield - infl : 0.5;
     return {
       us: isNum(m.cape) && m.cape > 0 ? clamp(100 / m.cape, 1.5, 7) : 3.5,
       intl: 4.5,
       crypto: 0,
       gold: 1,
-      bonds: isNum(m.y5y) ? clamp(m.y5y - INFLATION_ASSUMED, -1, 5) : 2,
+      bonds: isNum(bondYield) ? clamp(bondYield - infl, -1, 5) : 2,
       cash: clamp(fade * cashNow + (1 - fade) * 0.5, -1, 3),
-      live: isNum(m.cape) && isNum(m.y5y)
+      inflation: infl,
+      live: isNum(m.cape) && isNum(bondYield)
     };
   }
 
@@ -378,9 +426,9 @@
    * either side (swing / square root of years), which history suggests holds about two
    * times in three. It is a rough guide, not a promise: the worst outcomes lie outside it.
    */
-  function outlook(target, snapshot, profile, riskVol) {
+  function outlook(target, snapshot, profile, riskVol, local) {
     var p = normalizeProfile(profile);
-    var exp = expectedReal(snapshot, p.horizon);
+    var exp = expectedReal(snapshot, p.horizon, local);
     var mid = SLEEVES.reduce(function (a, k) { return a + target[k] * exp[k] / 100; }, 0);
     var years = Math.max(1, p.horizon);
     var spread = (isNum(riskVol) ? riskVol : 0.1) * 100 / Math.sqrt(years);
@@ -392,8 +440,8 @@
       start: start, monthly: p.monthly, years: p.horizon,
       paidIn: futureValue(start, p.monthly, p.horizon, 0).paidIn,
       value: { low: fv(mid - spread), mid: fv(mid), high: fv(mid + spread) },
-      feeDrag: feeDrag(p.horizon, (mid + INFLATION_ASSUMED) / 100, 0.01),
-      inflation: INFLATION_ASSUMED
+      feeDrag: feeDrag(p.horizon, (mid + exp.inflation) / 100, 0.01),
+      inflation: exp.inflation
     };
   }
 
@@ -405,16 +453,24 @@
   }
 
   /** Everything the page shows for one person at one moment. */
-  function plan(profile, snapshot, brief, now) {
+  function plan(profile, snapshot, brief, now, opts) {
     var p = normalizeProfile(profile);
     now = typeof now === 'number' ? now : Date.now();
+    opts = opts || {};
+    var first = firstThings(p);
     var base = baseAllocation(p);
     var scores = blendScores(snapshot, brief, now);
+    // A reading built on another market is no reading at all: parts named here stay at baseline.
+    (opts.noSignal || []).forEach(function (k) {
+      if (scores[k]) scores[k] = { signal: null, event: null, final: 0, eventUsed: false, eventEffect: 0, unread: true };
+    });
     var exact = tilt(base, scores, p);
     var baseR = roundWeights(base.weights);
     var target = roundWeights(exact);
-    var buy = buyPlan(target, p.holdings, p.amount);
+    var buy = buyPlan(target, p.holdings, first.invest);
     var risk = riskShares(target, snapshot && snapshot.risk);
+    var investing = {}; for (var key in p) investing[key] = p[key];
+    investing.amount = first.invest;
 
     var rows = SLEEVES.map(function (k) {
       var st = stanceFor(k, baseR[k], target[k]);
@@ -423,21 +479,23 @@
         key: k, label: LABELS[k], base: baseR[k], target: target[k], tilt: target[k] - baseR[k],
         stance: st, stanceText: STANCE_TEXT[st], amount: buy.buys[k], riskShare: risk.shares[k],
         signal: sc ? sc.signal : null, event: sc ? sc.event : null, score: sc ? sc.final : null,
-        eventEffect: sc ? sc.eventEffect : 0
+        eventEffect: sc ? sc.eventEffect : 0, unread: !!(sc && sc.unread)
       };
     });
 
+    // With real figures the money is redirected above, so the yes/no warnings are only a fallback.
     var checks = [];
-    if (p.debt) checks.push({ id: 'debt', level: 'stop' });
-    if (!p.efund) checks.push({ id: 'efund', level: 'stop' });
+    if (!first.known && p.debt) checks.push({ id: 'debt', level: 'stop' });
+    if (!first.known && !p.efund) checks.push({ id: 'efund', level: 'stop' });
     if (p.horizon < 1) checks.push({ id: 'short', level: 'note' });
     else if (base.limitedBy === 'horizon') checks.push({ id: 'horizon', level: 'note' });
     if (risk.shares.crypto >= 0.20) checks.push({ id: 'crypto', level: 'warn' });   // a fifth of all the risk in one small slice
 
     return {
       profile: p, base: base, baseRounded: baseR, target: target, rows: rows,
-      scores: scores, buy: buy, pacing: pacing(p, target), stress: stressTest(target),
-      risk: risk, outlook: outlook(target, snapshot, p, risk.vol), simple: threeFund(target),
+      scores: scores, buy: buy, pacing: pacing(investing, target, opts.small), stress: stressTest(target),
+      risk: risk, outlook: outlook(target, snapshot, investing, risk.vol, opts.local), simple: threeFund(target),
+      first: first,
       checks: checks, style: p.style, lean: STYLE[p.style],
       eventsUsed: briefIsFresh(brief, now), riskName: RISK_NAMES[p.risk]
     };
@@ -452,6 +510,7 @@
     briefIsFresh: briefIsFresh, blendScores: blendScores, tilt: tilt, roundWeights: roundWeights,
     stanceFor: stanceFor, driftBand: driftBand, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest,
     riskShares: riskShares, futureValue: futureValue, feeDrag: feeDrag, expectedReal: expectedReal,
-    outlook: outlook, threeFund: threeFund, plan: plan
+    outlook: outlook, threeFund: threeFund, firstThings: firstThings, plan: plan,
+    DEBT_FIRST_RATE: DEBT_FIRST_RATE, STATUSES: STATUSES
   };
 });
