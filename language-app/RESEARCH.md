@@ -84,3 +84,7 @@ Sources: https://link.springer.com/10.1007/s11423-020-09807-z ; https://olj.onli
 - **Spacing works for grammar too:** spaced practice beats massed for L2 grammar. The best gap is unclear (3.5 vs 7 days showed little difference). → A passed grammar lesson comes back as 3 quick questions inside the daily lesson after 3, 7, 14, 30 and 60 days. A failed review comes back the next day.
 - **Autonomy (self-determination theory):** choice and control go with engagement and persistence in language apps (Hwang 2026, 305 learners over 13 weeks; Jeon 2022). → A "Today I want to practice" choice (Mix / Listening / Speaking / Writing) steers the daily lesson.
 Sources: https://eprints.whiterose.ac.uk/141710/14/KASPROWICZ_et_al_2019_The_Modern_Language_Journal.pdf ; https://ira.lib.polyu.edu.hk/bitstream/10397/113055/1/Rogers_Optimizing_Distributed_Practice.pdf ; https://www.lltjournal.org/item-detail/1273/ ; https://selfdeterminationtheory.org/wp-content/uploads/2023/11/2022_Jeon_ExploringaSelf-Directed.pdf
+
+## Round 7
+- **Semantic vs thematic clustering:** learning words from one category together (colors, numbers) causes interference. Thematic groups (a café scene) are easier (Tinkham 1997; Nakata & Suzuki 2019 report mixed effects and say spacing helps). → New words in the daily lesson now rotate across topics. Reels feeds stay thematic.
+Sources: https://ideals.illinois.edu/items/19069 ; https://www.cambridge.org/core/product/F58BA8D70385603B9C42E408BFCB8A10

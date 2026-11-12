@@ -49,12 +49,21 @@
   function resetIndex() { byId = null; }
 
   // Curriculum order: level first, then topic order, then file order.
+  // Within each level, rotate through topics so a batch of new words never comes from one
+  // semantic set (e.g. 8 colors at once causes interference: Tinkham 1997; Nakata & Suzuki 2019).
+  let currCache = null;
   function curriculum() {
+    if (currCache && currCache.n === vocab().length) return currCache.list;
     const order = topicOrder();
-    return vocab()
-      .map((v, i) => ({ v, i }))
-      .sort((a, b) => (a.v.level || 2) - (b.v.level || 2) || order.indexOf(a.v.topic) - order.indexOf(b.v.topic) || a.i - b.i)
-      .map((x) => x.v);
+    const out = [];
+    [1, 2, 3].forEach((lvl) => {
+      const queues = order.map((tp) => vocab().filter((v) => (v.level || 2) === lvl && v.topic === tp));
+      let added = true;
+      while (added) { added = false; queues.forEach((q) => { if (q.length) { out.push(q.shift()); added = true; } }); }
+    });
+    vocab().forEach((v) => { if (!out.includes(v)) out.push(v); });
+    currCache = { n: vocab().length, list: out };
+    return out;
   }
 
   function phraseCurriculum() {
