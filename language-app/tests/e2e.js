@@ -66,8 +66,9 @@ async function runLesson(page, tag, maxSteps) {
   let n = 0;
   while (n < (maxSteps || 120)) {
     if (await page.$(".summary")) break;
-    const ok = await answerStep(page, n);
-    if (!ok) break;
+    let ok;
+    try { ok = await answerStep(page, n); } catch (e) { await page.waitForTimeout(150); n++; continue; }
+    if (!ok) { await page.waitForTimeout(200); if (!(await page.$(".ex"))) break; }
     if (n === 2) await shot(page, `${tag}-step`);
     n++;
   }

@@ -322,3 +322,54 @@ LS_DATA.vocab.push(
   { id: "feelings_be_proud", topic: "feelings", level: 3, en: "to be proud", ru: "горди́ться", enPast: "was proud", he: "להתגאות", ruPres: "я горжу́сь, ты горди́шься, они́ гордя́тся", emoji: "🏅", enEx: "I am proud of you.", ruEx: "Я горжу́сь тобо́й.", heEx: "אני גאה בך." },
   { id: "feelings_in_love", topic: "feelings", level: 3, en: "in love", ru: "влюблённый", he: "מאוהב", emoji: "😍", enEx: "They are in love.", ruEx: "Они́ влюблены́.", heEx: "הם מאוהבים." },
 );
+
+// ---------- CONNECTORS & PREPOSITIONS ----------
+LS_DATA.vocab.push(
+  { id: "connectors_and", topic: "connectors", level: 1, en: "and", ru: "и", he: "ו־", enEx: "Mom and Dad are at home.", ruEx: "Ма́ма и па́па до́ма.", heEx: "אמא ואבא בבית." },
+  { id: "connectors_but", topic: "connectors", level: 1, en: "but", ru: "но", he: "אבל", enEx: "I want to, but I can't.", ruEx: "Я хочу́, но не могу́.", heEx: "אני רוצה, אבל אני לא יכול." },
+  { id: "connectors_or", topic: "connectors", level: 1, en: "or", ru: "и́ли", he: "או", enEx: "Tea or coffee?", ruEx: "Чай и́ли ко́фе?", heEx: "תה או קפה?" },
+  { id: "connectors_with", topic: "connectors", level: 1, en: "with", ru: "с", he: "עם", enEx: "I drink tea with lemon.", ruEx: "Я пью чай с лимо́ном.", heEx: "אני שותה תה עם לימון." },
+  { id: "connectors_in", topic: "connectors", level: 1, en: "in", ru: "в", he: "ב־", enEx: "The keys are in the bag.", ruEx: "Ключи́ в су́мке.", heEx: "המפתחות בתיק." },
+  { id: "connectors_on", topic: "connectors", level: 1, en: "on", ru: "на", he: "על", enEx: "The book is on the table.", ruEx: "Кни́га на столе́.", heEx: "הספר על השולחן." },
+  { id: "connectors_very", topic: "connectors", level: 1, en: "very", ru: "о́чень", he: "מאוד", enEx: "It is very cold today.", ruEx: "Сего́дня о́чень хо́лодно.", heEx: "היום קר מאוד." },
+  { id: "connectors_also", topic: "connectors", level: 1, en: "also, too", ru: "то́же", he: "גם", enEx: "I also want ice cream.", ruEx: "Я то́же хочу́ моро́женое.", heEx: "גם אני רוצה גלידה." },
+  { id: "connectors_because", topic: "connectors", level: 1, en: "because", ru: "потому́ что", he: "כי, בגלל ש־", enEx: "I'm not going because I'm sick.", ruEx: "Я не иду́, потому́ что я бо́лен.", heEx: "אני לא הולך כי אני חולה." },
+  { id: "connectors_now", topic: "connectors", level: 1, en: "now", ru: "сейча́с", he: "עכשיו", emoji: "⏱️", enEx: "I am busy now.", ruEx: "Я сейча́с за́нят.", heEx: "אני עסוק עכשיו." },
+  { id: "connectors_here", topic: "connectors", level: 1, en: "here", ru: "здесь", he: "כאן, פה", emoji: "📍", enEx: "I live here.", ruEx: "Я живу́ здесь.", heEx: "אני גר כאן." },
+  { id: "connectors_there", topic: "connectors", level: 1, en: "there", ru: "там", he: "שם", enEx: "Who is there?", ruEx: "Кто там?", heEx: "מי שם?" },
+  { id: "connectors_without", topic: "connectors", level: 1, en: "without", ru: "без", he: "בלי", enEx: "Coffee without sugar, please.", ruEx: "Ко́фе без са́хара, пожа́луйста.", heEx: "קפה בלי סוכר, בבקשה." },
+  { id: "connectors_if", topic: "connectors", level: 1, en: "if", ru: "е́сли", he: "אם", enEx: "If it rains, we will stay home.", ruEx: "Е́сли бу́дет дождь, мы оста́немся до́ма.", heEx: "אם ירד גשם, נישאר בבית." },
+  { id: "connectors_when", topic: "connectors", level: 1, en: "when", ru: "когда́", he: "כש־, מתי", enEx: "Call me when you arrive.", ruEx: "Позвони́ мне, когда́ прие́дешь.", heEx: "תתקשר אליי כשתגיע." },
+  { id: "connectors_already", topic: "connectors", level: 1, en: "already", ru: "уже́", he: "כבר", enEx: "I have already eaten.", ruEx: "Я уже́ пое́л.", heEx: "כבר אכלתי." },
+  { id: "connectors_only", topic: "connectors", level: 1, en: "only", ru: "то́лько", he: "רק", enEx: "I have only one brother.", ruEx: "У меня́ то́лько оди́н брат.", heEx: "יש לי רק אח אחד." },
+  { id: "connectors_always", topic: "connectors", level: 1, en: "always", ru: "всегда́", he: "תמיד", enEx: "He is always late.", ruEx: "Он всегда́ опа́здывает.", heEx: "הוא תמיד מאחר." },
+  { id: "connectors_never", topic: "connectors", level: 1, en: "never", ru: "никогда́", he: "אף פעם (לא)", enEx: "I never drink coffee.", ruEx: "Я никогда́ не пью ко́фе.", heEx: "אני אף פעם לא שותה קפה." },
+  { id: "connectors_a_lot", topic: "connectors", level: 1, en: "a lot, many, much", ru: "мно́го", he: "הרבה", enEx: "I have a lot of work.", ruEx: "У меня́ мно́го рабо́ты.", heEx: "יש לי הרבה עבודה." },
+  { id: "connectors_a_little", topic: "connectors", level: 1, en: "a little", ru: "немно́го", he: "קצת", enEx: "I speak a little Russian.", ruEx: "Я немно́го говорю́ по-ру́сски.", heEx: "אני מדבר קצת רוסית." },
+  { id: "connectors_for", topic: "connectors", level: 1, en: "for", ru: "для", he: "בשביל", enEx: "This is for you.", ruEx: "Э́то для тебя́.", heEx: "זה בשבילך." },
+  { id: "connectors_from", topic: "connectors", level: 1, en: "from (out of)", ru: "из", he: "מ־", enEx: "I am from Israel.", ruEx: "Я из Изра́иля.", heEx: "אני מישראל." },
+  { id: "connectors_after", topic: "connectors", level: 2, en: "after", ru: "по́сле", he: "אחרי", enEx: "After work I rest.", ruEx: "По́сле рабо́ты я отдыха́ю.", heEx: "אחרי העבודה אני נח." },
+  { id: "connectors_before", topic: "connectors", level: 2, en: "before (time)", ru: "до", he: "לפני", enEx: "We will talk before the lesson.", ruEx: "Мы поговори́м до уро́ка.", heEx: "נדבר לפני השיעור." },
+  { id: "connectors_then", topic: "connectors", level: 2, en: "then, later", ru: "пото́м", he: "אחר כך", enEx: "First lunch, then a walk.", ruEx: "Снача́ла обе́д, пото́м прогу́лка.", heEx: "קודם ארוחת צהריים, אחר כך טיול." },
+  { id: "connectors_still", topic: "connectors", level: 2, en: "still; more", ru: "ещё", he: "עדיין, עוד", enEx: "He is still sleeping.", ruEx: "Он ещё спит.", heEx: "הוא עדיין ישן." },
+  { id: "connectors_often", topic: "connectors", level: 2, en: "often", ru: "ча́сто", he: "לעתים קרובות", enEx: "We often go to the sea.", ruEx: "Мы ча́сто е́здим на мо́ре.", heEx: "אנחנו נוסעים לים לעתים קרובות." },
+  { id: "connectors_sometimes", topic: "connectors", level: 2, en: "sometimes", ru: "иногда́", he: "לפעמים", enEx: "Sometimes I cook dinner.", ruEx: "Иногда́ я гото́влю у́жин.", heEx: "לפעמים אני מבשל ארוחת ערב." },
+  { id: "connectors_under", topic: "connectors", level: 2, en: "under", ru: "под", he: "מתחת ל־", enEx: "The cat is under the bed.", ruEx: "Ко́шка под крова́тью.", heEx: "החתולה מתחת למיטה." },
+  { id: "connectors_near", topic: "connectors", level: 2, en: "near, next to", ru: "ря́дом с", he: "ליד", enEx: "The school is near the park.", ruEx: "Шко́ла ря́дом с па́рком.", heEx: "בית הספר ליד הפארק." },
+  { id: "connectors_together", topic: "connectors", level: 2, en: "together", ru: "вме́сте", he: "ביחד", enEx: "Let's go together.", ruEx: "Пойдём вме́сте.", heEx: "בוא נלך ביחד." },
+  { id: "connectors_again", topic: "connectors", level: 2, en: "again", ru: "сно́ва", he: "שוב", enEx: "It is raining again.", ruEx: "Сно́ва идёт дождь.", heEx: "שוב יורד גשם." },
+  { id: "connectors_maybe", topic: "connectors", level: 2, en: "maybe", ru: "мо́жет быть", he: "אולי", enEx: "Maybe tomorrow.", ruEx: "Мо́жет быть, за́втра.", heEx: "אולי מחר." },
+  { id: "connectors_so", topic: "connectors", level: 2, en: "so, therefore", ru: "поэ́тому", he: "לכן", enEx: "It's raining, so we are home.", ruEx: "Идёт дождь, поэ́тому мы до́ма.", heEx: "יורד גשם, לכן אנחנו בבית." },
+  { id: "connectors_too", topic: "connectors", level: 2, en: "too (too much)", ru: "сли́шком", he: "מדי", enEx: "This dress is too expensive.", ruEx: "Э́то пла́тье сли́шком дорого́е.", heEx: "השמלה הזאת יקרה מדי." },
+  { id: "connectors_about", topic: "connectors", level: 2, en: "about", ru: "о", he: "על", enEx: "Tell me about yourself.", ruEx: "Расскажи́ мне о себе́.", heEx: "ספר לי על עצמך." },
+  { id: "connectors_far", topic: "connectors", level: 2, en: "far", ru: "далеко́", he: "רחוק", enEx: "Is it far from here?", ruEx: "Э́то далеко́ отсю́да?", heEx: "זה רחוק מכאן?" },
+  { id: "connectors_between", topic: "connectors", level: 3, en: "between", ru: "ме́жду", he: "בין", enEx: "The bank is between the store and the café.", ruEx: "Банк ме́жду магази́ном и кафе́.", heEx: "הבנק בין החנות לבית הקפה." },
+  { id: "connectors_behind", topic: "connectors", level: 3, en: "behind", ru: "за", he: "מאחורי", enEx: "The garden is behind the house.", ruEx: "Сад за до́мом.", heEx: "הגינה מאחורי הבית." },
+  { id: "connectors_in_front_of", topic: "connectors", level: 3, en: "in front of", ru: "пе́ред", he: "מול, לפני", enEx: "The car is in front of the house.", ruEx: "Маши́на пе́ред до́мом.", heEx: "המכונית מול הבית." },
+);
+
+// De-duplicate: these words already exist in vocab1 under another topic.
+(function () {
+  const dup = new Set(["adjectives_light", "adjectives_dark", "adjectives_healthy", "adjectives_sick", "places_hospital", "places_pharmacy", "work_doctor", "nature_fish", "nature_chicken", "shopping_size", "connectors_now", "connectors_here", "connectors_there", "connectors_when", "connectors_maybe"]);
+  LS_DATA.vocab = LS_DATA.vocab.filter((v) => !dup.has(v.id));
+})();

@@ -60,6 +60,7 @@
   function route() {
     leaveHandlers.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
     leaveHandlers = [];
+    document.querySelectorAll(".confetti, .overlay").forEach((n) => n.remove());
     const parts = (location.hash || "#/home").replace(/^#\/?/, "").split("/").map(decodeURIComponent);
     if (!currentProfile) {
       const p = ST.active();
