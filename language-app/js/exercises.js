@@ -52,11 +52,27 @@
         h("div.ex-t", L(exT, T), speakerBtn(exT, T)),
         exH ? h("div.ex-h", L(exH, H)) : null) : null,
       T === "ru" && /́/.test(tgt(it, ctx)) ? h("div.small.muted", t("stressNote")) : null,
+      isPhrase ? null : selfRef(it, ctx),
       isPhrase ? null : h("details.hook-box", h("summary", "💡 " + hookTitle()), hook)
     );
     autoplay(tgt(it, ctx), T, ctx);
     ctx.setCheck(true, () => ctx.finish({ intro: true, correct: null }), t("gotIt"));
     return el;
+  }
+  // Self-reference effect (Pruss, Karni & Prior 2025): relating a word to yourself improves memory.
+  function selfRef(it, ctx) {
+    const q = pick({ he: "המילה הזאת קשורה לחיים שלך?", en: "Is this word part of your life?", ru: "Это слово связано с вашей жизнью?" });
+    const box = h("div.selfref", h("span", "🪞 " + q));
+    const done = (yes) => {
+      const notes = ctx.prog.selfref || (ctx.prog.selfref = {});
+      notes[it.id] = yes ? 1 : 0;
+      root.LSStore.saveProgress(ctx.profile.id);
+      box.innerHTML = "";
+      box.appendChild(h("span", yes ? "💜 " + pick({ he: "מעולה — תחשבו על רגע אמיתי מהחיים שלכם עם המילה הזאת", en: "Great — picture a real moment from your life with this word", ru: "Отлично — представьте реальный момент из жизни с этим словом" }) : "👌 " + pick({ he: "גם זה עוזר — המוח בדק את זה מולך", en: "That helps too — your brain just checked it against your life", ru: "Это тоже помогает — мозг сравнил это с вашей жизнью" })));
+      root.LSUI.sfx("tap");
+    };
+    box.append(h("button.sr-btn", { type: "button", onclick: () => done(true) }, "👍"), h("button.sr-btn", { type: "button", onclick: () => done(false) }, "👎"));
+    return box;
   }
   function hookTitle() { return { he: "טריק לזכירה (לא חובה)", en: "Memory hook (optional)", ru: "Подсказка для памяти (по желанию)" }[root.LSI18n.getLang()]; }
   function hookPlaceholder() { return { he: "למשל: מילה שנשמעת דומה, תמונה מצחיקה בראש…", en: "e.g. a similar-sounding word, a funny mental picture…", ru: "например: похожее по звучанию слово, смешная картинка…" }[root.LSI18n.getLang()]; }
@@ -79,7 +95,7 @@
     } else {
       title = t("q_listen");
       promptEl = h("div.listen-prompt", speakerBtn(tgt(it, ctx), T, { big: true, withSlow: true }));
-      autoplay(tgt(it, ctx), T, ctx);
+      if (!ctx.muted) setTimeout(() => SP.speak(tgt(it, ctx), T, { rate: ctx.rate, vary: true }), 250);
     }
     let answered = false;
     const list = h("div.options");

@@ -90,7 +90,7 @@
       return { kind: r < 0.7 ? "buildListen" : "dictation", item: it };
     }
     if (s === 0) return { kind: "mc", dir: "t2h", item: it };
-    if (s === 1) return { kind: "mc", dir: r < 0.5 ? "h2t" : "listen", item: it };
+    if (s === 1) return r < 0.3 ? { kind: "type", item: it } : { kind: "mc", dir: r < 0.65 ? "h2t" : "listen", item: it };
     if (s === 2) return r < 0.5 ? { kind: "type", item: it } : { kind: "mc", dir: r < 0.75 ? "listen" : "h2t", item: it };
     if (canListen && r < 0.2) return { kind: "speak", item: it };
     if (r < 0.55) return { kind: "type", item: it };

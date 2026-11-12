@@ -329,7 +329,7 @@
         if (i >= pairs.length) { quizBox.appendChild(h("div.notice", `${right}/${pairs.length} ${right === pairs.length ? "🌟" : "👍"}`)); markDone(); ST.addXp(p.id, right * 3); return; }
         const pair = pairs[i];
         const target = pair[Math.random() < 0.5 ? 0 : 1];
-        SP.speak(target, T, { rate: app.ttsRate() });
+        SP.speak(target, T, { rate: app.ttsRate(), vary: true });
         let answered = false;
         quizBox.appendChild(h("div.card",
           h("div.small.muted", `${i + 1}/${pairs.length} · ${t("whichDidYouHear")}`),

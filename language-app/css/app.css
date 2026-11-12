@@ -551,3 +551,6 @@ h1, h2, .hero-title, .st-title, .target-word, .reel-word { font-family: "Rubik",
 .reel .reel-main { transition: transform .3s ease; }
 .reel.saying .reel-main { transform: translateY(-110px) scale(.9); }
 .reel.saying .reel-bg { opacity: .04; }
+.selfref { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: linear-gradient(135deg, var(--primary-soft), var(--surface-2)); border-radius: 16px; padding: 10px 12px; font-weight: 700; text-align: center; }
+.sr-btn { font-size: 1.5em; width: 54px; height: 48px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); box-shadow: 0 4px 0 var(--line); cursor: pointer; }
+.sr-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }

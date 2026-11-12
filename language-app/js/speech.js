@@ -47,9 +47,15 @@
         synth.cancel();
         const u = new root.SpeechSynthesisUtterance(U.stripStress(text));
         u.lang = LOCALES[lang] || lang;
-        const v = voiceFor(lang);
+        let v = voiceFor(lang);
+        if (opts.vary) {
+          // High-variability phonetic training: different voices and speeds train the ear.
+          const prefix = (LOCALES[lang] || lang).slice(0, 2);
+          const all = voices.filter((x) => (x.lang || "").toLowerCase().startsWith(prefix));
+          if (all.length) v = all[Math.floor(Math.random() * all.length)];
+        }
         if (v) u.voice = v;
-        u.rate = opts.rate || 0.9;
+        u.rate = (opts.rate || 0.9) * (opts.vary ? 0.85 + Math.random() * 0.3 : 1);
         u.pitch = 1;
         let done = false;
         const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
