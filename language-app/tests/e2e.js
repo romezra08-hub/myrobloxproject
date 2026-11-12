@@ -56,7 +56,8 @@ async function answerStep(page, i) {
     await page.click(".main-btn");
   }
   await page.waitForTimeout(60);
-  // advance past feedback
+  // advance past feedback (but never past the lesson summary)
+  if (await page.$(".summary")) return true;
   const btn = await page.$(".main-btn:not([disabled])");
   if (btn && (await btn.getAttribute("data-mode")) === "next") await btn.click();
   return true;

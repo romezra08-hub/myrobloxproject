@@ -157,13 +157,17 @@
 
     // 3) New words
     const today = U.dayKey();
-    const newLimit = opts.newCount != null ? opts.newCount : (profile.newPerDay || 8);
+    // Don't let reviews snowball: the bigger the review pile, the fewer new words today.
+    const dueCount = dueCards(prog).length;
+    const base = opts.newCount != null ? opts.newCount : (profile.newPerDay || 8);
+    const newLimit = dueCount > 30 ? Math.max(2, base - Math.floor((dueCount - 30) / 8)) : base;
     const fresh = unseen(prog, curriculum()).slice(0, newLimit).map((v) => item(v.id));
     const newSteps = [];
     for (let i = 0; i < fresh.length; i += 4) {
       const batch = fresh.slice(i, i + 4);
-      batch.forEach((it) => newSteps.push({ kind: "intro", item: it }));
-      U.shuffle(batch).forEach((it) => newSteps.push({ kind: "mc", dir: "t2h", item: it, learning: true }));
+      // Pretesting effect: guess first (no penalty), then see the answer, then retrieve.
+      batch.forEach((it) => { newSteps.push({ kind: "mc", dir: "t2h", item: it, pretest: true }); newSteps.push({ kind: "intro", item: it }); });
+      U.shuffle(batch).forEach((it) => newSteps.push({ kind: "mc", dir: Math.random() < 0.5 ? "h2t" : "listen", item: it, learning: true }));
       if (batch.length >= 3) newSteps.push({ kind: "match", items: batch, learning: true });
     }
 

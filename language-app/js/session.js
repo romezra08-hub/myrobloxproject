@@ -7,6 +7,7 @@
   const SP = root.LSSpeech;
   const U = root.LSUtil;
 
+  const I = () => root.LSI18n.getLang();
   function run(opts) {
     const app = root.LSApp;
     const profile = app.profile();
@@ -96,6 +97,15 @@
         return next();
       }
 
+      if (step.pretest) {
+        xp += 3;
+        root.LSUI.sfx(res.correct ? "right" : "tap");
+        fb.innerHTML = "";
+        fb.className = "feedback show good";
+        fb.appendChild(h("div.fb-title", res.correct ? "🎯 " + { he: "ניחוש מעולה!", en: "Great guess!", ru: "Отличная догадка!" }[I()] : "💡 " + { he: "עכשיו את/ה יודע/ת — ככה זוכרים טוב יותר!", en: "Now you know — guessing first helps you remember!", ru: "Теперь вы знаете — догадка помогает запомнить!" }[I()]));
+        mainBtn.disabled = false; mainBtn.textContent = t("next"); mainBtn.dataset.mode = "next"; checkFn = next;
+        return;
+      }
       const correct = !!res.correct;
       if (correct) right++; else wrong++;
       combo = correct ? combo + 1 : 0;

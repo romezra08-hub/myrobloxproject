@@ -61,3 +61,9 @@ Nir Eyal's Hook model has four steps: **trigger → action → variable reward �
 - **Investment:** levels that grow with XP, your own memory hooks for words, the family board.
 - **Ethics:** no guilt trips and no endless feed. Once the daily goal is met the app says "rest helps memory".
 Sources: https://umbrex.com/?p=242458 ; https://uxmag.com/?p=21127
+
+## Round 3
+- **Pretesting / guess first:** guessing a word's meaning *before* studying it improves later memory, even when the guess is wrong (Potts & Shanks 2014; Chua & Pan 2026 tested word↔picture guessing like language apps use; older adults benefit too). → Every new word now starts with a no-penalty "Guess!" question, then the reveal, then a harder retrieval.
+- **Review snowball:** there's no proven "best" number of new words a day, but practitioners agree on 10–20, and the real limit is the review load. → When more than 30 reviews are due, the daily lesson automatically cuts new words (minimum 2).
+- **Chunks (formulaic language):** using ready-made phrases goes with better fluency (Boers & Lindstromberg 2012), though the best way to teach them is still unclear. → The phrase builder, Reels phrase feeds and role-play conversations all practice whole chunks.
+Sources: https://sc-pan.github.io/pdf/CP_2026.pdf ; https://link.springer.com/article/10.3758/s13421-021-01218-6 ; https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9379275/ ; https://actualfluency.com/spaced-repetition-snowball-how-to-become-overwhelmed-by-learning-vocabulary

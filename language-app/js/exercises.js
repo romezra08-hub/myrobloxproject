@@ -70,7 +70,7 @@
     const opts = U.shuffle([it].concat(C.distractors(it, optField, 3)));
     let promptEl, title;
     if (dir === "t2h") {
-      title = t("q_meaning");
+      title = step.pretest ? "🤔 " + pick({ he: "נחשו! (אין בעיה לטעות)", en: "Guess! (it's fine to be wrong)", ru: "Угадайте! (ошибаться можно)" }) : t("q_meaning");
       promptEl = h("div.target-word", L(tgt(it, ctx), T), speakerBtn(tgt(it, ctx), T));
       autoplay(tgt(it, ctx), T, ctx);
     } else if (dir === "h2t") {
