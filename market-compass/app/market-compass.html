@@ -101,7 +101,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .tab:hover { color: var(--ink); }
 .tab[aria-current="page"] { color: var(--ink); border-bottom-color: var(--needle); }
-@media (max-width: 480px) { .tab { padding: 9px 8px; font-size: 13.5px; } }
+@media (max-width: 480px) { .tabs { gap: 0; } .tab { padding: 9px 5px; font-size: 13px; } }
 
 .banner { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 12px 14px; font-size: 13.5px; color: var(--ink-2); display: flex; gap: 10px; align-items: flex-start; }
 .banner strong { color: var(--ink); }
@@ -141,6 +141,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .seg { height: 100%; border-radius: 2px; min-width: 3px; }
 .seg:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
 .seg:last-child { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
+.twobars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 12px; align-items: center; }
+.bar-cap { font-size: 11.5px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .alloc { display: flex; flex-direction: column; }
 .alloc-item { border-top: 1px solid var(--line); }
 .alloc-item:first-child { border-top: 0; }
@@ -156,7 +158,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .zero > summary .alloc-pct, .zero > summary .alloc-amt { color: var(--muted); font-weight: 500; }
 
 .parts { display: flex; flex-direction: column; gap: 8px; }
-.part { display: grid; grid-template-columns: minmax(0, 150px) 96px minmax(0, 1fr); gap: 4px 12px; align-items: center; font-size: 13px; }
+.part { display: grid; grid-template-columns: minmax(0, 176px) 96px minmax(0, 1fr); gap: 4px 12px; align-items: center; font-size: 13px; }
 .part-label { font-weight: 600; }
 .part-text { color: var(--ink-2); }
 @media (max-width: 560px) { .part { grid-template-columns: minmax(0, 1fr) 96px; } .part-text { grid-column: 1 / -1; } }
@@ -252,6 +254,27 @@ tr.group th { padding-top: 16px; border-top: 0; color: var(--muted); font-size: 
 .sym { font-weight: 500; color: var(--muted); font-size: 11.5px; margin-left: 6px; }
 .spark { display: inline-block; vertical-align: middle; }
 
+.scen td { vertical-align: top; }
+.scen th:first-child { min-width: 230px; }
+.plan-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13.5px; line-height: 1.55; background: var(--inset); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; max-width: 78ch; }
+.ctx { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.ctx > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 2px 12px; font-size: 13px; }
+.ctx dt { font-weight: 600; }
+.ctx dd { color: var(--ink-2); }
+@media (max-width: 560px) { .ctx > div { grid-template-columns: minmax(0, 1fr); } }
+.tests { display: flex; flex-direction: column; gap: 9px; }
+.test { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 13.5px; }
+
+/* ---------- learn ---------- */
+.lessons { display: flex; flex-direction: column; }
+.lesson { padding: 14px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; }
+.lesson:first-child { border-top: 0; padding-top: 2px; }
+.lesson:last-child { padding-bottom: 2px; }
+.lesson h3 { font-size: 15px; font-weight: 650; text-wrap: balance; }
+.lesson p { max-width: 74ch; font-size: 14px; color: var(--ink-2); }
+.lesson .use { color: var(--ink); }
+.lesson .use b { font-weight: 650; }
+
 /* ---------- events ---------- */
 .lede { font-family: var(--font-display); font-weight: 650; font-size: clamp(19px, 2.6vw, 25px); line-height: 1.22; letter-spacing: -0.015em; text-wrap: balance; max-width: 34ch; }
 .prose { max-width: 68ch; color: var(--ink-2); }
@@ -328,6 +351,7 @@ tr.group th { padding-top: 16px; border-top: 0; color: var(--muted); font-size: 
     <a class="tab" href="#crypto" data-view="crypto">Crypto</a>
     <a class="tab" href="#events" data-view="events">Events</a>
     <a class="tab" href="#ask" data-view="ask">Ask</a>
+    <a class="tab" href="#learn" data-view="learn">Learn</a>
     <a class="tab" href="#method" data-view="method">Method</a>
   </nav>
 
@@ -339,6 +363,7 @@ tr.group th { padding-top: 16px; border-top: 0; color: var(--muted); font-size: 
     <section class="view" id="view-crypto" aria-label="Crypto" hidden></section>
     <section class="view" id="view-events" aria-label="Events" hidden></section>
     <section class="view" id="view-ask" aria-label="Ask" hidden></section>
+    <section class="view" id="view-learn" aria-label="Learn" hidden></section>
     <section class="view" id="view-method" aria-label="Method" hidden></section>
   </main>
 
@@ -359,10 +384,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
  * same file runs in the page and under `node --test`.
  *
  * The method, in one paragraph: your time horizon and nerve set a diversified
- * baseline (that decision matters far more than any forecast). Live trend,
- * valuation, liquidity and event readings may then lean each part up or down
- * by a bounded amount, with anything trimmed parked in T-bills. Hard caps keep
- * the tilts from ever overriding the baseline's risk limits.
+ * baseline, and that decision matters far more than any forecast. Live trend,
+ * valuation and risk readings may then lean each part by a small, bounded
+ * amount, with anything trimmed parked in T-bills. News can only make the plan
+ * more careful, never bolder. Hard caps keep the leans from overriding the
+ * baseline's risk limits. Every number below is tied to a source in the
+ * page's Library and Method tabs.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -379,14 +406,28 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   };
 
   // Share of the plan in growth assets (stocks + crypto) by nerve, before the horizon cap.
-  var RISK_GROWTH = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 95 };
+  // The top is 90, not 100: long horizons do not make stocks safe, and US history is the lucky draw.
+  var RISK_GROWTH = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 90 };
   var RISK_NAMES = { 1: 'Very cautious', 2: 'Cautious', 3: 'Balanced', 4: 'Growth', 5: 'Aggressive' };
   // The most crypto the plan will ever hold, by the choice you make.
   var CRYPTO_CAP = { none: 0, small: 2, medium: 5, high: 10 };
-  // How far live signals may move a part away from its baseline (fraction of the part).
-  var STYLE_K = { steady: 0, balanced: 0.35, active: 0.7 };
-  // Worst peak-to-trough falls since 2000, used for the stress test (percent).
-  var WORST = { us: -51, intl: -57, crypto: -80, gold: -45, bonds: -17, cash: 0 };
+  // How far a full reading may move a part away from its baseline, as a fraction of the part.
+  // Trimming is allowed further than adding: the evidence for trend rules is that they
+  // reduce losses, not that they raise returns.
+  var STYLE = {
+    steady: { down: 0, up: 0 },
+    balanced: { down: 0.35, up: 0.20 },
+    active: { down: 0.50, up: 0.25 }
+  };
+  // Deepest month-end falls since 2000 (percent). Older history was worse; see SCENARIOS.
+  var WORST = { us: -51, intl: -57, crypto: -85, gold: -45, bonds: -17, cash: 0 };
+  // Real episodes, part by part (percent, approximate). Crypto did not exist in 2008,
+  // so its own typical bear-market fall is assumed there.
+  var SCENARIOS = [
+    { id: 'crisis', r: { us: -51, intl: -57, crypto: -80, gold: 20, bonds: 6, cash: 2 } },
+    { id: 'inflation', r: { us: -19, intl: -16, crypto: -64, gold: 0, bonds: -13, cash: 1.5 } },
+    { id: 'worst', r: WORST }
+  ];
   // Long-run yearly swings (standard deviation). Recent calm is never allowed to
   // make a part look safer than its history: the higher of live and long-run is used.
   var LONG_RUN_VOL = { us: 0.16, intl: 0.17, crypto: 0.65, gold: 0.16, bonds: 0.06, cash: 0.01 };
@@ -399,45 +440,53 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     bonds:  { us: 0.10, intl: 0.15, crypto: 0.05, gold: 0.25, bonds: 1, cash: 0 },
     cash:   { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 1 }
   };
+  var INFLATION_ASSUMED = 2.5;  // percent a year, used to turn today's yields into after-inflation returns
   var BRIEF_MAX_AGE_H = 96;     // an event read older than four days no longer moves the plan
-  var EVENT_WEIGHT = 0.2;       // events are a fifth of each part's reading; prices are the rest
+  var EVENT_WEIGHT = 0.1;       // news is a tenth of a reading at most, and only in the careful direction
 
   var DEFAULTS = {
-    amount: 1000, horizon: 10, risk: 3, crypto: 'small', style: 'balanced',
-    efund: true, debt: false,
+    amount: 1000, monthly: 0, horizon: 10, risk: 3, crypto: 'small', style: 'balanced',
+    efund: true, debt: false, unstable: false,
     holdings: { us: 0, intl: 0, crypto: 0, gold: 0, bonds: 0, cash: 0 }
   };
 
   function num(x, d) { x = Number(x); return isFinite(x) ? x : d; }
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function isNum(x) { return typeof x === 'number' && isFinite(x); }
 
   function normalizeProfile(p) {
     p = p || {};
     var h = p.holdings || {};
     var out = {
       amount: clamp(num(p.amount, DEFAULTS.amount), 0, 1e9),
+      monthly: clamp(num(p.monthly, DEFAULTS.monthly), 0, 1e7),
       horizon: clamp(num(p.horizon, DEFAULTS.horizon), 0, 60),
       risk: clamp(Math.round(num(p.risk, DEFAULTS.risk)), 1, 5),
       crypto: CRYPTO_CAP.hasOwnProperty(p.crypto) ? p.crypto : DEFAULTS.crypto,
-      style: STYLE_K.hasOwnProperty(p.style) ? p.style : DEFAULTS.style,
+      style: STYLE.hasOwnProperty(p.style) ? p.style : DEFAULTS.style,
       efund: p.efund === undefined ? DEFAULTS.efund : !!p.efund,
       debt: !!p.debt,
+      unstable: !!p.unstable,
       holdings: {}
     };
     SLEEVES.forEach(function (k) { out.holdings[k] = clamp(num(h[k], 0), 0, 1e9); });
     return out;
   }
 
-  /** The most that may sit in growth assets for money needed in `years`. */
+  /**
+   * The most that may sit in growth assets for money needed in `years`.
+   * The test behind each rung: if stocks halved, as they did in 2000-02 and 2007-09,
+   * the loss must be one the goal survives in the time left.
+   */
   function horizonCap(years) {
     if (years < 1) return 0;
-    if (years < 2) return 15;
-    if (years < 3) return 30;
-    if (years < 5) return 50;
-    if (years < 7) return 65;
-    if (years < 10) return 80;
-    if (years < 15) return 90;
-    return 100;
+    if (years < 2) return 10;
+    if (years < 3) return 20;
+    if (years < 5) return 35;
+    if (years < 7) return 50;
+    if (years < 10) return 70;
+    if (years < 15) return 85;
+    return 90;
   }
 
   /** The baseline mix: what you would hold if you ignored every headline. Sums to 100. */
@@ -445,20 +494,27 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var p = normalizeProfile(profile);
     var cap = horizonCap(p.horizon);
     var want = RISK_GROWTH[p.risk];
+    if (p.unstable) want = Math.max(0, want - 10);   // a shaky pay cheque is already a risky asset
     var growth = Math.min(want, cap);
 
-    var crypto = Math.min(CRYPTO_CAP[p.crypto], 0.125 * growth);
-    if (p.horizon < 3) crypto = 0;            // too volatile for money needed soon
-    else if (p.horizon < 5) crypto = crypto / 2;
+    // Crypto is sized by risk, not by enthusiasm: at most a tenth of the growth share,
+    // none for the most cautious answer, and none for money needed inside a full crypto cycle.
+    var crypto = Math.min(CRYPTO_CAP[p.crypto], growth / 10);
+    if (p.risk === 1) crypto = 0;
+    else if (p.risk === 2) crypto = crypto / 2;
+    if (p.horizon < 4) crypto = 0;
+    else if (p.horizon < 6) crypto = crypto / 2;
 
     var stocks = growth - crypto;
-    var gold = growth <= 0 ? 0 : (growth >= 40 ? 5 : 3);
+    var gold = (growth <= 0 || p.horizon < 3) ? 0 : (growth >= 40 ? 5 : 3);
     var defensive = 100 - growth - gold;
     var cashShare = p.horizon < 1 ? 1 : p.horizon < 3 ? 0.7 : p.horizon < 5 ? 0.4 : 0.2;
+    var cash = defensive * cashShare;
+    if (p.horizon >= 10) cash = Math.min(cash, 5);  // over decades cash barely beats inflation
 
     var w = {
       us: stocks * 0.65, intl: stocks * 0.35, crypto: crypto, gold: gold,
-      bonds: defensive * (1 - cashShare), cash: defensive * cashShare
+      bonds: defensive - cash, cash: cash
     };
     return { weights: w, growth: growth, growthWanted: want, growthCap: cap, limitedBy: cap < want ? 'horizon' : 'risk' };
   }
@@ -472,21 +528,29 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     return ageH >= -1 && ageH <= BRIEF_MAX_AGE_H;
   }
 
-  /** Blend each part's price-based reading with the event reading. All in [-1, 1]. */
+  /**
+   * Combine each part's price-based reading with the news reading. All in [-1, 1].
+   * News may only make the plan more careful. It is ignored when it is rosier than
+   * the price reading, it counts for a tenth when it is gloomier, and it can shrink a
+   * positive lean to nothing but never turn it negative. Acting on headlines is the
+   * least supported input in the research, so it gets the least room.
+   */
   function blendScores(snapshot, brief, now) {
     var fresh = briefIsFresh(brief, now);
     var out = {};
     RISKY.forEach(function (k) {
       var sl = snapshot && snapshot.sleeves && snapshot.sleeves[k];
-      var s = sl && typeof sl.score === 'number' ? clamp(sl.score, -1, 1) : null;
+      var s = sl && isNum(sl.score) ? clamp(sl.score, -1, 1) : null;
       var ev = fresh && brief.sleeveScores && brief.sleeveScores[k];
-      var e = ev && typeof ev.score === 'number' ? clamp(ev.score, -1, 1) : null;
+      var e = ev && isNum(ev.score) ? clamp(ev.score, -1, 1) : null;
       var f;
-      if (s === null && e === null) f = 0;
-      else if (e === null) f = s;
-      else if (s === null) f = EVENT_WEIGHT * e;
-      else f = (1 - EVENT_WEIGHT) * s + EVENT_WEIGHT * e;
-      out[k] = { signal: s, event: e, final: f, eventUsed: e !== null };
+      if (s === null) f = e !== null && e < 0 ? EVENT_WEIGHT * e : 0;
+      else if (e === null || e >= s) f = s;
+      else {
+        f = (1 - EVENT_WEIGHT) * s + EVENT_WEIGHT * e;
+        if (s > 0 && f < 0) f = 0;
+      }
+      out[k] = { signal: s, event: e, final: f, eventUsed: e !== null && f !== (s === null ? 0 : s), eventEffect: f - (s === null ? 0 : s) };
     });
     return out;
   }
@@ -494,11 +558,11 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   /** Lean the baseline by the readings, then enforce the caps. Sums to 100. */
   function tilt(base, scores, profile) {
     var p = normalizeProfile(profile);
-    var k = STYLE_K[p.style];
+    var lean = STYLE[p.style];
     var w = {};
     RISKY.forEach(function (s) {
-      var f = scores && scores[s] ? scores[s].final : 0;
-      w[s] = base.weights[s] * (1 + k * clamp(f, -1, 1));
+      var f = clamp(scores && scores[s] ? scores[s].final : 0, -1, 1);
+      w[s] = base.weights[s] * (1 + (f >= 0 ? lean.up : lean.down) * f);
     });
     // 1. never more crypto than you chose
     w.crypto = Math.min(w.crypto, CRYPTO_CAP[p.crypto]);
@@ -550,6 +614,14 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   };
 
   /**
+   * How far a holding may drift before it is worth trading: 5 points, or a quarter
+   * of its target if that is less, and never under 1 point. Inside the band, leave it.
+   * Rebalancing controls risk rather than adding return, and the exact rule matters
+   * little, so the aim is one or two trades a year.
+   */
+  function driftBand(target) { return Math.max(1, Math.min(5, 0.25 * target)); }
+
+  /**
    * Split new money across the parts.
    * With no holdings, it simply follows the target. With holdings, new money
    * goes to whatever is furthest below target first, so you rebalance by buying
@@ -569,34 +641,38 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       if (gaps[k] > 0) pos += gaps[k];
     });
     SLEEVES.forEach(function (k) { buys[k] = pos > 0 && gaps[k] > 0 ? amount * gaps[k] / pos : 0; });
-    // What is still well over target once the new money is in: buying alone could not fix these.
+    // What is still outside its band once the new money is in: buying alone could not fix these.
     SLEEVES.forEach(function (k) {
       var share = total > 0 ? ((holdings[k] || 0) + buys[k]) / total * 100 : 0;
-      if (share - target[k] >= 5) trims.push({ key: k, share: share, target: target[k], over: share - target[k] });
+      if (share - target[k] >= driftBand(target[k])) trims.push({ key: k, share: share, target: target[k], over: share - target[k] });
     });
     trims.sort(function (a, b) { return b.over - a.over; });
     return { buys: buys, trims: trims, held: held, total: total };
   }
 
-  /** How to put the money in: one go, or in steps. */
-  function pacing(p, target, snapshot) {
-    var regime = snapshot && snapshot.regime && typeof snapshot.regime.score === 'number' ? snapshot.regime.score : null;
-    var vix = snapshot && snapshot.macro ? snapshot.macro.vix : null;
+  /**
+   * How to put the money in. A lump sum has beaten spreading out about two times in
+   * three, so it is the default. Stepping in is offered only to people who said a fall
+   * would shake them, as a fixed schedule decided in advance. Market conditions play
+   * no part: waiting for calm is market timing.
+   */
+  function pacing(p, target) {
     var atRisk = p.amount * (100 - target.cash) / 100;
-    var stressed = (regime !== null && regime < -0.35) || (typeof vix === 'number' && vix >= 26);
-    var nervous = p.risk <= 2;
     if (atRisk <= 0) return { mode: 'now', steps: 1, why: 'cash' };
     if (atRisk < 500) return { mode: 'now', steps: 1, why: 'small' };
-    if (stressed && nervous) return { mode: 'steps', steps: 6, why: 'stressed-nervous' };
-    if (stressed) return { mode: 'steps', steps: 3, why: 'stressed' };
-    if (nervous) return { mode: 'steps', steps: 4, why: 'nervous' };
+    if (p.risk === 1) return { mode: 'steps', steps: 6, why: 'nervous' };
+    if (p.risk === 2) return { mode: 'steps', steps: 3, why: 'nervous' };
     return { mode: 'now', steps: 1, why: 'evidence' };
   }
 
-  /** What the mix would lose if every part repeated its worst fall since 2000 at once. */
+  /** What the mix would do in each scenario, and the gain then needed to get back to even. */
   function stressTest(target) {
-    var loss = SLEEVES.reduce(function (a, k) { return a + target[k] * WORST[k] / 100; }, 0);
-    return { pct: loss, worst: WORST };
+    var list = SCENARIOS.map(function (sc) {
+      var pct = SLEEVES.reduce(function (a, k) { return a + target[k] * sc.r[k] / 100; }, 0);
+      var loss = Math.min(0.99, Math.max(0, -pct / 100));
+      return { id: sc.id, pct: pct, recover: loss > 0 ? loss / (1 - loss) * 100 : 0, parts: sc.r };
+    });
+    return { pct: list[list.length - 1].pct, scenarios: list, worst: WORST };
   }
 
   /**
@@ -609,13 +685,13 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var live = !!(risk && risk.vol && risk.corr);
     var vol = {};
     SLEEVES.forEach(function (k) {
-      var v = live && typeof risk.vol[k] === 'number' && isFinite(risk.vol[k]) ? risk.vol[k] : 0;
+      var v = live && isNum(risk.vol[k]) ? risk.vol[k] : 0;
       vol[k] = Math.max(v, LONG_RUN_VOL[k]);
     });
     function corr(a, b) {
       if (a === b) return 1;
       var c = live && risk.corr[a] ? risk.corr[a][b] : null;
-      return typeof c === 'number' && isFinite(c) ? clamp(c, -1, 1) : LONG_RUN_CORR[a][b];
+      return isNum(c) ? clamp(c, -1, 1) : LONG_RUN_CORR[a][b];
     }
     var rows = {}, variance = 0;
     SLEEVES.forEach(function (a) {
@@ -650,6 +726,63 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     return 1 - Math.pow((1 + rate - fee) / (1 + rate), years);
   }
 
+  /**
+   * What each part can reasonably be expected to earn a year after inflation, in percent.
+   * Built from today's starting points rather than from past returns:
+   *   stocks  the earnings yield on ten-year average profits (100 / Shiller P/E)
+   *   bonds   today's yield less assumed inflation; starting yield is the best forecast there is
+   *   cash    today's bill yield less inflation for a few years, fading to its long-run 0.5%
+   *   gold    about 1%, its record since 1900
+   *   crypto  0%: it has no earnings or interest to build a forecast on, so the plan counts on nothing
+   * International stocks have no live valuation feed, so they use 4.5%, close to their long-run record.
+   */
+  function expectedReal(snapshot, years) {
+    var m = (snapshot && snapshot.macro) || {};
+    var fade = clamp(3 / Math.max(1, num(years, 10)), 0, 1);
+    var cashNow = isNum(m.y3m) ? m.y3m - INFLATION_ASSUMED : 0.5;
+    return {
+      us: isNum(m.cape) && m.cape > 0 ? clamp(100 / m.cape, 1.5, 7) : 3.5,
+      intl: 4.5,
+      crypto: 0,
+      gold: 1,
+      bonds: isNum(m.y5y) ? clamp(m.y5y - INFLATION_ASSUMED, -1, 5) : 2,
+      cash: clamp(fade * cashNow + (1 - fade) * 0.5, -1, 3),
+      live: isNum(m.cape) && isNum(m.y5y)
+    };
+  }
+
+  /**
+   * A range for where the money could end up, in today's dollars.
+   * The middle uses expectedReal. The range is one standard error of the yearly average
+   * either side (swing / square root of years), which history suggests holds about two
+   * times in three. It is a rough guide, not a promise: the worst outcomes lie outside it.
+   */
+  function outlook(target, snapshot, profile, riskVol) {
+    var p = normalizeProfile(profile);
+    var exp = expectedReal(snapshot, p.horizon);
+    var mid = SLEEVES.reduce(function (a, k) { return a + target[k] * exp[k] / 100; }, 0);
+    var years = Math.max(1, p.horizon);
+    var spread = (isNum(riskVol) ? riskVol : 0.1) * 100 / Math.sqrt(years);
+    var held = SLEEVES.reduce(function (a, k) { return a + p.holdings[k]; }, 0);
+    var start = held + p.amount;
+    function fv(rate) { return futureValue(start, p.monthly, p.horizon, rate / 100).value; }
+    return {
+      parts: exp, mid: mid, low: mid - spread, high: mid + spread, spread: spread,
+      start: start, monthly: p.monthly, years: p.horizon,
+      paidIn: futureValue(start, p.monthly, p.horizon, 0).paidIn,
+      value: { low: fv(mid - spread), mid: fv(mid), high: fv(mid + spread) },
+      feeDrag: feeDrag(p.horizon, (mid + INFLATION_ASSUMED) / 100, 0.01),
+      inflation: INFLATION_ASSUMED
+    };
+  }
+
+  /** The same plan folded into three funds, for anyone who wants fewer moving parts. */
+  function threeFund(target) {
+    var stocks = target.us + target.intl + target.crypto;
+    var us = Math.round(stocks * 0.65);
+    return { us: us, intl: stocks - us, bonds: 100 - stocks, stocks: stocks };
+  }
+
   /** Everything the page shows for one person at one moment. */
   function plan(profile, snapshot, brief, now) {
     var p = normalizeProfile(profile);
@@ -660,14 +793,16 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var baseR = roundWeights(base.weights);
     var target = roundWeights(exact);
     var buy = buyPlan(target, p.holdings, p.amount);
+    var risk = riskShares(target, snapshot && snapshot.risk);
 
     var rows = SLEEVES.map(function (k) {
       var st = stanceFor(k, baseR[k], target[k]);
       var sc = scores[k] || null;
       return {
         key: k, label: LABELS[k], base: baseR[k], target: target[k], tilt: target[k] - baseR[k],
-        stance: st, stanceText: STANCE_TEXT[st], amount: buy.buys[k],
-        signal: sc ? sc.signal : null, event: sc ? sc.event : null, score: sc ? sc.final : null
+        stance: st, stanceText: STANCE_TEXT[st], amount: buy.buys[k], riskShare: risk.shares[k],
+        signal: sc ? sc.signal : null, event: sc ? sc.event : null, score: sc ? sc.final : null,
+        eventEffect: sc ? sc.eventEffect : 0
       };
     });
 
@@ -676,26 +811,27 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (!p.efund) checks.push({ id: 'efund', level: 'stop' });
     if (p.horizon < 1) checks.push({ id: 'short', level: 'note' });
     else if (base.limitedBy === 'horizon') checks.push({ id: 'horizon', level: 'note' });
-    if (p.crypto === 'high' && target.crypto > 0) checks.push({ id: 'crypto', level: 'warn' });
+    if (risk.shares.crypto >= 0.20) checks.push({ id: 'crypto', level: 'warn' });   // a fifth of all the risk in one small slice
 
     return {
       profile: p, base: base, baseRounded: baseR, target: target, rows: rows,
-      scores: scores, buy: buy, pacing: pacing(p, target, snapshot), stress: stressTest(target),
-      risk: riskShares(target, snapshot && snapshot.risk),
-      checks: checks, style: p.style, k: STYLE_K[p.style],
+      scores: scores, buy: buy, pacing: pacing(p, target), stress: stressTest(target),
+      risk: risk, outlook: outlook(target, snapshot, p, risk.vol), simple: threeFund(target),
+      checks: checks, style: p.style, lean: STYLE[p.style],
       eventsUsed: briefIsFresh(brief, now), riskName: RISK_NAMES[p.risk]
     };
   }
 
   return {
     SLEEVES: SLEEVES, RISKY: RISKY, LABELS: LABELS, DEFAULTS: DEFAULTS, RISK_GROWTH: RISK_GROWTH,
-    RISK_NAMES: RISK_NAMES, CRYPTO_CAP: CRYPTO_CAP, STYLE_K: STYLE_K, WORST: WORST,
+    RISK_NAMES: RISK_NAMES, CRYPTO_CAP: CRYPTO_CAP, STYLE: STYLE, WORST: WORST, SCENARIOS: SCENARIOS,
     EVENT_WEIGHT: EVENT_WEIGHT, BRIEF_MAX_AGE_H: BRIEF_MAX_AGE_H, STANCE_TEXT: STANCE_TEXT,
+    LONG_RUN_VOL: LONG_RUN_VOL, LONG_RUN_CORR: LONG_RUN_CORR, INFLATION_ASSUMED: INFLATION_ASSUMED,
     normalizeProfile: normalizeProfile, horizonCap: horizonCap, baseAllocation: baseAllocation,
     briefIsFresh: briefIsFresh, blendScores: blendScores, tilt: tilt, roundWeights: roundWeights,
-    stanceFor: stanceFor, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest, plan: plan,
-    LONG_RUN_VOL: LONG_RUN_VOL, LONG_RUN_CORR: LONG_RUN_CORR, riskShares: riskShares,
-    futureValue: futureValue, feeDrag: feeDrag
+    stanceFor: stanceFor, driftBand: driftBand, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest,
+    riskShares: riskShares, futureValue: futureValue, feeDrag: feeDrag, expectedReal: expectedReal,
+    outlook: outlook, threeFund: threeFund, plan: plan
   };
 });
 
@@ -708,7 +844,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   'use strict';
   var E = window.MCEngine;
   var CFG = window.MC_CONFIG || {};
-  var VIEWS = ['plan', 'markets', 'crypto', 'events', 'ask', 'method'];
+  var VIEWS = ['plan', 'markets', 'crypto', 'events', 'ask', 'learn', 'method'];
   var MINUS = '−';
   var STALE_H = 30;            // older than this, prices are flagged as out of date
   var IGNORE_SIGNALS_D = 14;   // older than this, signals no longer move the plan
@@ -716,8 +852,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   var HOLD_WITH = {
     us: 'A total-market or S&P 500 index fund, such as VTI, VOO or FSKAX.',
     intl: 'A total international index fund, such as VXUS or IXUS.',
-    crypto: 'Mostly Bitcoin, with a smaller share of Ether if you want it. A spot fund such as IBIT or FBTC, or a large regulated exchange.',
-    gold: 'A low-cost gold fund, such as IAU or GLDM.',
+    crypto: 'Mostly Bitcoin, with Ether as a small share at most. A spot fund such as IBIT or FBTC (0.25% a year) avoids the risk of an exchange failing. If you hold coins directly, use a large regulated platform and keep no more there than you could afford to lose.',
+    gold: 'A low-cost gold fund, such as IAU or GLDM. Think of it as insurance against disorder: over the long run it has earned about 1% a year after inflation.',
     bonds: 'A broad bond index fund, such as BND or AGG. BSV is a shorter, steadier version.',
     cash: 'A high-yield savings account, a money-market fund, or a T-bill fund such as SGOV or BIL.'
   };
@@ -788,6 +924,13 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (!isNum(x)) return '–';
     var a = Math.abs(x);
     return (x < 0 ? MINUS : '') + '$' + nf(a, a > 0 && a < 100 && Math.round(a) !== a ? 2 : 0);
+  }
+  function moneyShort(x) {
+    if (!isNum(x)) return '';
+    var a = Math.abs(x);
+    if (a >= 1e6) return '$' + nf(x / 1e6, a >= 1e7 ? 0 : 1) + 'M';
+    if (a >= 1e3) return '$' + nf(x / 1e3, a < 1e4 && Math.round(a) % 1000 !== 0 ? 1 : 0) + 'K';
+    return '$' + nf(x, 0);
   }
   function moneyBig(x) {
     if (!isNum(x)) return '–';
@@ -887,7 +1030,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   }
 
   /* Chart observers are tracked per view so a re-render can release the old ones. */
-  var ROS = { markets: [], crypto: [] }, roBucket = null;
+  var ROS = { plan: [], markets: [], crypto: [] }, roBucket = null;
   function dropObservers(name) { ROS[name].forEach(function (r) { r.disconnect(); }); ROS[name] = []; }
 
   /* Line chart with a crosshair readout, drawn at its real pixel width so text never scales.
@@ -1081,6 +1224,18 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   }
 
   // --------------------------------------------------------------------- plan
+  function heldTotal(p) { return E.SLEEVES.reduce(function (a, k) { return a + (p.holdings[k] || 0); }, 0); }
+  function riskQuestion(p) {
+    var a = p.amount + heldTotal(p);
+    if (!(a >= 100)) a = 1000;
+    return 'If your ' + money(a) + ' fell to ' + money(Math.round(a * 0.7)) + ' and stayed there for three years, you would';
+  }
+  var STYLE_HINT = {
+    steady: 'You hold your baseline mix whatever the market does. Most of the research favours this for most people.',
+    balanced: 'A full reading can trim a part by 35% of its size, or add 20%. This is about as far as the evidence supports.',
+    active: 'A full reading can trim a part by half, or add 25%. Expect more changes, and more of them to be wrong.'
+  };
+
   function buildControls() {
     var p = S.profile;
     function radioSet(name, options, current, cls) {
@@ -1092,25 +1247,32 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       });
       return box;
     }
+    function moneyField(id, label, value, hint) {
+      return h('div', { class: 'field' }, h('label', { for: id }, label),
+        h('div', { class: 'money' }, h('span', { 'aria-hidden': 'true' }, '$'), h('input', { id: id, type: 'number', inputmode: 'decimal', min: '0', step: '50', value: value })),
+        hint ? h('span', { class: 'hint' }, hint) : null);
+    }
     var horizonOut = h('output', { for: 'f-horizon', class: 'num', id: 'f-horizon-out' }, years(p.horizon));
     var form = h('form', { class: 'card plan-controls stack', id: 'controls', autocomplete: 'off', onsubmit: function (e) { e.preventDefault(); } },
       h('h2', null, 'About you'),
-      h('div', { class: 'field' }, h('label', { for: 'f-amount' }, 'Money to invest now'),
-        h('div', { class: 'money' }, h('span', { 'aria-hidden': 'true' }, '$'), h('input', { id: 'f-amount', type: 'number', inputmode: 'decimal', min: '0', step: '50', value: p.amount }))),
+      moneyField('f-amount', 'Money to invest now', p.amount),
+      moneyField('f-monthly', 'Adding each month', p.monthly || '', 'Optional. In the early years, how much you add matters more than what it earns.'),
       h('div', { class: 'field' },
         h('div', { class: 'row' }, h('label', { for: 'f-horizon', class: 'grow' }, 'When you will need it'), horizonOut),
         h('input', { id: 'f-horizon', type: 'range', min: '0', max: '40', step: '1', value: p.horizon }),
         h('span', { class: 'hint' }, 'The single biggest input. Money needed soon cannot ride out a crash.')),
-      h('fieldset', { class: 'field' }, h('legend', null, 'If your investments fell 30% in a year, you would'),
-        radioSet('risk', [[1, 'Sell everything'], [2, 'Sell some to feel safer'], [3, 'Hold, and lose sleep'], [4, 'Hold without much worry'], [5, 'Buy more']], p.risk, 'opt-list')),
+      h('fieldset', { class: 'field' }, h('legend', { id: 'risk-legend' }, riskQuestion(p)),
+        radioSet('risk', [[1, 'Sell everything'], [2, 'Sell some to feel safer'], [3, 'Hold, and lose sleep'], [4, 'Hold without much worry'], [5, 'Buy more']], p.risk, 'opt-list'),
+        h('span', { class: 'hint' }, 'Answer for the worst day, not today. People tend to feel braver while prices are rising.')),
       h('fieldset', { class: 'field' }, h('legend', null, 'Crypto, at most'),
         radioSet('crypto', [['none', 'None'], ['small', '2%'], ['medium', '5%'], ['high', '10%']], p.crypto, 'seg-ctl'),
         h('span', { class: 'hint' }, 'A ceiling, not a target. Large banks suggest 1 to 5% for those who want any.')),
       h('fieldset', { class: 'field' }, h('legend', null, 'How much should market signals move the plan'),
-        radioSet('style', [['steady', 'Not at all'], ['balanced', 'A little'], ['active', 'A lot']], p.style, 'seg-ctl'),
-        h('span', { class: 'hint', id: 'style-hint' }, '')),
+        radioSet('style', [['steady', 'Not at all'], ['balanced', 'A little'], ['active', 'More']], p.style, 'seg-ctl'),
+        h('span', { class: 'hint', id: 'style-hint' }, STYLE_HINT[p.style])),
       h('label', { class: 'check', for: 'f-efund' }, h('input', { type: 'checkbox', id: 'f-efund', checked: p.efund }), h('span', null, 'I have 3 to 6 months of spending set aside')),
       h('label', { class: 'check', for: 'f-debt' }, h('input', { type: 'checkbox', id: 'f-debt', checked: p.debt }), h('span', null, 'I have credit-card or other high-interest debt')),
+      h('label', { class: 'check', for: 'f-unstable' }, h('input', { type: 'checkbox', id: 'f-unstable', checked: p.unstable }), h('span', null, 'My income is irregular, or rises and falls with the stock market')),
       h('details', { class: 'plain', id: 'hold-details', open: E.SLEEVES.some(function (k) { return p.holdings[k] > 0; }) },
         h('summary', null, 'Already invested? Add what you hold'),
         h('div', { class: 'stack', style: { 'margin-top': '10px' } },
@@ -1132,11 +1294,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var holdings = {};
     E.SLEEVES.forEach(function (k) { holdings[k] = Number($('f-h-' + k).value) || 0; });
     S.profile = E.normalizeProfile({
-      amount: $('f-amount').value === '' ? 0 : Number($('f-amount').value), horizon: Number($('f-horizon').value),
-      risk: Number(pick('risk')), crypto: pick('crypto'), style: pick('style'),
-      efund: $('f-efund').checked, debt: $('f-debt').checked, holdings: holdings
+      amount: $('f-amount').value === '' ? 0 : Number($('f-amount').value), monthly: Number($('f-monthly').value) || 0,
+      horizon: Number($('f-horizon').value), risk: Number(pick('risk')), crypto: pick('crypto'), style: pick('style'),
+      efund: $('f-efund').checked, debt: $('f-debt').checked, unstable: $('f-unstable').checked, holdings: holdings
     });
     $('f-horizon-out').textContent = years(S.profile.horizon);
+    $('risk-legend').textContent = riskQuestion(S.profile);
     renderPlan();
     saveProfileSoon();
   }
@@ -1145,10 +1308,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var p = S.profile, f = $('controls');
     if (!f) return;
     if (document.activeElement !== $('f-amount')) $('f-amount').value = p.amount;
+    if (document.activeElement !== $('f-monthly')) $('f-monthly').value = p.monthly || '';
     $('f-horizon').value = p.horizon;
     $('f-horizon-out').textContent = years(p.horizon);
+    $('risk-legend').textContent = riskQuestion(p);
     [['risk', p.risk], ['crypto', p.crypto], ['style', p.style]].forEach(function (x) { var el = $('f-' + x[0] + '-' + x[1]); if (el) el.checked = true; });
-    $('f-efund').checked = p.efund; $('f-debt').checked = p.debt;
+    $('f-efund').checked = p.efund; $('f-debt').checked = p.debt; $('f-unstable').checked = p.unstable;
     E.SLEEVES.forEach(function (k) { if (document.activeElement !== $('f-h-' + k)) $('f-h-' + k).value = p.holdings[k] || ''; });
     if (E.SLEEVES.some(function (k) { return p.holdings[k] > 0; })) $('hold-details').open = true;
   }
@@ -1160,15 +1325,30 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     return (same.length ? same : live).slice().sort(function (a, b) { return Math.abs(b.score * b.weight) - Math.abs(a.score * a.weight); })[0];
   }
 
+  /* How to hold each part. Bonds depend on the timeline and on whether inflation is driving markets. */
+  function holdWith(key, pl) {
+    if (key !== 'bonds') return HOLD_WITH[key];
+    var snap = snapForEngine(), ir = snap && snap.macro && snap.macro.inflationRegime, mode = ir && ir.mode;
+    if (pl.profile.horizon < 3) return 'Short-term only for money needed this soon: T-bills or a short Treasury fund, such as SGOV, SHY or BSV.';
+    if (mode === 'short') return 'Inflation is driving markets right now, so keep this part short: about 40% in T-bills or short Treasuries (SGOV, SHY), about 35% in short inflation-linked bonds (VTIP, STIP), and no more than 25% in a broad bond fund (BND, AGG). Leave long-term bonds out.';
+    if (mode === 'mixed') return 'Half in a broad bond fund (BND, AGG) and half in T-bills and short inflation-linked bonds (SGOV, VTIP), until inflation settles.';
+    return 'A broad bond index fund, such as BND or AGG. BSV is a shorter, steadier version.' + (pl.profile.horizon >= 10 ? ' For goals a decade or more away, an inflation-linked fund such as SCHP can make up part of it.' : '');
+  }
+
   function rowWhy(row, pl) {
     var snap = snapForEngine(), sl = snap && snap.sleeves && snap.sleeves[row.key];
     if (row.key === 'cash') {
       var y = sl && sl.parts && sl.parts[0] ? str(sl.parts[0].text, 200) : '';
       var lead = row.stance === 'extra' ? 'Holds what the signals trimmed elsewhere. ' : row.stance === 'less' ? 'Drawn on to fund stronger parts. ' : '';
-      return lead + (y && y !== 'No reading' ? y + '.' : 'Your steady anchor and dry powder.');
+      return lead + (y && y !== 'No reading' ? y + '.' : 'Your steady anchor.');
     }
     if (row.stance === 'none') {
-      if (row.key === 'crypto') return S.profile.crypto === 'none' ? 'You chose to hold none.' : 'Too volatile for money needed within ' + (S.profile.horizon < 3 ? '3' : '5') + ' years.';
+      if (row.key === 'crypto') {
+        if (S.profile.crypto === 'none') return 'You chose to hold none.';
+        if (S.profile.risk === 1) return 'Left out: it can fall 80%, and you said a 30% fall would make you sell.';
+        return 'Left out for money needed within four years: its recoveries have taken two to four.';
+      }
+      if (row.key === 'gold') return 'Left out for money needed within three years.';
       return 'Not part of a mix with this timeline.';
     }
     if (!sl) return 'No live reading, so this stays at its baseline.';
@@ -1180,14 +1360,19 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var snap = snapForEngine(), sl = snap && snap.sleeves && snap.sleeves[row.key];
     var box = h('div', { class: 'alloc-detail' });
     var moved = row.target - row.base;
-    box.appendChild(h('p', { class: 'sub' },
-      'Baseline ' + row.base + '%. Now ' + row.target + '%' + (moved !== 0 ? ' (' + (moved > 0 ? '+' : MINUS) + Math.abs(moved) + (Math.abs(moved) === 1 ? ' point).' : ' points).') : '.') +
-      (row.key !== 'cash' && isNum(row.score) && pl.k > 0 ? ' Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1; at this setting a full reading moves a part by ' + Math.round(pl.k * 100) + '%.' : '') +
-      (row.key !== 'cash' && pl.k === 0 ? ' Signals are shown for information and do not move your plan.' : '')));
+    var line = 'Baseline ' + row.base + '%. Now ' + row.target + '%' +
+      (moved !== 0 ? ' (' + (moved > 0 ? '+' : MINUS) + Math.abs(moved) + (Math.abs(moved) === 1 ? ' point).' : ' points).') : '.');
+    if (row.target > 0) line += ' It holds ' + row.target + '% of your money and carries about ' + Math.max(0, Math.round(row.riskShare * 100)) + '% of the risk.';
+    box.appendChild(h('p', { class: 'sub' }, line));
+    if (row.key !== 'cash' && isNum(row.score)) {
+      box.appendChild(h('p', { class: 'sub' }, pl.lean.down > 0
+        ? 'Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1. At your setting, a full negative reading trims a part by ' + Math.round(pl.lean.down * 100) + '% of its size and a full positive one adds ' + Math.round(pl.lean.up * 100) + '%.'
+        : 'Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1. Readings are shown for information and do not move your plan.'));
+    }
     if (sl && sl.parts && row.key !== 'cash') {
       var parts = h('div', { class: 'parts' });
       sl.parts.forEach(function (p) {
-        parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, str(p.label, 60)), dv(p.score), h('span', { class: 'part-text' }, str(p.text, 260))));
+        parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, str(p.label, 60) + ' · ' + Math.round((p.weight || 0) * 100) + '%'), dv(p.score), h('span', { class: 'part-text' }, str(p.text, 260))));
         if (Array.isArray(p.detail)) {
           var bits = p.detail.filter(function (d) { return isNum(d.score); }).map(function (d) { return str(d.text, 120); });
           if (bits.length) parts.appendChild(h('p', { class: 'note' }, bits.join(' · ')));
@@ -1195,18 +1380,23 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       });
       var ev = pl.eventsUsed && S.brief.sleeveScores && S.brief.sleeveScores[row.key];
       if (ev && isNum(ev.score)) {
-        parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, 'News and events'), dv(ev.score), h('span', { class: 'part-text' }, str(ev.why, 300))));
+        parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, 'News'), dv(ev.score), h('span', { class: 'part-text' }, str(ev.why, 300))));
       }
       box.appendChild(parts);
-      box.appendChild(h('p', { class: 'note' }, 'Price-based readings count for 80% and the news reading for 20%.'));
+      if (sl.capNote) box.appendChild(h('p', { class: 'note' }, str(sl.capNote, 200) + '.'));
+      if (ev && isNum(ev.score)) {
+        box.appendChild(h('p', { class: 'note' }, row.eventEffect < -0.004
+          ? 'The news is gloomier than prices, so it made this reading more careful by ' + Math.abs(row.eventEffect).toFixed(2) + '. News can only ever do that: it never makes the plan bolder.'
+          : 'The news is no gloomier than prices here, so it changes nothing. News can only make the plan more careful, never bolder.'));
+      }
     }
-    box.appendChild(h('p', { class: 'sub' }, h('b', null, 'How to hold it: '), HOLD_WITH[row.key], ' Examples, not endorsements.'));
+    box.appendChild(h('p', { class: 'sub' }, h('b', null, 'How to hold it: '), holdWith(row.key, pl), ' Examples, not endorsements.'));
     return box;
   }
 
   function summarySentence(pl) {
     if (!snapForEngine()) return 'Live signals are not available right now, so this is your baseline mix.';
-    if (pl.k === 0) return 'This is your baseline mix. Market signals are shown for information and do not move it.';
+    if (pl.lean.down === 0) return 'This is your baseline mix. Market signals are shown for information and do not move it.';
     var up = [], down = [];
     pl.rows.forEach(function (r) {
       if (r.key === 'cash') return;
@@ -1225,17 +1415,50 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   }
 
   var CHECK_COPY = {
-    debt: ['Pay off high-interest debt before investing', function () { return 'A card charging 22% costs more than anything here can reliably earn, so clearing it is the best return available. Use this plan for money left after that.'; }],
+    debt: ['Pay off high-interest debt before investing', function () { return 'A card charging 22% costs more than anything here can reliably earn, so clearing it is the best return available. If your employer matches pension contributions, take the full match first: that is free money. Use this plan for what is left.'; }],
     efund: ['Build a safety cushion first', function () {
       var y = S.snap && S.snap.macro && isNum(S.snap.macro.y3m) ? ' (T-bills currently pay about ' + S.snap.macro.y3m.toFixed(1) + '%)' : '';
       return 'Keep 3 to 6 months of spending in savings or T-bills' + y + ', so a surprise bill never forces you to sell investments at a bad moment. Then invest what is left.';
     }],
-    short: ['Money needed within a year belongs in cash', function () { return 'Stocks can fall 20% or more in a single year. For money you need that soon, the plan keeps everything in savings or T-bills.'; }],
-    horizon: ['Your timeline is setting the limit', function (pl) { return 'You could stomach more risk, but money needed in ' + years(pl.profile.horizon) + ' should not have more than ' + pl.base.growthCap + '% in stocks and crypto.'; }],
-    crypto: ['A 10% crypto ceiling is a large bet', function () { return 'Bitcoin has fallen 75% or more three times. A repeat at this size would cost about 8 points of your whole portfolio.'; }]
+    short: ['Money needed within a year belongs in cash', function () { return 'US stocks have lost money in about one year in four. For money you need that soon, the plan keeps everything in savings or T-bills.'; }],
+    horizon: ['Your timeline is setting the limit', function (pl) { return 'You could stomach more risk, but money needed in ' + years(pl.profile.horizon) + ' should not have more than ' + pl.base.growthCap + '% in stocks and crypto. If stocks halved, as they did twice this century, that keeps the loss to about ' + Math.round(pl.base.growthCap / 2) + '% with time left to recover.'; }],
+    crypto: ['Crypto is a small slice carrying a large share of the risk', function (pl) {
+      var r = pl.rows.filter(function (x) { return x.key === 'crypto'; })[0];
+      return 'It is ' + r.target + '% of your money but about ' + Math.round(r.riskShare * 100) + '% of the risk in this plan. Bitcoin has fallen more than 75% four times. A lower ceiling changes your long-run prospects very little and your worst day a great deal.';
+    }]
   };
   function callout(level, title, text) {
     return h('div', { class: 'callout ' + level }, icon(level === 'info' ? 'info' : 'stop'), h('h3', null, title), h('p', null, text));
+  }
+
+  function splitBar(rows, valueOf, label) {
+    var bar = h('div', { class: 'segbar', role: 'img', 'aria-label': label + ': ' + rows.filter(function (r) { return valueOf(r) > 0; }).map(function (r) { return r.label + ' ' + Math.round(valueOf(r)) + '%'; }).join(', ') });
+    rows.forEach(function (r) {
+      var v = valueOf(r);
+      if (v > 0.4) bar.appendChild(h('div', { class: 'seg', title: r.label + ' ' + Math.round(v) + '%', style: { 'flex-grow': String(v), 'flex-basis': '0', background: COLOR[r.key] } }));
+    });
+    return bar;
+  }
+
+  var SCENARIO_COPY = {
+    crisis: ['A 2008-style financial crisis', 'October 2007 to February 2009. Bonds and gold rose and softened the fall. US stocks took about five and a half years to regain their high.'],
+    inflation: ['A 2022-style inflation shock', 'Calendar 2022. Stocks and bonds fell together, which is what tends to happen when inflation is the problem.'],
+    worst: ['Every part repeats its worst fall since 2000, all at once', 'Deliberately harsh. These falls did not happen together.']
+  };
+
+  function planText(pl) {
+    var p = pl.profile, L = [];
+    var worst = pl.stress.scenarios.filter(function (s) { return s.id === 'crisis'; })[0];
+    L.push('MY INVESTING PLAN, written ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+    L.push('');
+    L.push('Goal: money I will need in about ' + years(p.horizon) + '.');
+    L.push('Target mix: ' + pl.rows.filter(function (r) { return r.target > 0; }).map(function (r) { return r.label + ' ' + r.target + '%'; }).join(', ') + '.');
+    if (p.monthly > 0) L.push('Every month I add ' + money(p.monthly) + ', automatically, split the same way.');
+    L.push('I look once a month at most. I change something only when a part is more than 5 points, or a quarter of its own size, away from its target, and I fix it with new money before I sell anything.');
+    L.push('If markets fall 30%, I do nothing. I chose this mix knowing it could lose about ' + Math.abs(Math.round(worst.pct)) + '% in a crisis like 2008.');
+    if (pl.target.crypto > 0) L.push('Crypto stays at or under ' + E.CRYPTO_CAP[p.crypto] + '% of the total. If it grows past one and a half times its target, I trim it back.');
+    L.push('I review the plan itself once a year, or when my life changes. Never because of a headline.');
+    return L.join('\n');
   }
 
   function renderPlan() {
@@ -1243,6 +1466,8 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (!hero) return;
     var pl = currentPlan(), p = pl.profile;
     clear(hero); clear(rest);
+    dropObservers('plan');
+    roBucket = ROS.plan;
 
     pl.checks.filter(function (c) { return c.level === 'stop'; }).forEach(function (c) {
       hero.appendChild(callout('stop', CHECK_COPY[c.id][0], CHECK_COPY[c.id][1](pl)));
@@ -1252,11 +1477,10 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       h('h1', { class: 'hero-title' }, 'Where your next ' + money(p.amount) + ' goes'),
       h('p', { class: 'sub' }, summarySentence(pl))));
 
-    var bar = h('div', { class: 'segbar', role: 'img', 'aria-label': 'Target mix: ' + pl.rows.filter(function (r) { return r.target > 0; }).map(function (r) { return r.label + ' ' + r.target + '%'; }).join(', ') });
-    pl.rows.forEach(function (r) {
-      if (r.target > 0) bar.appendChild(h('div', { class: 'seg', title: r.label + ' ' + r.target + '%', style: { 'flex-grow': String(r.target), 'flex-basis': '0', background: COLOR[r.key] } }));
-    });
-    hero.appendChild(bar);
+    var live = pl.rows.filter(function (r) { return r.target > 0; });
+    hero.appendChild(h('div', { class: 'twobars' },
+      h('span', { class: 'bar-cap' }, 'Your money'), splitBar(live, function (r) { return r.target; }, 'Where the money goes'),
+      h('span', { class: 'bar-cap' }, 'Your risk'), splitBar(live, function (r) { return Math.max(0, r.riskShare * 100); }, 'Where the risk sits')));
 
     var listEl = h('div', { class: 'alloc' });
     pl.rows.forEach(function (r) {
@@ -1265,7 +1489,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       var det = h('details', { class: 'alloc-item' + (r.target === 0 ? ' zero' : ''), id: 'row-' + r.key, open: !!S.open[r.key] },
         h('summary', null,
           h('span', { class: 'swatch', style: { background: COLOR[r.key] } }),
-          h('span', { class: 'alloc-name' }, r.label, pl.k > 0 || r.stance === 'none' ? chip(r.stanceText, tone, r.stance === 'none' ? null : ico) : null),
+          h('span', { class: 'alloc-name' }, r.label, pl.lean.down > 0 || r.stance === 'none' ? chip(r.stanceText, tone, r.stance === 'none' ? null : ico) : null),
           h('span', { class: 'alloc-pct num' }, r.target + '%'),
           h('span', { class: 'alloc-amt num' }, money(Math.round(r.amount))),
           h('span', { class: 'caret', 'aria-hidden': 'true' }, '▶'),
@@ -1275,40 +1499,106 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
       listEl.appendChild(det);
     });
     hero.appendChild(listEl);
-    hero.appendChild(h('p', { class: 'note' }, (pl.buy.held > 0 ? 'Percentages are the target for your whole portfolio; dollar figures split this deposit to move you toward it. ' : '') + 'Select a row to see every reading behind it.'));
+    hero.appendChild(h('p', { class: 'note' }, 'The second bar shows where the risk sits, which is rarely where the money sits. ' + (pl.buy.held > 0 ? 'Percentages are the target for your whole portfolio; dollar figures split this deposit to move you toward it. ' : '') + 'Select a row to see every reading behind it.'));
 
-    // pacing
-    var pc = pl.pacing, vix = S.snap && S.snap.macro && isNum(S.snap.macro.vix) ? S.snap.macro.vix.toFixed(0) : null;
+    // ---- how to put it in, and how often to look ----
+    var pc = pl.pacing;
     var paceCopy = {
-      evidence: ['Put it in all at once', 'Since 1976, investing a lump sum straight away has beaten spreading it out about 68% of the time, because markets rise more often than they fall. Spreading out mainly helps if an early drop would make you abandon the plan.'],
+      evidence: ['Put it in all at once', 'Investing a lump sum straight away has beaten spreading it out about two times in three (68% in Vanguard’s study of 1976 to 2022), because markets rise more often than they fall. Waiting for a calmer moment is market timing, and it rarely pays.'],
       small: ['Put it in all at once', 'At this size, splitting into smaller buys adds effort without much protection.'],
       cash: ['Nothing to time', 'Everything in this plan sits in cash, which you can add at any moment.'],
-      nervous: ['Spread it over ' + pc.steps + ' monthly buys', 'You said a big drop would be hard to sit through. Buying in equal monthly steps gives up a little return on average, but makes a bad first month far easier to live with. Put the cash part in today.'],
-      stressed: ['Spread it over ' + pc.steps + ' monthly buys', 'Markets are under stress' + (vix ? ' (the VIX is at ' + vix + ')' : '') + '. Stepping in over a few months lowers the odds of buying everything just before another leg down. Put the cash part in today.'],
-      'stressed-nervous': ['Spread it over ' + pc.steps + ' monthly buys', 'Markets are under stress and you said a big drop would be hard to sit through. Go slowly: equal monthly steps, with the cash part in today.']
+      nervous: ['Spread it over ' + pc.steps + ' monthly buys', 'You said a fall would be hard to sit through. Set the dates now and keep to them whatever the news says: ' + pc.steps + ' equal buys, one a month, with the cash part in today. On average this gives up a little return, which is a fair price for staying the course.']
     }[pc.why];
     rest.appendChild(callout('info', paceCopy[0], paceCopy[1]));
+    if (p.monthly > 0) rest.appendChild(callout('info', 'Make the monthly ' + money(p.monthly) + ' automatic', 'Set a standing transfer for the day you are paid, split the same way as above. Investing money as soon as you have it is not timing the market. It is the habit that does most of the work.'));
     var cRow = pl.rows.filter(function (r) { return r.key === 'crypto'; })[0];
     if (cRow.amount >= 60) rest.appendChild(callout('info', 'Buy the crypto slice in pieces', 'Crypto swings three to four times as much as stocks. Split the ' + money(Math.round(cRow.amount)) + ' into at least three buys, a week or more apart.'));
     pl.checks.filter(function (c) { return c.level !== 'stop'; }).forEach(function (c) {
       rest.appendChild(callout(c.level === 'warn' ? 'warn' : 'info', CHECK_COPY[c.id][0], CHECK_COPY[c.id][1](pl)));
     });
     pl.buy.trims.forEach(function (t) {
-      rest.appendChild(callout('warn', E.LABELS[t.key] + ' will still be ' + Math.round(t.over) + ' points over target', 'Even after this deposit it makes up ' + Math.round(t.share) + '% of your holdings against a ' + t.target + '% target. Selling to rebalance can trigger tax, so many people fix this with future deposits instead.'));
+      rest.appendChild(callout('warn', E.LABELS[t.key] + ' will still be ' + Math.round(t.over) + ' points over target', 'Even after this deposit it makes up ' + Math.round(t.share) + '% of your holdings against a ' + t.target + '% target. Selling to rebalance can trigger tax, so point future deposits elsewhere first and sell only if that is not enough.'));
     });
+    rest.appendChild(callout('info', 'Look once a month at most', 'This page refreshes every weekday. Your plan should not. Act only when a part is more than 5 points, or a quarter of its own size, away from its target. In the largest study of its kind, the households that traded most earned 11.4% a year while the market made 17.9%.'));
 
-    // stress test
-    var total = pl.buy.total || p.amount, lossPct = pl.stress.pct / 100;
+    // ---- what it could grow to ----
+    var o = pl.outlook;
+    if (p.horizon >= 1 && o.start + o.monthly > 0) {
+      var yrs = [], lo = [], mid = [], hi = [], paid = [];
+      for (var y = 0; y <= p.horizon; y++) {
+        yrs.push(y === 0 ? 'Today' : 'Year ' + y);
+        lo.push(E.futureValue(o.start, o.monthly, y, o.low / 100).value);
+        mid.push(E.futureValue(o.start, o.monthly, y, o.mid / 100).value);
+        hi.push(E.futureValue(o.start, o.monthly, y, o.high / 100).value);
+        paid.push(o.start + o.monthly * 12 * y);
+      }
+      var rate = function (x) { return (x < 0 ? MINUS : '') + Math.abs(x).toFixed(1) + '% a year'; };
+      var ex = o.parts;
+      rest.appendChild(h('section', { class: 'card stack' },
+        h('h2', null, 'What this could grow to in ' + years(p.horizon)),
+        h('p', { class: 'sub' }, 'In today’s money, after inflation. The estimate is built from today’s yields and prices, which point to lower returns than the last few decades delivered.'),
+        h('div', { class: 'tiles' },
+          tile('Cautious case', money(Math.round(o.value.low)), rate(o.low)),
+          tile('Middle case', money(Math.round(o.value.mid)), rate(o.mid)),
+          tile('Hopeful case', money(Math.round(o.value.high)), rate(o.high)),
+          tile('You pay in', money(Math.round(o.paidIn)), o.monthly > 0 ? money(o.start) + ' now, ' + money(o.monthly) + ' a month' : 'one deposit')),
+        h('div', { class: 'legend' },
+          h('span', null, h('i', { style: { background: 'var(--c-us)' } }), 'Middle case'),
+          h('span', null, h('i', { style: { background: 'var(--line-2)' } }), 'Cautious and hopeful cases'),
+          h('span', null, h('i', { style: { background: 'var(--ink-2)' } }), 'What you paid in')),
+        lineChart({ height: 180, label: 'Projected value by year in three cases, against what you paid in',
+          series: [{ name: 'Middle case', color: 'var(--c-us)', values: mid }, { name: 'Hopeful case', color: 'var(--line-2)', values: hi, width: 1.5 },
+            { name: 'Cautious case', color: 'var(--line-2)', values: lo, width: 1.5 }, { name: 'Paid in', color: 'var(--ink-2)', values: paid, width: 1.5 }],
+          labels: yrs, xLabels: ['Today', 'Year ' + p.horizon], tick: function (v) { return moneyShort(v); }, fmt: function (v) { return money(Math.round(v)); } }),
+        h('p', { class: 'note' }, 'History suggests the result lands between the cautious and hopeful cases about two times in three; the worst outcomes lie outside them. Yearly returns assumed after ' + o.inflation + '% inflation: US stocks ' + ex.us.toFixed(1) + '%, international stocks ' + ex.intl.toFixed(1) + '%, bonds ' + ex.bonds.toFixed(1) + '%, cash ' + ex.cash.toFixed(1) + '%, gold ' + ex.gold.toFixed(1) + '%, crypto 0% (it has no earnings or interest to forecast from, so the plan counts on nothing).'),
+        h('p', { class: 'note' }, 'Cost matters as much as any of this. The funds suggested here charge about 0.05% a year. A fund or adviser charging 1% would take about ' + Math.round(o.feeDrag * 100) + '% of the final amount on money invested today.')));
+    }
+
+    // ---- how bad could it get ----
+    var total = pl.buy.total || p.amount;
+    var tb = h('tbody', null, pl.stress.scenarios.map(function (sc) {
+      var c = SCENARIO_COPY[sc.id];
+      return h('tr', null, h('th', { scope: 'row', style: { 'white-space': 'normal' } }, c[0], h('div', { class: 'note', style: { 'font-weight': '400' } }, c[1])),
+        h('td', { class: 'num ' + dirClass(sc.pct) }, pct(sc.pct / 100, 0)),
+        h('td', { class: 'num' }, money(Math.round(total * (1 + sc.pct / 100)))),
+        h('td', { class: 'num' }, sc.recover > 0 ? '+' + Math.round(sc.recover) + '%' : '–'));
+    }));
     rest.appendChild(h('section', { class: 'card stack' },
-      h('h2', null, 'If the worst happened again'),
-      h('div', { class: 'tiles' },
-        tile('Fall in a repeat of each part’s worst slide', pct(lossPct, 0), 'all at the same time', ''),
-        tile(money(total) + ' would become about', money(Math.round(total * (1 + lossPct))), 'before any recovery', ''),
-        tile('Share in stocks and crypto', (pl.target.us + pl.target.intl + pl.target.crypto) + '%', 'limit for your timeline: ' + pl.base.growthCap + '%', '')),
-      h('p', { class: 'note' }, 'Uses the deepest falls since 2000: US stocks ' + MINUS + '51%, international stocks ' + MINUS + '57%, crypto ' + MINUS + '80%, gold ' + MINUS + '45%, bonds ' + MINUS + '17%. They did not all happen together, so this is a deliberately harsh test. If the number would make you sell, choose a more cautious answer above.')));
+      h('h2', null, 'How bad could it get'),
+      h('div', { class: 'table-scroll' }, h('table', { class: 'scen' },
+        h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'If this happened again'), h('th', { scope: 'col' }, 'This mix'), h('th', { scope: 'col' }, money(total) + ' becomes'), h('th', { scope: 'col' }, 'Gain needed to recover'))), tb)),
+      h('p', { class: 'note' }, 'None of these is a floor. US stocks fell about 86% between 1929 and 1932, Japan’s market took 34 years to regain its 1989 high, and Bitcoin has fallen more than 75% four times. Crypto did not exist in 2008, so that row assumes it falls 80%. If the worst row would make you sell, choose a more cautious answer.')));
+
+    // ---- simpler ----
+    var s3 = pl.simple, tiny = pl.rows.some(function (r) { return r.target > 0 && r.amount > 0 && r.amount < 25; });
+    if (s3.stocks > 0) {
+      rest.appendChild(h('section', { class: 'card stack' },
+        h('h2', null, 'A simpler way to hold it'),
+        h('p', { class: 'sub' }, 'Six parts is more than most people need. The same balance of risk fits in three funds, or in one.'),
+        h('div', { class: 'tiles' },
+          tile('US stock index fund', s3.us + '%', 'such as VTI or FSKAX'),
+          tile('International index fund', s3.intl + '%', 'such as VXUS'),
+          tile(p.horizon < 3 ? 'Short-term bonds and cash' : 'Bond index fund', s3.bonds + '%', p.horizon < 3 ? 'such as BSV or SGOV' : 'such as BND')),
+        h('p', { class: 'note' }, 'Or one all-in-one fund with about ' + s3.stocks + '% in stocks: a target-date fund, or a fixed-mix fund (iShares offers 30, 40, 60 and 80% versions as AOK, AOM, AOR and AOA). In the research, investors in all-in-one funds kept more of their funds’ returns than any other group.' + (tiny ? ' Some slices above are under $25. At this size, the three-fund version is the practical choice.' : ''))));
+    }
+
+    // ---- one-page plan ----
+    var text = planText(pl);
+    var pre = h('pre', { class: 'plan-text', id: 'plan-text', tabindex: '0' }, text);
+    var copied = h('span', { class: 'note', 'aria-live': 'polite' }, '');
+    var btn = h('button', { class: 'btn small', type: 'button', onclick: function () {
+      var done = function () { copied.textContent = 'Copied.'; };
+      var fallback = function () { var r = document.createRange(); r.selectNodeContents(pre); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); copied.textContent = 'Selected. Copy it with your keyboard or the menu.'; };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    } }, 'Copy');
+    rest.appendChild(h('section', { class: 'card stack' },
+      h('div', { class: 'row' }, h('h2', { class: 'grow' }, 'Your plan on one page'), btn, copied),
+      h('p', { class: 'sub' }, 'Decide what you will do in a crash while you are calm. Keep this somewhere you will see it on a bad day.'),
+      pre));
 
     var hint = $('style-hint');
-    if (hint) hint.textContent = { steady: 'You hold your baseline mix whatever the market does. For most long-term investors this is hard to beat.', balanced: 'Signals can move each part up or down by as much as 35% of its size.', active: 'Signals can move each part by as much as 70% of its size. Expect more changes, and more of them to be wrong.' }[p.style];
+    if (hint) hint.textContent = STYLE_HINT[p.style];
+    roBucket = null;
   }
 
   function buildPlan() {
@@ -1332,22 +1622,39 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     var parts = h('div', { class: 'parts' }, (rg.parts || []).map(function (p) {
       return h('div', { class: 'part' }, h('span', { class: 'part-label' }, str(p.label, 60)), dv(p.score), h('span', { class: 'part-text' }, str(p.text, 260)));
     }));
-    root.appendChild(card('Risk conditions', 'Four gauges that have tended to turn before trouble does: credit markets, expected volatility, how many sectors are rising, and the yield curve.',
-      h('div', { class: 'dial-wrap' }, h('div', { class: 'stack tight' }, dial(rg.score), h('div', { class: 'dial-read', style: { 'text-align': 'center' } }, scoreWord(rg.score))), parts)));
+    var ctx = Array.isArray(rg.context) && rg.context.length ? h('div', { class: 'stack tight' },
+      h('span', { class: 'eyebrow' }, 'Shown, not scored'),
+      h('dl', { class: 'ctx' }, rg.context.map(function (c) { return h('div', null, h('dt', null, str(c.label, 40)), h('dd', null, str(c.text, 400))); }))) : null;
+    root.appendChild(card('Risk conditions', 'Four readings the research supports as warnings for stocks: credit markets, how violently prices have been moving, a jump in interest rates, and how many sectors are rising. Some famous gauges are listed underneath but left out of the score, because they have not predicted stock returns.',
+      h('div', { class: 'dial-wrap' }, h('div', { class: 'stack tight' }, dial(rg.score), h('div', { class: 'dial-read', style: { 'text-align': 'center' } }, scoreWord(rg.score))), h('div', { class: 'stack' }, parts, ctx))));
 
     var f = S.brief && S.brief.facts || {};
     var tiles = h('div', { class: 'tiles' });
     if (f.fed && isNum(f.fed.lo) && isNum(f.fed.hi)) tiles.appendChild(tile('Fed policy rate', f.fed.lo.toFixed(2) + '–' + f.fed.hi.toFixed(2) + '%', str(f.fed.stance, 30) + (f.fed.next ? ' · next decision ' + dateShort(f.fed.next) : '')));
     if (isNum(m.y3m)) tiles.appendChild(tile('3-month T-bill', m.y3m.toFixed(2) + '%', isNum(m.realCash) ? signedNum(m.realCash, 1) + ' pts after inflation' : ''));
     if (isNum(m.y10y)) tiles.appendChild(tile('10-year Treasury', m.y10y.toFixed(2) + '%', isNum(m.y10yChg3m) ? signedNum(m.y10yChg3m, 2) + ' pts in 3 months' : ''));
-    if (isNum(m.curve)) tiles.appendChild(tile('Yield curve (10y less 3m)', signedNum(m.curve, 2) + ' pts', m.curve < 0 ? 'inverted' : 'normal slope'));
+    if (isNum(m.curve)) tiles.appendChild(tile('Yield curve (10y less 3m)', signedNum(m.curve, 2) + ' pts', m.curve < 0 ? 'inverted: a recession gauge' : 'normal slope'));
     if (isNum(m.cpi)) tiles.appendChild(tile('Inflation, 12 months', m.cpi.toFixed(1) + '%', (m.cpiAsOf ? dateShortMonth(m.cpiAsOf) : '') + (isNum(m.cpi3mAgo) ? ' · was ' + m.cpi3mAgo.toFixed(1) + '% 3 months before' : '')));
     if (f.jobs && isNum(f.jobs.unemployment)) tiles.appendChild(tile('Unemployment', f.jobs.unemployment.toFixed(1) + '%', str(f.jobs.period, 30)));
     if (isNum(m.vix)) tiles.appendChild(tile('VIX', m.vix.toFixed(1), isNum(m.vixAvg1y) ? '1-year average ' + m.vixAvg1y.toFixed(1) : ''));
     if (isNum(m.dxy)) tiles.appendChild(tile('US dollar index', m.dxy.toFixed(1), isNum(m.dxyVs200) ? pct(m.dxyVs200) + ' vs 200-day average' : ''));
-    if (isNum(m.cape)) tiles.appendChild(tile('Shiller P/E (US stocks)', m.cape.toFixed(1), isNum(m.capePct) ? 'higher than ' + Math.round(m.capePct) + '% of history' : ''));
-    if (isNum(m.erp)) tiles.appendChild(tile('Stock earnings yield less 10-year', signedNum(m.erp, 1) + ' pts', m.erp < 0 ? 'bonds pay more than stocks earn' : 'stocks earn more than bonds pay'));
+    if (isNum(m.cape)) tiles.appendChild(tile('Shiller P/E (US stocks)', m.cape.toFixed(1), isNum(m.capePct40) ? 'higher than ' + Math.round(m.capePct40) + '% of the last 40 years' : isNum(m.capePct) ? 'higher than ' + Math.round(m.capePct) + '% of history' : ''));
+    if (isNum(m.stockBondCorr)) tiles.appendChild(tile('Stocks and bonds, 3 months', signedNum(m.stockBondCorr, 2), m.stockBondCorr > 0.2 ? 'moving together: bonds are not cushioning' : m.stockBondCorr < -0.2 ? 'moving opposite: bonds are cushioning' : 'moving independently'));
     root.appendChild(h('section', { class: 'stack' }, h('h2', { class: 'section-title' }, 'Rates, inflation and valuation'), tiles));
+
+    var ir = m.inflationRegime;
+    if (ir && Array.isArray(ir.tests) && ir.mode) {
+      var verdict = { short: ['Yes: ' + ir.points + ' of 4 tests', 'neg', 'Inflation, not growth, is the main worry. In past inflation surges, stocks and ordinary bonds lost together while T-bills and short inflation-linked bonds held up. The plan therefore says to hold the bond part short. Some ordinary bonds stay, because a recession would lift them.'],
+        mixed: ['Partly: ' + ir.points + ' of 4 tests', 'warn', 'The picture is mixed. The plan says to hold half the bond part in T-bills and short inflation-linked bonds until it clears.'],
+        normal: ['No: ' + ir.points + ' of 4 tests', 'pos', 'Growth, not inflation, is the main driver, which is when ordinary bonds do their job of cushioning stock falls. The plan holds a broad bond fund.'] }[ir.mode];
+      root.appendChild(card('Is inflation driving markets?', 'This decides how the bond part of your plan should be held.',
+        h('div', { class: 'row' }, chip(verdict[0], verdict[1], verdict[1] === 'neg' ? 'stop' : null)),
+        h('p', { class: 'prose' }, verdict[2]),
+        h('div', { class: 'tests' }, ir.tests.map(function (t) {
+          return h('div', { class: 'test' }, t.on === null ? chip('No data', '') : t.on ? chip('Yes', 'neg') : chip('No', 'pos'),
+            h('span', null, h('b', null, str(t.label, 80)), h('span', { class: 'part-text' }, ' ' + str(t.text, 160))));
+        }))));
+    }
 
     var charts = h('div', { class: 'grid-3' });
     E.SLEEVES.forEach(function (k) {
@@ -1448,7 +1755,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     if (isNum(b.vol60)) kv('Bitcoin yearly swing (volatility)', pct(b.vol60, 0, false));
     if (c.ethBtc && isNum(c.ethBtc.chg90)) kv('Ether vs Bitcoin, 90 days', pct(c.ethBtc.chg90, 0));
     trio.appendChild(card('Cycle context', null, cyc,
-      h('p', { class: 'note' }, 'Past cycles peaked 12 to 18 months after a halving and then fell hard. That is three cycles of history, which is too few to rely on. The 200-week average has marked the low area of earlier bear markets.')));
+      h('p', { class: 'note' }, 'Shown for context and not scored. Past cycles peaked 12 to 18 months after a halving and then fell hard, but that is four overlapping examples, each weaker than the last. The 200-week average has marked the low area of earlier bear markets.')));
     root.appendChild(trio);
 
     var coins = (c.top || []).filter(function (x) { return !x.stable; }).slice(0, 10);
@@ -1463,10 +1770,12 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
         h('p', { class: 'note' }, 'Market data from CoinGecko, Coinbase, alternative.me and DefiLlama.')));
     }
     root.appendChild(card('Ground rules the plan follows for crypto', null, h('ul', { class: 'bullets' },
-      h('li', null, 'It never exceeds the ceiling you set, and it is left out entirely for money needed within three years.'),
-      h('li', null, 'Only invest an amount you could watch fall 80% without changing your life. That has happened three times.'),
-      h('li', null, 'Crypto pays no earnings or interest, so its price depends on demand alone. That is why trend and money flows carry most of the weight here.'),
-      h('li', null, 'Keep coins on a large regulated platform or in a spot fund. The record $6.3 billion exchange theft in October 2026 is a reminder of why that matters.'))));
+      h('li', null, 'Size is the protection. The plan never exceeds your ceiling, never puts more than a tenth of your stock money in crypto, and leaves it out for money needed within four years.'),
+      h('li', null, 'Expect an 80% fall and a wait of two to four years at some point. It has happened four times.'),
+      h('li', null, 'Bitcoin now falls with the stock market in bad times. It is not insurance.'),
+      h('li', null, 'Where you hold it can fail even if Bitcoin does not. A spot fund avoids that. On an exchange, keep only what you could lose.'),
+      h('li', null, 'Selling coins is taxable in the US. To cut back, point new money elsewhere first.'),
+      h('li', null, 'Trim back to target if the slice grows past one and a half times its size. Left alone, a winning crypto slice can come to steer the whole portfolio.'))));
     roBucket = null;
   }
 
@@ -1491,6 +1800,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
         h('p', { class: 'lede' }, str(b.headline, 400)),
         h('p', { class: 'prose' }, str(b.summary, 1500)),
         fresh ? null : h('p', { class: 'note' }, 'This brief is more than four days old, so it no longer moves the plan.')));
+      root.appendChild(callout('info', 'Does any of this change your plan? Usually not', 'The plan has already weighed these stories. News can make it more careful by a small amount and can never make it bolder, because investors who trade on headlines have earned less than those who do nothing. Read this to understand what is happening, not to decide what to do today.'));
 
       var f = b.facts || {}, tiles = h('div', { class: 'tiles' });
       if (f.fed && isNum(f.fed.lo) && isNum(f.fed.hi)) tiles.appendChild(tile('Fed policy rate', f.fed.lo.toFixed(2) + '–' + f.fed.hi.toFixed(2) + '%', str(f.fed.odds, 120)));
@@ -1510,7 +1820,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
               h('h3', null, str(ev.title, 200)),
               h('p', null, str(ev.what, 900)),
               h('p', { class: 'why' }, h('b', null, 'Why it matters: '), str(ev.why, 700)),
-              chips.length ? h('div', { class: 'row' }, h('span', { class: 'note' }, 'Pressure on'), chips) : h('div', { class: 'row' }, h('span', { class: 'note' }, 'No clear push on any part of the plan')),
+              chips.length ? h('div', { class: 'row' }, h('span', { class: 'note' }, 'Leans on'), chips) : h('div', { class: 'row' }, h('span', { class: 'note' }, 'No clear push on any part of the plan')),
               Array.isArray(ev.sources) && ev.sources.length ? h('div', { class: 'src' }, ev.sources.slice(0, 4).map(function (so) { return link(str(so.title, 90), so.url); })) : null)));
         });
         root.appendChild(box);
@@ -1539,12 +1849,15 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
   }
 
   // ---------------------------------------------------------------------- ask
-  var ASK_SUGGEST = ['Explain my plan like I’m new to investing', 'Why is the plan holding less gold and fewer bonds right now?', 'What is the single biggest risk to my plan this month?', 'Is now a bad time to buy Bitcoin?', 'What would make you more positive on stocks?'];
+  var ASK_SUGGEST = ['Explain my plan like I’m new to investing', 'Why is the plan holding less gold and fewer bonds right now?', 'What is the single biggest risk to my plan this month?', 'Why does crypto carry more risk than its share of my money?', 'What would have to change for the plan to change?'];
   function askContext() {
     var pl = currentPlan(), s = S.snap, b = S.brief, L = [];
     L.push('PROFILE: investing ' + money(pl.profile.amount) + ', needs the money in ' + years(pl.profile.horizon) + ', risk answer ' + pl.profile.risk + '/5 (' + pl.riskName + '), crypto ceiling ' + E.CRYPTO_CAP[pl.profile.crypto] + '%, signal strength "' + pl.profile.style + '", emergency fund: ' + (pl.profile.efund ? 'yes' : 'no') + ', high-interest debt: ' + (pl.profile.debt ? 'yes' : 'no') + '.');
     L.push('PLAN (baseline% -> target%, dollars of this deposit): ' + pl.rows.map(function (r) { return r.label + ' ' + r.base + '->' + r.target + '% ' + money(Math.round(r.amount)); }).join('; ') + '.');
-    L.push('Stress test: ' + pct(pl.stress.pct / 100, 0) + '. Suggested pacing: ' + (pl.pacing.mode === 'now' ? 'all at once' : pl.pacing.steps + ' monthly steps') + '.');
+    L.push('Share of risk by part: ' + pl.rows.filter(function (r) { return r.target > 0; }).map(function (r) { return r.label + ' ' + Math.round(r.riskShare * 100) + '%'; }).join(', ') + '. Expected yearly swing ' + pct(pl.risk.vol, 0, false) + '.');
+    L.push('Scenarios for this mix: ' + pl.stress.scenarios.map(function (sc) { return sc.id + ' ' + pct(sc.pct / 100, 0); }).join(', ') + '. Suggested pacing: ' + (pl.pacing.mode === 'now' ? 'all at once' : pl.pacing.steps + ' monthly steps') + '.');
+    L.push('Growth range in today\u2019s money over ' + years(pl.profile.horizon) + ': ' + money(Math.round(pl.outlook.value.low)) + ' to ' + money(Math.round(pl.outlook.value.high)) + ', middle ' + money(Math.round(pl.outlook.value.mid)) + ' (' + pl.outlook.mid.toFixed(1) + '% a year after inflation), paying in ' + money(Math.round(pl.outlook.paidIn)) + '.');
+    L.push('RULES OF THE MODEL: leans are small (a full negative reading trims a part by ' + Math.round(pl.lean.down * 100) + '%, a full positive adds ' + Math.round(pl.lean.up * 100) + '%); news can only make the plan more careful; act only when a part is 5 points or a quarter of its size off target; check monthly at most.');
     if (s) {
       L.push('DATA AS OF ' + s.generatedAt + '.');
       Object.keys(s.sleeves || {}).forEach(function (k) {
@@ -1563,7 +1876,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     }
     return L.join('\n');
   }
-  var ASK_RULES = 'You are the assistant inside Market Compass, a personal investing dashboard. Answer the question using the data below plus general, well-established investing knowledge. You cannot browse; if something is not in the data, say so. Write for a beginner: plain words, short paragraphs, no more than about 180 words unless asked for more, and define any jargon you use. Be direct about what the data says and honest about uncertainty. Never promise returns or tell the person a price will go up or down. If asked to pick individual stocks or small coins, explain briefly why the plan uses broad funds instead. Do not use markdown headings or tables.\n\n';
+  var ASK_RULES = 'You are the assistant inside Market Compass, a personal investing dashboard. Answer the question using the data below plus general, well-established investing knowledge. You cannot browse; if something is not in the data, say so. Write for a beginner: plain words, short paragraphs, no more than about 180 words unless asked for more, and define any jargon you use. Be direct about what the data says and honest about uncertainty. Never promise returns or tell the person a price will go up or down. If asked whether now is a good or bad time to buy or sell something, say plainly that nobody can know, and point back to the plan and its check-in rule. If the person wants to change their plan because of news or a recent price move, suggest waiting 48 hours first, and remind them that investors who trade on headlines have earned less than those who do nothing. If asked to pick individual stocks or small coins, explain briefly why the plan uses broad funds instead. Do not use markdown headings or tables.\n\n';
   var ASK_ERR = {
     not_granted: 'Asking Claude is switched off for this page.', sampling_disabled: 'Claude is not available on this account.', rate_limited: 'Too many questions at once, or you have hit a usage limit. Try again later.',
     session_expired: 'Your session has expired. Sign in to Claude again.', refused: 'Claude declined that question. Try wording it differently.', prompt_too_large: 'That conversation is too long. Start a new one.',
@@ -1626,32 +1939,145 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
     });
   }
 
+  // -------------------------------------------------------------------- learn
+  /* What the books and the research behind them teach. s = strength of evidence:
+     3 strong, 2 mixed, 1 weak. Each lesson says how this app applies it. */
+  var LIBRARY = [
+    { theme: 'Before you invest', intro: 'The steps that beat any choice of investment.', items: [
+      { t: 'Pay yourself first, and make it automatic.', d: 'When saving was made the default at one US employer, the share of staff taking part rose from 37% to 86%. Willpower is not a plan.', src: 'Clason, The Richest Man in Babylon; Sethi, I Will Teach You to Be Rich; Madrian and Shea (2001)', s: 3, use: 'The monthly deposit field, and the nudge to automate it.' },
+      { t: 'Early on, how much you add matters more than what it earns.', d: 'After 10 years at 7% a year, 70% of the balance is your own deposits. After 40 years it is 19%.', src: 'Bernstein, If You Can; arithmetic', s: 3, use: 'The growth chart separates what you paid in from what it earned.' },
+      { t: 'Start now rather than later.', d: '$200 a month from age 22 to 65 at 7% grows to about $614,000. Starting at 32 gives about $294,000.', src: 'Malkiel, A Random Walk Down Wall Street; arithmetic', s: 3, use: 'Change the horizon slider and watch the growth range.' },
+      { t: 'Follow the order of operations.', d: 'Take any employer match first (a 50% match is an instant 50% return), clear high-interest debt, build 3 to 6 months of cash, then use tax-advantaged accounts before ordinary ones.', src: 'Lindauer, Larimore and LeBoeuf, The Bogleheads’ Guide to Investing; Collins, The Simple Path to Wealth', s: 3, use: 'The warnings at the top of your plan.' }
+    ] },
+    { theme: 'What to own', intro: 'The mix matters more than anything you pick inside it.', items: [
+      { t: 'Your mix of stocks, bonds and cash drives most of the result.', d: 'It explains about 90% of how a fund’s returns vary over time, and the average fund’s timing and stock-picking added nothing on top.', src: 'Brinson, Hood and Beebower (1986); Ibbotson and Kaplan (2000)', s: 3, use: 'Your timeline and nerve set the baseline before any signal is read.' },
+      { t: 'Own the whole market instead of choosing stocks.', d: 'About 4% of US stocks produced all of the market’s gain over Treasury bills between 1926 and 2016. Most individual stocks did worse than bills.', src: 'Bessembinder, Do Stocks Outperform Treasury Bills? (2018)', s: 3, use: 'Every part of the plan is a broad index fund.' },
+      { t: 'Cheap index funds beat most professionals.', d: '89% of actively managed US large-company funds trailed the S&P 500 over the five years to 2025. The cheapest fifth of funds succeeded 62% of the time; the dearest fifth, 20%.', src: 'S&P SPIVA scorecard (2025); Morningstar (2016); Bogle, The Little Book of Common Sense Investing', s: 3, use: 'The example funds cost about 0.05% a year.' },
+      { t: 'Fees compound against you.', d: 'A 1% yearly fee takes about 31% of a lump sum over 40 years.', src: 'Bogle, Common Sense on Mutual Funds; SEC investor bulletin on fees', s: 3, use: 'The fee line under your growth range.' },
+      { t: 'Own the world, not one country.', d: 'US stocks earned 6.6% a year after inflation since 1900; the rest of the world earned 4.3%. Japan was the world’s largest market in 1989 and took 34 years to regain that peak.', src: 'Dimson, Marsh and Staunton, Global Investment Returns Yearbook (2026)', s: 3, use: 'About a third of your stocks are international, close to the world’s actual weights.' },
+      { t: 'Time does not make stocks safe.', d: 'Across developed markets there has been roughly a 12% chance of losing money after inflation over 30 years. On US data alone it looks like 1%.', src: 'Anarkulova, Cederburg and O’Doherty (2022); Pastor and Stambaugh (2012)', s: 2, use: 'Stocks and crypto never exceed 90% of the plan, however long the horizon.' },
+      { t: 'Expect less than the past.', d: 'Return is the starting yield, plus growth, plus any change in what investors will pay. From today’s prices a balanced portfolio is expected to earn roughly 3.4% a year after inflation, against nearly 5% historically.', src: 'Bogle, The Little Book of Common Sense Investing; AQR capital market assumptions (2026)', s: 2, use: 'The growth range is built from today’s yields, not from past returns.' },
+      { t: 'A bond’s yield today is roughly what it will earn.', d: 'Starting yield and the following 10-year return on the US bond index have a correlation of about 0.9.', src: 'Leibowitz, Bova and Kogelman (2014); Ilmanen, Expected Returns', s: 3, use: 'The plan’s bond forecast is simply today’s yield less inflation.' },
+      { t: 'Gold is insurance against disorder, with a small return.', d: 'About 1.3% a year after inflation since 1900. It fell in 13 of the 28 years when inflation was above 3%, and rose in 8 of 11 major stock-market falls since 1975.', src: 'Erb and Harvey, The Golden Dilemma (2013); Dimson, Marsh and Staunton (2026)', s: 2, use: 'Gold is 5% at most, and described as insurance, not as an inflation hedge.' },
+      { t: 'Simple rules beat clever optimisers.', d: 'None of 14 portfolio-optimising models reliably beat simply holding equal amounts.', src: 'DeMiguel, Garlappi and Uppal (2009)', s: 3, use: 'Fixed, readable rules. No optimiser.' }
+    ] },
+    { theme: 'Timing and signals', intro: 'Why this app leans gently, and why "not at all" is a respectable choice.', items: [
+      { t: 'Trend rules are a seatbelt, not an engine.', d: 'Holding an asset only above its long-run average has cut the depth of losses more than it has raised returns, and it lagged for years after 2009.', src: 'Faber (2007); Hurst, Ooi and Pedersen, A Century of Evidence on Trend-Following (2017)', s: 2, use: 'Trend can trim a part further than it can add to it.' },
+      { t: 'Any strategy looks better in a backtest than in life.', d: 'Across 97 published market patterns, returns were 58% lower after publication.', src: 'McLean and Pontiff (2016)', s: 3, use: 'A full reading moves a part by a third at most on the default setting.' },
+      { t: 'Most indicators have not predicted the market in real time.', d: 'In a review of the best-known predictors, none would have helped an investor beat a simple historical average.', src: 'Welch and Goyal (2008); Goyal, Welch and Zafirov (2024)', s: 3, use: 'The yield curve, the VIX and the earnings-yield comparison are shown but no longer scored.' },
+      { t: 'Valuation is a ten-year guide, not a timing tool.', d: 'The Shiller P/E explains about a third of the variation in the next ten years of returns and almost none of the next year.', src: 'Shiller, Irrational Exuberance; Asness, Ilmanen and Maloney, Market Timing: Sin a Little (2017)', s: 3, use: 'Valuation is a tenth of the stock reading and caps how far the plan may lean in.' },
+      { t: 'Real tactical funds lost to doing nothing.', d: 'Over ten years, 30 of 34 tactical funds trailed a version of their own holdings that never traded.', src: 'Morningstar (2023)', s: 3, use: 'The "not at all" setting, and small leans otherwise.' },
+      { t: 'A recession warning is not a sell signal.', d: 'Switching from stocks to bills when the yield curve inverted lost money in all 24 tests from 1975 to 2018. The curve was inverted from 2022 to 2024 with no recession.', src: 'Fama and French, Inverted Yield Curves and Expected Stock Returns (2019)', s: 3, use: 'The yield curve is displayed as a gauge only.' }
+    ] },
+    { theme: 'Inflation and interest rates', intro: 'What changes when prices, not growth, are the worry.', items: [
+      { t: 'Inflation shocks hurt stocks and bonds together.', d: 'In US inflation surges since 1926, a classic stock-and-bond mix lost about 6% a year after inflation and long Treasuries about 8%.', src: 'Neville, Draaisma, Funnell, Harvey and Van Hemert, The Best Strategies for Inflationary Times (2021)', s: 3, use: 'Four inflation tests decide how the bond part should be held.' },
+      { t: 'Bonds are safe from default, not from inflation.', d: 'In 2022 the broad US bond index lost 13%, its worst year since 1976, while stocks fell too.', src: 'Dimson, Marsh and Staunton (2026); AQR, A Changing Stock-Bond Correlation (2023)', s: 3, use: 'The 2022 row in the stress test.' },
+      { t: 'Great earnings cannot rescue an overpriced market.', d: 'Investors have paid about 23 times earnings when inflation was under 3% and about 15 times when it was above.', src: 'Shiller, Irrational Exuberance; J.P. Morgan data', s: 2, use: 'Strong profits in the news do not lift the stock reading.' },
+      { t: 'Rate rises lower returns but are not a reason to sell.', d: 'The S&P 500 rose in 11 of 12 periods of Fed rate increases, with an average fall of about 14% along the way in the first year.', src: 'Bernanke and Kuttner (2005); Truist and Ned Davis data', s: 2, use: 'A jump in yields trims the stock reading slightly and nothing more.' },
+      { t: 'Oil spikes act like a tax.', d: 'Ten of eleven US recessions after 1945 followed a spike in oil prices.', src: 'Hamilton, Historical Oil Shocks (2011)', s: 2, use: 'Oil against its recent high is shown beside the risk dial.' },
+      { t: 'Gold stopped following interest rates.', d: 'Its link to inflation-adjusted yields was 84% from 2005 to 2021 and close to zero since 2022, as central banks bought over 1,000 tonnes a year.', src: 'World Gold Council and RBC data', s: 2, use: 'Interest rates are now a tenth of the gold reading, down from a fifth.' }
+    ] },
+    { theme: 'Your own behaviour', intro: 'The part of investing you control.', items: [
+      { t: 'The more people trade, the less they earn.', d: 'Among 66,000 households, the most active earned 11.4% a year while the market made 17.9%.', src: 'Barber and Odean, Trading Is Hazardous to Your Wealth (2000)', s: 3, use: 'The check-once-a-month rule, and no alerts.' },
+      { t: 'Bad timing costs about a point a year.', d: 'Investors earned 8.7% a year in funds that returned 9.9%. The gap was smallest in all-in-one funds and largest in the most volatile ones.', src: 'Morningstar, Mind the Gap (2025)', s: 3, use: 'The simpler three-fund and one-fund versions of your plan.' },
+      { t: 'Losses hurt about twice as much as gains please, so look less often.', d: 'A review of 607 measurements puts the ratio near 2. The more often people see results, the less risk they can bear.', src: 'Kahneman, Thinking, Fast and Slow; Benartzi and Thaler (1995); Brown and others (2024)', s: 2, use: 'The risk question is asked in dollars over three years, not as a percentage.' },
+      { t: 'Selling in a crash usually locks in the loss.', d: 'Savers who left stocks in 2008 and stayed out saw balances rise about 2% by 2011, against about 50% for those who held. Nearly a third of panic sellers never came back.', src: 'Fidelity (2011); Elkind and others, When Do Investors Freak Out? (2022)', s: 3, use: 'The one-page plan says in advance what you will do: nothing.' },
+      { t: 'The worst so far is not the worst possible.', d: 'Every record loss was larger than the record before it.', src: 'Taleb, The Black Swan; Taleb, Fooled by Randomness', s: 2, use: 'The stress test says plainly that it is not a floor.' },
+      { t: 'Apps that prompt action make people trade more.', d: 'In a controlled experiment, rewarding trades with points produced 39% more of them.', src: 'Ontario Securities Commission (2022); Barber and others on Robinhood (2022)', s: 2, use: 'No notifications, no top movers, no daily profit and loss.' },
+      { t: 'A lump sum usually beats drip-feeding it.', d: 'Investing at once beat spreading over months 68% of the time from 1976 to 2022.', src: 'Vanguard, Cost Averaging: Invest Now or Temporarily Hold Your Cash? (2023)', s: 3, use: 'Stepping in is offered only if you gave a nervous answer.' },
+      { t: 'Write your rules while you are calm.', d: 'There is no controlled proof that a written plan helps, but it costs nothing and the people who study investor behaviour recommend it.', src: 'Zweig, Your Money and Your Brain; Ellis, Winning the Loser’s Game', s: 1, use: 'Your plan on one page.' },
+      { t: 'The market’s mood is an offer, not an instruction.', d: 'Prices swing far more than the value of the businesses behind them. You are free to ignore the quote.', src: 'Graham, The Intelligent Investor; Marks, The Most Important Thing', s: 2, use: 'News can make this plan more careful, and never bolder.' }
+    ] },
+    { theme: 'Crypto', intro: 'Neither a miracle nor a fraud. A very volatile asset that needs sizing.', items: [
+      { t: 'Size is your main protection.', d: 'In a standard portfolio a 2% Bitcoin holding carries about 5% of the total risk, and 4% carries about 14%.', src: 'BlackRock, Sizing Bitcoin in Portfolios (2024)', s: 2, use: 'Crypto is at most a tenth of your stock money, and its share of risk is shown.' },
+      { t: 'Expect an 80% fall and a wait of two to four years.', d: 'Bitcoin has fallen 93%, 84%, 83% and 78% in its four completed busts.', src: 'Harvey and others, An Investor’s Guide to Crypto (2022)', s: 3, use: 'None for money needed within four years; 85% in the stress test.' },
+      { t: 'It falls with stocks in bad times.', d: 'Its link to US shares went from zero before 2020 to about 0.5 in the five years to 2026.', src: 'IMF (2022); AQR (2026)', s: 3, use: 'Risk conditions are a quarter of the crypto reading.' },
+      { t: 'Crypto trends are real but short.', d: 'Momentum shows up over days to weeks and tends to reverse beyond a month.', src: 'Liu and Tsyvinski (2021); Liu, Tsyvinski and Wu (2022)', s: 2, use: 'The crypto trend reading leans on 50- and 100-day averages, not a year.' },
+      { t: 'Popular indicators mostly follow price.', d: 'Fund flows match the same day’s price move but say almost nothing about the next week. Stablecoin issuance has no reliable lead in the published tests.', src: 'Lyons and Viswanath-Natraj; DWF Labs flow study', s: 1, use: 'Flows are reported in the news brief; stablecoins and mood are a twentieth each.' },
+      { t: 'Most people buy after prices have soared.', d: 'About three in four users of crypto apps probably lost money on Bitcoin between 2015 and 2022.', src: 'Bank for International Settlements, Bulletin 69 (2023)', s: 2, use: 'Crypto buys are split into at least three.' },
+      { t: 'The place you hold coins can fail even if Bitcoin does not.', d: 'Mt. Gox lost 650,000 or more coins in 2014. About $3.4 billion was stolen from platforms in 2025, and $6.3 billion from one exchange in October 2026.', src: 'Chainalysis; court records; Faux, Number Go Up', s: 3, use: 'The plan suggests a spot fund, or a regulated platform with limits.' },
+      { t: 'Most small coins die.', d: 'More than half of the tokens tracked since 2021 had stopped trading by the end of 2025.', src: 'CoinGecko (2026); Liu, Tsyvinski and Wu (2022)', s: 3, use: 'The plan holds Bitcoin and a little Ether, nothing smaller.' },
+      { t: 'Four cycles prove little.', d: 'The "four-year cycle" rests on four overlapping examples, and each has been weaker than the last.', src: 'Grayscale research; Liu and Tsyvinski (2021)', s: 1, use: 'The halving clock is shown for context and scores nothing.' }
+    ] },
+    { theme: 'Accounts, tax and scams (US)', intro: 'Rules change every year. Check the official source before acting.', items: [
+      { t: 'Use a tax-sheltered account before an ordinary one.', d: 'For 2026 the limit is $7,500 for an IRA and $24,500 for a 401(k). A Roth IRA needs earned income and suits people in a low tax bracket today; what you paid in can come out again without tax.', src: 'IRS; Collins, The Simple Path to Wealth', s: 3, use: 'Not built in. Choose the account first, then apply this mix inside it.' },
+      { t: 'Hold for more than a year where you can.', d: 'Gains on assets held over a year are taxed at lower rates than those sold sooner. Every sale of crypto is taxable; it is treated as property.', src: 'IRS; The Bogleheads’ Guide to Investing', s: 3, use: 'Rebalance with new money first, and sell last.' },
+      { t: 'Rebalance rarely, by rule.', d: 'No schedule beats another. Checking once or twice a year and acting at a 5-point gap needed about 28 trades in 84 years.', src: 'Vanguard, Best Practices for Portfolio Rebalancing (2015); Bernstein, The Intelligent Asset Allocator', s: 3, use: 'The 5-point band in your plan.' },
+      { t: 'High returns with little risk is the classic sign of fraud.', d: 'So are pressure to act now, "everyone is buying it", and sellers who are not licensed. $1.1 billion was lost to investment scams on social media in 2025.', src: 'SEC, investor.gov; FINRA Foundation; FTC', s: 3, use: 'This app names only large, regulated index funds.' },
+      { t: 'Know what "enough" is.', d: 'A sum of about 25 times your yearly spending has historically supported that spending for 30 years.', src: 'Bengen (1994); Robin and Dominguez, Your Money or Your Life', s: 2, use: 'Set the horizon to when you want to reach it.' }
+    ] }
+  ];
+  var READING = [
+    ['If You Can', 'William Bernstein', 'Sixteen free pages. The whole plan in one sitting.'],
+    ['The Little Book of Common Sense Investing', 'John Bogle', 'Why owning everything cheaply beats trying to choose.'],
+    ['The Simple Path to Wealth', 'JL Collins', 'One fund, held through every crash.'],
+    ['The Psychology of Money', 'Morgan Housel', 'Why behaviour matters more than knowledge.'],
+    ['A Random Walk Down Wall Street', 'Burton Malkiel', 'The evidence, and a guide for each stage of life.'],
+    ['The Intelligent Investor', 'Benjamin Graham, with Jason Zweig’s commentary', 'Mr. Market and the margin of safety.'],
+    ['The Four Pillars of Investing', 'William Bernstein', 'Theory, history, psychology and the business of investing.'],
+    ['The Most Important Thing', 'Howard Marks', 'How to think about risk and cycles.']
+  ];
+  var STRENGTH = { 3: ['Strong evidence', 'pos'], 2: ['Mixed evidence', ''], 1: ['Weak evidence', 'warn'] };
+
+  function renderLearn() {
+    var root = clear($('view-learn'));
+    var count = LIBRARY.reduce(function (a, g) { return a + g.items.length; }, 0);
+    root.appendChild(h('section', { class: 'card stack' },
+      h('span', { class: 'eyebrow' }, count + ' lessons from the books and the research behind them'),
+      h('p', { class: 'lede' }, 'What a century of investing writing agrees on, where it disagrees, and how this app uses each lesson.'),
+      h('p', { class: 'note' }, 'Gathered in November 2026 across the major investing books and the studies they rest on. Figures come from published summaries and abstracts, not from the full texts, and a few are from memory. Treat them as a careful reader’s notes and check a number at its source before relying on it.')));
+    LIBRARY.forEach(function (g) {
+      var box = h('section', { class: 'card stack' }, h('h2', null, g.theme), h('p', { class: 'sub' }, g.intro));
+      var listEl = h('div', { class: 'lessons' });
+      g.items.forEach(function (it) {
+        var st = STRENGTH[it.s];
+        listEl.appendChild(h('article', { class: 'lesson' },
+          h('div', { class: 'row' }, h('h3', { class: 'grow' }, it.t), chip(st[0], st[1])),
+          h('p', null, it.d),
+          h('p', { class: 'note' }, it.src),
+          h('p', { class: 'use' }, h('b', null, 'In this app: '), it.use)));
+      });
+      box.appendChild(listEl);
+      root.appendChild(box);
+    });
+    root.appendChild(h('section', { class: 'card stack' },
+      h('h2', null, 'Eight books, in the order to read them'),
+      h('ol', { class: 'steps' }, READING.map(function (b) {
+        return h('li', null, h('h3', null, b[0]), h('p', null, b[1] + '. ' + b[2]));
+      })),
+      h('p', { class: 'note' }, 'For crypto, read Saifedean Ammous’s The Bitcoin Standard alongside a critical review, then Zeke Faux’s Number Go Up.')));
+  }
+
   // ------------------------------------------------------------------- method
   function renderMethod() {
     var root = clear($('view-method'));
     root.appendChild(card('How the plan is built', 'Four steps, in order of how much they matter.',
       h('ol', { class: 'steps' },
         h('li', null, h('h3', null, 'First, the things that beat any investment'), h('p', null, 'Paying off high-interest debt and holding an emergency cushion come before everything else. If either is missing, the plan says so at the top.')),
-        h('li', null, h('h3', null, 'Your timeline and nerve set a baseline mix'), h('p', null, 'How soon you need the money caps how much can sit in stocks and crypto: none for money needed within a year, up to 100% past 15 years. Your answer to the 30% question then picks a level from 20% to 95%. Stocks are split 65% US and 35% international, with about 5% gold as a diversifier. The rest is bonds and cash.')),
-        h('li', null, h('h3', null, 'Live readings lean each part up or down'), h('p', null, 'Each part gets a reading from ' + MINUS + '1 to +1. Trend carries the most weight: price against its 200-day average, 12-month return against T-bills, the 50-day against the 200-day, and 3-month return. Stocks also weigh valuation and risk conditions; bonds weigh yield after inflation and where inflation is heading; gold weighs real interest rates and the dollar; crypto weighs money flows and crowd mood. The news brief adds a fifth of each reading.')),
-        h('li', null, h('h3', null, 'Hard limits keep the leaning small'), h('p', null, 'A full reading moves a part by 35% of its size on the "a little" setting and 70% on "a lot". Whatever is trimmed waits in T-bills. Crypto never exceeds your ceiling and growth assets never exceed your timeline cap, whatever the signals say.')))));
+        h('li', null, h('h3', null, 'Your timeline and nerve set a baseline mix'), h('p', null, 'How soon you need the money caps the share in stocks and crypto: none within a year, 10% at one to two years, 20% at two to three, 35% at three to five, 50% at five to seven, 70% at seven to ten, 85% at ten to fifteen, and 90% beyond. The test behind each step is that if stocks halved, the loss would be one your goal could survive in the time left. Your answer to the falling-prices question then picks a level from 20% to 90%. Stocks are split 65% US and 35% international, with up to 5% gold. The rest is bonds and cash.')),
+        h('li', null, h('h3', null, 'Live readings lean each part, gently'), h('p', null, 'Each part gets a reading from ' + MINUS + '1 to +1. For stocks it is 70% trend (price against its 200-day average and 12-month return against T-bills), 20% risk conditions (credit markets, recent volatility, a jump in interest rates, breadth) and 10% valuation, measured against its own last 40 years. Bonds weigh trend, yield after inflation, and the level and direction of inflation. Gold is three-quarters trend. Crypto is two-thirds trend on shorter averages. On the default setting a full negative reading trims a part by 35% of its size and a full positive one adds 20%.')),
+        h('li', null, h('h3', null, 'Hard limits, and news only as a brake'), h('p', null, 'Whatever is trimmed waits in T-bills. Crypto never exceeds your ceiling or a tenth of your stock money. Growth assets never exceed your timeline cap. The news brief can make a reading more careful by a tenth at most. It can never make the plan bolder, and it cannot turn a positive lean into a negative one.')))));
 
-    root.appendChild(card('Why it works this way', 'The research behind each design choice.',
-      h('ul', { class: 'evidence' },
-        h('li', null, h('b', null, 'Broad funds, not stock picks. '), 'From 1926 to 2016, about 4% of US stocks produced all of the market’s gain over Treasury bills, and most individual stocks did worse than bills. Owning the whole market guarantees you hold the winners. ', link('Bessembinder, Arizona State University', 'https://wpcarey.asu.edu/department-finance/faculty-research/do-stocks-outperform-treasury-bills')),
-        h('li', null, h('b', null, 'Low-cost index funds. '), 'Around 90% of professionally managed US large-company funds have trailed the S&P 500 over 15 years. ', link('S&P SPIVA scorecard', 'https://www.spglobal.com/spdji/en/spiva/article/spiva-us-year-end-2021')),
-        h('li', null, h('b', null, 'Small, bounded tilts. '), 'The average fund investor earns 1.1 to 1.6 points a year less than their own funds because of badly timed buying and selling. The tilts here are capped so a wrong signal costs little. ', link('Morningstar, Mind the Gap', 'https://www.morningstar.com/funds/investors-still-need-mind-gap-their-funds-returns')),
-        h('li', null, h('b', null, 'Trend as the main signal. '), 'Holding an asset only while it is above its 10-month average has historically given similar returns with much shallower falls. It lags at turning points and gets whipsawed in choppy markets. ', link('Faber, A Quantitative Approach to Tactical Asset Allocation', 'https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461')),
-        h('li', null, h('b', null, 'Valuation as a slow signal. '), 'The Shiller P/E explains roughly 40% of the variation in the following ten years of stock returns and almost none of the next year. So it gets a small weight and never drives the plan alone. ', link('Shiller P/E history', 'https://www.multpl.com/shiller-pe')),
-        h('li', null, h('b', null, 'Lump sum by default. '), 'Investing at once beat spreading purchases out 68% of the time between 1976 and 2022. Spreading out is suggested only when markets are stressed or a fall would shake you out. ', link('Vanguard', 'https://www.vanguard.co.uk/professional/vanguard-365/financial-planning/financial-well-being/cost-averaging')),
-        h('li', null, h('b', null, 'A ceiling on crypto. '), 'Bank of America, Morgan Stanley, Fidelity and BlackRock have each suggested between 1% and 5% for clients who want exposure. The plan offers 0, 2, 5 or 10% as a ceiling. ', link('Coverage of the bank guidance', 'https://finance.yahoo.com/news/bank-america-joins-jpmorgan-citi-230105379.html')),
-        h('li', null, h('b', null, 'The yield curve. '), 'When 3-month bills pay more than 10-year bonds, a recession has usually followed within a year or two. ', link('New York Fed', 'https://www.newyorkfed.org/research/capital_markets/ycfaq')))));
+    root.appendChild(card('What the research changed', 'The first version of this model was rebuilt after six research passes through the investing literature. These are the changes, each made because the evidence pointed against the original choice.',
+      h('ul', { class: 'bullets' },
+        h('li', null, h('b', null, 'News counts for less. '), 'It was a fifth of every reading and could push in either direction. It is now a tenth at most and can only add caution. Acting on headlines is the least supported idea in the research.'),
+        h('li', null, h('b', null, 'Three popular gauges no longer score. '), 'The yield curve, the VIX and the gap between stock earnings yield and bond yields are shown for context only. None has predicted stock returns in real time.'),
+        h('li', null, h('b', null, 'Valuation is judged against its own recent past. '), 'A fixed "normal" Shiller P/E of 25 had read "expensive" almost every month since 2014, which amounts to a permanent underweight.'),
+        h('li', null, h('b', null, 'Trend uses two slow readings, not four. '), 'The 50-day against 200-day comparison repeated what the others already said. Crypto now uses shorter averages, where its evidence is.'),
+        h('li', null, h('b', null, 'Leans are smaller and lopsided. '), 'Trend rules have cut losses more than they have raised returns, so the plan trims further than it adds. The strongest setting came down from 70% to 50%.'),
+        h('li', null, h('b', null, 'The ceiling on stocks is 90%, not 100%, '), 'and the steps for money needed within ten years are lower. Long horizons do not make stocks safe.'),
+        h('li', null, h('b', null, 'Crypto is sized by risk. '), 'At most a tenth of your stock money, none for the most cautious answer, none for money needed within four years.'),
+        h('li', null, h('b', null, 'Pacing ignores the market. '), 'Suggesting slower buying when markets look stressed was a form of market timing. Stepping in is now offered only for nerves.'),
+        h('li', null, h('b', null, 'The stress test uses real episodes. '), '2008, when bonds helped, and 2022, when they did not, alongside the harsh all-at-once case.'),
+        h('li', null, h('b', null, 'Bonds change shape with inflation. '), 'When inflation is driving markets the plan says to hold shorter and inflation-linked bonds.'),
+        h('li', null, h('b', null, 'Added: '), 'your share of risk by part, a growth range built from today’s yields, a three-fund version, a one-page written plan, and a check-once-a-month rule.'))));
 
     root.appendChild(card('What it cannot do', null, h('ul', { class: 'bullets' },
       h('li', null, 'Predict. Every reading describes what has already happened. Markets regularly do the opposite of what the signals suggest.'),
+      h('li', null, 'Beat doing nothing with any confidence. The leans are small because the evidence for them is modest. "Not at all" is a sound setting.'),
       h('li', null, 'Know your whole situation. It cannot see your taxes, income, pension, debts or what you already own unless you enter it. An adviser who can is worth more than any dashboard.'),
-      h('li', null, 'Guarantee fresh data. Prices are delayed, a feed can fail, and the news brief is written by an AI that can misjudge a story. Each source below shows whether it loaded.'),
-      h('li', null, 'Replace patience. Over decades, how much you save and how long you stay invested matter far more than any tilt on this page.'))));
+      h('li', null, 'Guarantee fresh or perfect data. Prices are delayed, a feed can fail, and the news brief is written by an AI that can misjudge a story. Each source below shows whether it loaded.'),
+      h('li', null, 'Replace patience. Over decades, how much you save and how long you stay invested matter far more than any lean on this page.'))));
 
     var s = S.snap;
     if (s && s.sources) {
@@ -1679,6 +2105,7 @@ window.MC_CONFIG = {"refreshServer": "Claude Code Remote", "refreshTrigger": "tr
 
   function renderData() {
     renderFresh(); renderPlan(); renderMarkets(); renderCrypto(); renderEvents(); renderMethod();
+    if (!S.learnBuilt) { renderLearn(); S.learnBuilt = true; }
   }
 
   // -------------------------------------------------------------- persistence

@@ -77,7 +77,8 @@ Part keys are `us`, `intl`, `bonds`, `gold` and `crypto`. Cash has no score.
 - **Score with restraint.** A `sleeveScore` is how today's events lean on that part over the next few weeks:
   0 when the news is mixed or irrelevant, around ±0.3 for a clear lean, ±0.6 or more only when several
   independent developments point the same way. Stay inside ±0.8 unless something extraordinary has happened.
-  Events count for a fifth of each part's reading, so there is no need to shout.
+  The plan uses a score only when it is gloomier than the price-based reading, and then for a tenth at most.
+  News can make the plan more careful and never bolder, so there is nothing to gain from a strong score.
 - **Stay neutral on people and politics.** Describe market consequences, not who is right. Leave personal
   details about individuals out unless the market reaction cannot be explained without them.
 - **Keep it small.** The whole document should stay under about 15 KB.

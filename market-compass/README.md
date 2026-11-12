@@ -25,14 +25,24 @@ rest of this repository and shares no code with it.
 
 ## The model in brief
 
-- Your timeline caps how much can sit in stocks and crypto. Your answer to "what would you do after a 30% fall"
-  picks a level under that cap. That baseline matters far more than any signal.
-- Each part (US stocks, international stocks, crypto, gold, bonds) gets a reading from -1 to +1. Trend carries
-  the most weight, then valuation, risk conditions, yields, liquidity and the news brief, depending on the part.
-- A full reading moves a part by 35% of its size ("a little") or 70% ("a lot"). What is trimmed waits in T-bills.
-- Crypto never exceeds the ceiling you choose. Growth assets never exceed your timeline cap.
+The first version was rebuilt after six research passes through the investing books and the studies behind
+them. Where the evidence pointed against an original choice, the choice changed. The page's Learn tab lists the
+lessons and the Method tab lists what changed.
 
-The Method tab on the page explains each choice and links the research behind it.
+- **Baseline.** Your timeline caps the share in stocks and crypto (0% within a year, rising to 90% beyond
+  fifteen years; never 100%). Your answer to "what would you do if this fell 30% for three years", asked in
+  dollars, picks a level under that cap. That baseline matters far more than any signal.
+- **Readings.** Each part gets a reading from -1 to +1. Stocks are 70% trend, 20% risk conditions and 10%
+  valuation. Bonds weigh trend, yield after inflation and inflation itself. Gold is three-quarters trend.
+  Crypto is two-thirds trend on shorter averages. The yield curve, the VIX and the earnings-yield comparison
+  are displayed but not scored, because they have not predicted stock returns.
+- **Leans.** On the default setting a full negative reading trims a part by 35% of its size and a full positive
+  one adds 20%. What is trimmed waits in T-bills. "Not at all" is offered and is a sound choice.
+- **News.** It can make a reading more careful by a tenth at most. It never makes the plan bolder.
+- **Limits.** Crypto never exceeds your ceiling or a tenth of your stock money, and is left out for money
+  needed within four years. Growth assets never exceed the timeline cap.
+- **Beyond the mix.** Share of risk by part, a growth range built from today's yields, three real crisis
+  scenarios, a three-fund version, and a one-page written plan.
 
 ## Layout
 

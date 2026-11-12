@@ -57,6 +57,7 @@ UNIVERSE = {
     "VWO": ("Emerging markets", "stocks", 252),
     # bonds and cash
     "BND": ("US bond market", "bonds", 252), "SHY": ("1-3 yr Treasuries", "bonds", 252),
+    "IEI": ("3-7 yr Treasuries", "bonds", 252),
     "IEF": ("7-10 yr Treasuries", "bonds", 252), "TLT": ("20+ yr Treasuries", "bonds", 252),
     "TIP": ("Inflation-linked bonds", "bonds", 252), "LQD": ("Investment-grade credit", "bonds", 252),
     "HYG": ("High-yield credit", "bonds", 252), "SGOV": ("0-3 mo T-bills", "bonds", 252),
@@ -81,7 +82,7 @@ UNIVERSE = {
     "SOL-USD": ("Solana", "crypto", 365),
 }
 # Symbols where we want dividend-adjusted (total return) history for fair comparisons.
-TOTAL_RETURN = ["VTI", "VXUS", "BND", "SGOV", "IAU", "HYG", "IEF", "TLT", "TIP", "VNQ"]
+TOTAL_RETURN = ["VTI", "VXUS", "BND", "SGOV", "IAU", "HYG", "IEI", "IEF", "TLT", "TIP", "VNQ"]
 SECTORS = ["XLK", "XLC", "XLY", "XLF", "XLI", "XLV", "XLP", "XLE", "XLU", "XLB", "XLRE"]
 
 NEWS_QUERIES = [
@@ -329,6 +330,7 @@ def analyze(dates, px, tr=None, ppy=252):
     out["ytd"] = rnd(pct(tr[-1], tr[prev[-1]])) if prev else None
     s50, s200 = sma(tr, 50), sma(tr, 200)
     out["vs50"] = rnd(pct(tr[-1], s50))
+    out["vs100"] = rnd(pct(tr[-1], sma(tr, 100)))
     out["vs200"] = rnd(pct(tr[-1], s200))
     out["cross"] = rnd(pct(s50, s200))
     s200_prev = sma(tr[:-k1m], 200) if len(tr) > 200 + k1m else None
@@ -341,37 +343,143 @@ def analyze(dates, px, tr=None, ppy=252):
     return out
 
 
-def trend_parts(a, cash12m, ppy=252):
-    """Four trend readings for one instrument, each scored in [-1, 1].
+def _part_adder(parts):
+    def add(pid, label, value, band, weight, text):
+        parts.append({"id": pid, "label": label, "score": rnd(soft(value, band), 3), "weight": weight,
+                      "value": rnd(value), "text": text})
+    return add
 
-    The mix follows the long-run evidence on trend and absolute momentum:
-    a 10-month/200-day moving-average filter (Faber 2007), 12-month return in
-    excess of T-bills (Moskowitz, Ooi and Pedersen 2012; Antonacci 2014), with
-    a medium-term cross and 3-month return as confirmation. Bands scale with the
-    instrument's own volatility so a 2% move means more for bonds than Bitcoin.
+
+def _above_below(v, what):
+    if v is None:
+        return "n/a"
+    return "%.1f%% %s %s" % (abs(v) * 100, "above" if v >= 0 else "below", what)
+
+
+def trend_parts(a, cash12m, ppy=252):
+    """Trend readings for stocks, bonds and gold, each scored in [-1, 1].
+
+    Two slow readings carry it: price against its 200-day average (Faber 2007) and
+    12-month return in excess of T-bills (Moskowitz, Ooi and Pedersen 2012). They are
+    two views of the same thing, past returns (Levine and Pedersen 2016), so adding
+    more moving averages adds no information; the 50/200-day cross was dropped for
+    that reason. A small 3-month reading is kept only to shorten the lag when a
+    market rebounds, which is when trend rules are most wrong (Daniel and Moskowitz
+    2016). Bands scale with the instrument's own volatility, so a 2% move means
+    more for bonds than for stocks.
     """
     vol = a.get("vol60") or a.get("vol20") or 0.15
     parts = []
-
-    def add(pid, label, value, band, weight, text):
-        s = soft(value, band)
-        parts.append({"id": pid, "label": label, "score": rnd(s, 3), "weight": weight,
-                      "value": rnd(value), "text": text})
-
+    add = _part_adder(parts)
     v = a.get("vs200")
-    add("vs200", "Price vs 200-day average", v, max(0.01, 0.25 * vol), 0.40,
-        "n/a" if v is None else "%s the 200-day average" % (("%.1f%% above" % (v * 100)) if v >= 0 else ("%.1f%% below" % (-v * 100))))
+    add("vs200", "Price vs 200-day average", v, max(0.01, 0.25 * vol), 0.45, _above_below(v, "the 200-day average"))
     r12 = a.get("ret12m")
     ex = None if r12 is None or cash12m is None else r12 - cash12m
-    add("mom12", "12-month return vs T-bills", ex, max(0.02, 0.5 * vol), 0.25,
+    add("mom12", "12-month return vs T-bills", ex, max(0.02, 0.5 * vol), 0.45,
         "n/a" if ex is None else "%+.1f%% over 12 months, %s T-bills by %.1f pts" % (r12 * 100, "ahead of" if ex >= 0 else "behind", abs(ex) * 100))
-    c = a.get("cross")
-    add("cross", "50-day vs 200-day average", c, max(0.005, 0.15 * vol), 0.20,
-        "n/a" if c is None else "50-day average is %.1f%% %s the 200-day" % (abs(c) * 100, "above" if c >= 0 else "below"))
     r3 = a.get("ret3m")
-    add("mom3", "3-month return", r3, max(0.01, 0.25 * vol), 0.15,
+    add("mom3", "3-month return", r3, max(0.01, 0.25 * vol), 0.10,
         "n/a" if r3 is None else "%+.1f%% over 3 months" % (r3 * 100))
     return parts
+
+
+def crypto_trend_parts(a, cash12m):
+    """Trend readings for Bitcoin, weighted toward shorter horizons.
+
+    The published evidence for crypto momentum is at days to weeks, with reversal
+    beyond a month or so (Liu and Tsyvinski 2021; Liu, Tsyvinski and Wu 2022), and
+    moving-average rules of 20 to 100 days have mainly reduced drawdowns (Detzel et
+    al. 2021). Nothing validates a 12-month rule for crypto, so it gets a tenth.
+    """
+    vol = a.get("vol60") or a.get("vol20") or 0.5
+    parts = []
+    add = _part_adder(parts)
+    for key, days, band in (("vs50", 50, 0.125), ("vs100", 100, 0.18), ("vs200", 200, 0.25)):
+        v = a.get(key)
+        add(key, "Price vs %d-day average" % days, v, max(0.02, band * vol), 0.20, _above_below(v, "the %d-day average" % days))
+    r1 = a.get("ret1m")
+    add("mom1", "1-month return", r1, max(0.02, 0.145 * vol), 0.15, "n/a" if r1 is None else "%+.1f%% over 1 month" % (r1 * 100))
+    r3 = a.get("ret3m")
+    add("mom3", "3-month return", r3, max(0.02, 0.25 * vol), 0.15, "n/a" if r3 is None else "%+.1f%% over 3 months" % (r3 * 100))
+    r12 = a.get("ret12m")
+    ex = None if r12 is None or cash12m is None else r12 - cash12m
+    add("mom12", "12-month return vs T-bills", ex, max(0.05, 0.5 * vol), 0.10,
+        "n/a" if ex is None else "%+.1f%% over 12 months" % (r12 * 100))
+    return parts
+
+
+def valuation_reading(history, value, years=40):
+    """Where a valuation measure sits in its own recent past.
+
+    history: [(iso_date, value)] oldest first. Returns (score, percentile).
+    The score is 0 across the middle of the range (20th to 80th percentile of the
+    trailing `years`), sliding to -1 at the 95th percentile and +1 at the 5th.
+    A fixed "normal" level is avoided on purpose: the Shiller P/E has sat above its
+    old average almost continuously since the 1990s, and a rule tied to that average
+    amounts to a permanent underweight (Asness, Ilmanen and Maloney 2017).
+    """
+    if not history or value is None:
+        return None, None
+    last = history[-1][0]
+    cutoff = "%04d%s" % (int(last[:4]) - years, last[4:])
+    window = [v for d, v in history if d >= cutoff]
+    if len(window) < 60:
+        return None, None
+    pr = percentile_rank(window, value)
+    if pr >= 80:
+        score = -clamp((pr - 80) / 15.0, 0, 1)
+    elif pr <= 20:
+        score = clamp((20 - pr) / 15.0, 0, 1)
+    else:
+        score = 0.0
+    return score, pr
+
+
+def volatility_reading(vol, norm):
+    """Recent realised volatility against its long-run norm, in [-1, 0.5].
+
+    Exposure is worth trimming when the market itself has turned violent
+    (Moreira and Muir 2017; the benefit holds for the broad market after costs,
+    Barroso and Detzel 2021). Calm earns only half credit: quiet markets are not
+    a reason to add much risk.
+    """
+    if vol is None or not norm:
+        return None
+    ratio = vol / norm
+    return min(0.5, 1 - ratio) if ratio <= 1 else -min(1.0, ratio - 1)
+
+
+def rate_shock_reading(chg3m):
+    """3-month change in the 10-year yield, in points: caution from +0.25, full at +1.0."""
+    if chg3m is None:
+        return None
+    if chg3m >= 0:
+        return -clamp((chg3m - 0.25) / 0.75, 0, 1)
+    return clamp(-chg3m / 1.0, 0, 0.5)
+
+
+def inflation_regime(cpi, cpi6m, stock_bond_corr, short_rate_chg3m):
+    """Four yes/no tests of whether inflation, not growth, is driving markets.
+
+    When it is, bonds stop cushioning stock falls and both can lose together
+    (Neville et al. 2021; AQR 2023), so the defensive part of a plan should sit
+    in shorter and inflation-linked bonds. Returns points 0-4, a mode, and the tests.
+    """
+    tests = [
+        ("Inflation above 3%", None if cpi is None else cpi > 3.0,
+         "n/a" if cpi is None else "12-month inflation is %.1f%%" % cpi),
+        ("Inflation higher than six months ago", None if cpi is None or cpi6m is None else cpi > cpi6m,
+         "n/a" if cpi is None or cpi6m is None else "%.1f%% now against %.1f%% six months ago" % (cpi, cpi6m)),
+        ("Stocks and bonds falling and rising together", None if stock_bond_corr is None else stock_bond_corr > 0.2,
+         "n/a" if stock_bond_corr is None else "3-month correlation of daily moves is %+.2f" % stock_bond_corr),
+        ("Short-term interest rates rising", None if short_rate_chg3m is None else short_rate_chg3m >= 0.20,
+         "n/a" if short_rate_chg3m is None else "3-month T-bill yield moved %+.2f pts in 3 months" % short_rate_chg3m),
+    ]
+    points = sum(1 for _, on, _ in tests if on)
+    known = sum(1 for _, on, _ in tests if on is not None)
+    mode = None if known < 2 else "short" if points >= 3 else "mixed" if points == 2 else "normal"
+    return {"points": points, "known": known, "mode": mode,
+            "tests": [{"label": l, "on": on, "text": t} for l, on, t in tests]}
 
 
 def combine(parts):
@@ -597,6 +705,9 @@ def build(out_dir, verbose=True):
         since = [v for d, v in cape_hist if d >= "1990-01-01"]
         macro["capePctSince1990"] = rnd(percentile_rank(since, cape), 0)
         macro["capeMedian"] = rnd(sorted(v for _, v in cape_hist)[len(cape_hist) // 2], 1)
+        vs, vp = valuation_reading(cape_hist, cape, 40)
+        macro["capeScore"] = rnd(vs, 3)
+        macro["capePct40"] = rnd(vp, 0)
         pe = multpl_table("s-p-500-pe-ratio", 3)
         if pe:
             macro["pe"] = pe[0][1]
@@ -612,31 +723,48 @@ def build(out_dir, verbose=True):
         macro["cpi"] = rows[0][1]
         macro["cpiAsOf"] = rows[0][0][:7]
         macro["cpi3mAgo"] = rows[3][1]
+        macro["cpi6mAgo"] = rows[6][1]
         macro["cpi12mAgo"] = rows[12][1]
         macro["cpiTrail"] = [r[1] for r in rows[:13]][::-1]
         return True
     source("inflation", fetch_inflation, "multpl.com: US CPI inflation, year over year (BLS data)")
 
-    if macro.get("earnYield") is not None and macro.get("y10y") is not None:
-        macro["erp"] = rnd(macro["earnYield"] - macro["y10y"], 2)  # earnings yield minus 10-year yield
     if macro.get("y3m") is not None and macro.get("cpi") is not None:
         macro["realCash"] = rnd(macro["y3m"] - macro["cpi"], 2)
     if macro.get("y5y") is not None and macro.get("cpi") is not None:
         macro["realBond"] = rnd(macro["y5y"] - macro["cpi"], 2)
 
-    # ---- risk regime --------------------------------------------------------
+    # ---- stocks and bonds: together or apart? ---------------------------------
+    if "VTI" in series and "IEF" in series:
+        dv, _, av = series["VTI"]
+        di, _, ai = series["IEF"]
+        av, ai = av or series["VTI"][1], ai or series["IEF"][1]
+        common = sorted(set(dv) & set(di))[-64:]
+        mv, mi = dict(zip(dv, av)), dict(zip(di, ai))
+        rv = [math.log(mv[common[i + 1]] / mv[common[i]]) for i in range(len(common) - 1)]
+        rb_ = [math.log(mi[common[i + 1]] / mi[common[i]]) for i in range(len(common) - 1)]
+        c = pearson(rv, rb_) if len(rv) >= 40 else None
+        macro["stockBondCorr"] = rnd(c, 2)
+    if "CL=F" in series:
+        oil = series["CL=F"][1]
+        macro["oil"] = rnd(oil[-1], 2)
+        macro["oilVsHigh"] = rnd(pct(oil[-1], max(oil)))
+    macro["inflationRegime"] = inflation_regime(macro.get("cpi"), macro.get("cpi6mAgo"),
+                                                macro.get("stockBondCorr"), macro.get("y3mChg3m"))
+
+    # ---- risk conditions ------------------------------------------------------
     regime_parts = []
 
     def rpart(pid, label, score, weight, text):
         regime_parts.append({"id": pid, "label": label, "score": rnd(score, 3), "weight": weight, "text": text})
 
-    # credit: high-yield bonds against 7-10 year Treasuries (total return)
-    credit = None
-    if "HYG" in series and "IEF" in series:
+    # Credit: high-yield bonds against Treasuries of similar maturity, so the reading
+    # reflects fear of default rather than a move in interest rates.
+    credit, base = None, ("IEI" if "IEI" in series else "IEF")
+    if "HYG" in series and base in series:
         dh, _, ah = series["HYG"]
-        di, _, ai = series["IEF"]
-        ah = ah or series["HYG"][1]
-        ai = ai or series["IEF"][1]
+        di, _, ai = series[base]
+        ah, ai = ah or series["HYG"][1], ai or series[base][1]
         common = sorted(set(dh) & set(di))
         mh, mi = dict(zip(dh, ah)), dict(zip(di, ai))
         ratio = [mh[d] / mi[d] for d in common]
@@ -646,48 +774,46 @@ def build(out_dir, verbose=True):
             credit = clamp(0.6 * soft(vs, 0.03) + 0.4 * soft(ch, 0.03))
             macro["creditVs200"] = rnd(vs)
             macro["credit3m"] = rnd(ch)
-            rpart("credit", "Credit markets", credit, 0.35,
+            rpart("credit", "Credit markets", credit, 0.50,
                   "High-yield bonds are %.1f%% %s their 200-day trend against Treasuries (%+.1f%% over 3 months)" %
                   (abs(vs) * 100, "above" if vs >= 0 else "below", ch * 100))
     if credit is None:
-        rpart("credit", "Credit markets", None, 0.35, "No reading")
+        rpart("credit", "Credit markets", None, 0.50, "No reading")
 
-    vix = macro.get("vix")
-    if vix is not None:
-        vs_ = 0.6 if vix < 14 else 0.35 if vix < 17 else 0.0 if vix < 21 else -0.5 if vix < 28 else -1.0
-        band = "calm" if vix < 17 else "normal" if vix < 21 else "elevated" if vix < 28 else "stressed"
-        rpart("vix", "Expected volatility", vs_, 0.30, "VIX at %.1f, %s (1-year average %.1f)" % (vix, band, macro.get("vixAvg1y") or float("nan")))
-    else:
-        rpart("vix", "Expected volatility", None, 0.30, "No reading")
+    vol20 = A("VTI", "vol20")
+    vscore = volatility_reading(vol20, 0.16)
+    rpart("volatility", "Recent stock volatility", vscore, 0.30,
+          "No reading" if vol20 is None else "US stocks have swung at a %.0f%% yearly rate over the last month, against a long-run 16%%" % (vol20 * 100))
+
+    rscore = rate_shock_reading(macro.get("y10yChg3m"))
+    rpart("rates", "Interest-rate shock", rscore, 0.15,
+          "No reading" if rscore is None else "10-year Treasury yield moved %+.2f pts in 3 months" % macro["y10yChg3m"])
 
     above = [s for s in SECTORS if (A(s, "vs200") or 0) > 0]
     have = [s for s in SECTORS if A(s, "vs200") is not None]
     if have:
         share = len(above) / len(have)
         macro["breadth"] = rnd(share, 2)
-        rel = None
         if A("RSP", "ret3m") is not None and A("SPY", "ret3m") is not None:
-            rel = A("RSP", "ret3m") - A("SPY", "ret3m")
-            macro["equalWeightRel3m"] = rnd(rel)
-        b = clamp((share - 0.5) * 2.0)
-        text = "%d of %d sectors are above their 200-day average" % (len(above), len(have))
-        if rel is not None:
-            text += "; the average stock is %s the index by %.1f pts over 3 months" % ("beating" if rel >= 0 else "lagging", abs(rel) * 100)
-        rpart("breadth", "Market breadth", b, 0.20, text)
+            macro["equalWeightRel3m"] = rnd(A("RSP", "ret3m") - A("SPY", "ret3m"))
+        rpart("breadth", "Market breadth", clamp((share - 0.5) * 2.0), 0.05,
+              "%d of %d sectors are above their 200-day average" % (len(above), len(have)))
     else:
-        rpart("breadth", "Market breadth", None, 0.20, "No reading")
-
-    curve = macro.get("curve")
-    if curve is not None:
-        cs = clamp(curve / 1.5) if curve < 0 else clamp(curve / 2.0, 0, 0.5)
-        rpart("curve", "Yield curve", cs, 0.15,
-              "10-year yield is %.2f pts %s the 3-month bill%s" % (abs(curve), "above" if curve >= 0 else "below",
-                                                                  "" if curve >= 0 else " (inverted: a classic recession warning)"))
-    else:
-        rpart("curve", "Yield curve", None, 0.15, "No reading")
+        rpart("breadth", "Market breadth", None, 0.05, "No reading")
 
     regime_score = combine(regime_parts)
-    regime = {"score": rnd(regime_score, 3), "label": label_for(regime_score), "parts": regime_parts}
+    # Widely quoted gauges that the evidence does not support as stock signals. Shown, not scored.
+    context = []
+    if macro.get("vix") is not None:
+        vix = macro["vix"]
+        band = "calm" if vix < 17 else "normal" if vix < 21 else "elevated" if vix < 28 else "stressed"
+        context.append({"label": "VIX", "text": "%.1f, %s. A high VIX marks risk, but has not predicted lower returns." % (vix, band)})
+    if macro.get("curve") is not None:
+        cv = macro["curve"]
+        context.append({"label": "Yield curve", "text": "10-year yield is %.2f pts %s the 3-month bill. An inverted curve has preceded recessions, but it gave a false alarm from 2022 to 2024 and has not predicted stock returns." % (abs(cv), "above" if cv >= 0 else "below")})
+    if macro.get("oilVsHigh") is not None:
+        context.append({"label": "Oil", "text": "$%.0f a barrel, %.0f%% below its 2-year high. Most US recessions since 1945 followed an oil spike." % (macro["oil"], abs(macro["oilVsHigh"]) * 100)})
+    regime = {"score": rnd(regime_score, 3), "label": label_for(regime_score), "parts": regime_parts, "context": context}
 
     # ---- sleeves ------------------------------------------------------------
     cash12m = A("SGOV", "ret12m")
@@ -699,15 +825,20 @@ def build(out_dir, verbose=True):
         a = assets.get(sym)
         if not a:
             return None, []
-        parts = trend_parts(a, cash12m, ppy)
+        parts = crypto_trend_parts(a, cash12m) if ppy == 365 else trend_parts(a, cash12m, ppy)
         return combine(parts), parts
 
     sleeves = {}
 
-    def sleeve(key, parts):
+    def sleeve(key, parts, cap=None):
         score = combine(parts)
+        note = None
+        if cap is not None and score is not None and score > cap[0]:
+            score, note = cap
         sleeves[key] = {"label": CORE[key]["label"], "sym": CORE[key]["sym"], "score": rnd(score, 3),
                         "stance": label_for(score), "parts": parts}
+        if note:
+            sleeves[key]["capNote"] = note
 
     def P(pid, label, score, weight, text, detail=None):
         d = {"id": pid, "label": label, "score": rnd(score, 3), "weight": weight, "text": text}
@@ -724,33 +855,29 @@ def build(out_dir, verbose=True):
             UNIVERSE[sym][0], abs(v) * 100, "above" if v >= 0 else "below",
             "n/a" if a.get("ret12m") is None else "%+.1f%%" % (a["ret12m"] * 100))
 
-    risk_text = "Credit, volatility, breadth and the yield curve together read %s" % regime["label"].lower()
+    risk_text = "Credit, volatility, interest rates and breadth together read %s" % regime["label"].lower()
     dxy_vs = macro.get("dxyVs200")
     dollar_score = None if dxy_vs is None else -soft(dxy_vs, 0.03)  # a weaker dollar helps non-US assets and gold
     dollar_text = "No reading" if dxy_vs is None else "US dollar index is %.1f%% %s its 200-day average" % (abs(dxy_vs) * 100, "above" if dxy_vs >= 0 else "below")
 
-    # US stocks
+    # US stocks. Valuation is a slow, weak signal, so it gets a tenth and one other job:
+    # when prices are in the top tenth of their 40-year range it caps how far the plan may lean in.
     us_t, us_tp = trend_block("VTI")
-    cape, erp = macro.get("cape"), macro.get("erp")
-    val_score, val_text = None, "No reading"
-    if cape is not None:
-        v1 = clamp((25.0 - cape) / 15.0)          # CAPE 25 is neutral, 40+ fully stretched, 10 fully cheap
-        v2 = clamp(erp / 3.0) if erp is not None else None  # +3 pts of earnings yield over bonds is generous
-        val_score = v1 if v2 is None else clamp(0.6 * v1 + 0.4 * v2)
-        val_text = "Shiller P/E is %.1f (higher than %s%% of months since 1881)" % (cape, int(macro.get("capePct") or 0))
-        if erp is not None:
-            val_text += "; stocks' earnings yield is %.1f pts %s the 10-year Treasury" % (abs(erp), "above" if erp >= 0 else "below")
+    cape = macro.get("cape")
+    val_score, val_pct = macro.get("capeScore"), macro.get("capePct40")
+    val_text = "No reading" if cape is None or val_pct is None else "Shiller P/E is %.1f, higher than %d%% of the last 40 years" % (cape, int(val_pct))
+    stretched = val_pct is not None and val_pct >= 90
     sleeve("us", [
-        P("trend", "Trend", us_t, 0.50, trend_text("VTI", us_t), us_tp),
-        P("risk", "Risk conditions", regime_score, 0.30, risk_text),
-        P("value", "Valuation", val_score, 0.20, val_text),
-    ])
+        P("trend", "Trend", us_t, 0.70, trend_text("VTI", us_t), us_tp),
+        P("risk", "Risk conditions", regime_score, 0.20, risk_text),
+        P("value", "Valuation", val_score, 0.10, val_text),
+    ], cap=(0.5, "Held at +0.50 because prices are in the top tenth of their 40-year range") if stretched else None)
 
     # International stocks
     in_t, in_tp = trend_block("VXUS")
     sleeve("intl", [
-        P("trend", "Trend", in_t, 0.60, trend_text("VXUS", in_t), in_tp),
-        P("risk", "Risk conditions", regime_score, 0.25, risk_text),
+        P("trend", "Trend", in_t, 0.65, trend_text("VXUS", in_t), in_tp),
+        P("risk", "Risk conditions", regime_score, 0.20, risk_text),
         P("dollar", "US dollar", dollar_score, 0.15, dollar_text),
     ])
 
@@ -764,18 +891,18 @@ def build(out_dir, verbose=True):
     if macro.get("cpi") is not None and macro.get("cpi3mAgo") is not None:
         d3 = macro["cpi"] - macro["cpi3mAgo"]
         lvl = macro["cpi"]
-        # falling inflation helps bonds; high and rising inflation hurts them
-        infl_score = clamp(-d3 / 0.5) * 0.7 + clamp((2.5 - lvl) / 2.0) * 0.3
-        infl_score = clamp(infl_score)
+        # Half direction, half level. The level penalty runs from nothing at 2.5% to full at 4%.
+        infl_score = clamp(0.5 * clamp(-d3 / 0.5) - 0.5 * clamp((lvl - 2.5) / 1.5))
         infl_text = "Inflation is %.1f%% (%s), %s %.1f%% three months earlier" % (
             lvl, macro.get("cpiAsOf"), "up from" if d3 > 0 else "down from" if d3 < 0 else "unchanged from", macro["cpi3mAgo"])
     sleeve("bonds", [
         P("trend", "Trend", bo_t, 0.45, trend_text("BND", bo_t), bo_tp),
         P("carry", "Yield after inflation", carry_score, 0.30, carry_text),
-        P("inflation", "Inflation direction", infl_score, 0.25, infl_text),
+        P("inflation", "Inflation level and direction", infl_score, 0.25, infl_text),
     ])
 
-    # Gold
+    # Gold. Its old link to real interest rates broke after 2022 (central-bank buying), so that
+    # reading now counts for a tenth and trend carries most of the weight.
     go_t, go_tp = trend_block("IAU")
     rr_score, rr_text = None, "No reading"
     if macro.get("y10yChg3m") is not None:
@@ -784,8 +911,8 @@ def build(out_dir, verbose=True):
         rr_score = -soft(real_chg, 0.6)  # rising real yields raise the cost of holding gold
         rr_text = "10-year yield moved %+.2f pts in 3 months against a %+.2f pt move in inflation" % (macro["y10yChg3m"], d_infl)
     sleeve("gold", [
-        P("trend", "Trend", go_t, 0.65, trend_text("IAU", go_t), go_tp),
-        P("real", "Real interest rates", rr_score, 0.20, rr_text),
+        P("trend", "Trend", go_t, 0.75, trend_text("IAU", go_t), go_tp),
+        P("real", "Real interest rates", rr_score, 0.10, rr_text),
         P("dollar", "US dollar", dollar_score, 0.15, dollar_text),
     ])
 
@@ -885,6 +1012,9 @@ def build(out_dir, verbose=True):
     days = (NOW().date() - LAST_HALVING).days
     crypto["halving"] = {"last": LAST_HALVING.isoformat(), "daysSince": days, "monthsSince": rnd(days / 30.44, 1)}
 
+    # Stablecoin supply and the mood index have no reliable lead over prices in the
+    # published tests, so each counts for a twentieth. The mood index is used on the
+    # greed side only; "buy when others are fearful" has not held up at short horizons.
     liq_score, liq_text = None, "No reading"
     st = crypto.get("stables")
     if st and st.get("chg30") is not None:
@@ -894,14 +1024,13 @@ def build(out_dir, verbose=True):
     fg = crypto.get("fng")
     if fg:
         n = fg["now"]
-        # contrarian only at the extremes; the middle of the range says nothing useful
-        sent_score = 0.6 if n <= 15 else 0.3 if n <= 25 else -0.3 if n >= 75 and n < 85 else -0.6 if n >= 85 else 0.0
-        sent_text = "Fear and Greed Index is %d (%s); extremes tend to reverse, the middle means little" % (n, fg["label"])
+        sent_score = -0.6 if n >= 85 else -0.3 if n >= 75 else 0.0
+        sent_text = "Fear and Greed Index is %d (%s); only extreme greed counts, as a caution" % (n, fg["label"])
     sleeve("crypto", [
-        P("trend", "Bitcoin trend", btc_t, 0.55, trend_text("BTC-USD", btc_t), btc_tp),
-        P("risk", "Risk conditions", regime_score, 0.20, risk_text),
-        P("liquidity", "Crypto liquidity", liq_score, 0.15, liq_text),
-        P("sentiment", "Sentiment (contrarian)", sent_score, 0.10, sent_text),
+        P("trend", "Bitcoin trend", btc_t, 0.65, trend_text("BTC-USD", btc_t), btc_tp),
+        P("risk", "Risk conditions", regime_score, 0.25, risk_text),
+        P("liquidity", "Crypto liquidity", liq_score, 0.05, liq_text),
+        P("sentiment", "Crowd mood", sent_score, 0.05, sent_text),
     ])
 
     # ---- chart series for the six sleeves -----------------------------------
@@ -979,7 +1108,7 @@ def build(out_dir, verbose=True):
     except Exception:
         pass
     snapshot = {
-        "v": 1,
+        "v": 2,
         "generatedAt": NOW().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "pricesAsOf": spy.get("asOf"),
         "quoteAt": quote_at,
@@ -1019,15 +1148,19 @@ def summary(s):
     L.append("")
     L.append("Rates: 3m %s  5y %s  10y %s  30y %s | curve 10y-3m %s | 10y 3m change %s" % (m.get("y3m"), m.get("y5y"), m.get("y10y"), m.get("y30y"), m.get("curve"), m.get("y10yChg3m")))
     L.append("VIX %s (pct rank %s) | Dollar index %s (vs 200d %s)" % (m.get("vix"), m.get("vixPct"), m.get("dxy"), f(m.get("dxyVs200"))))
-    L.append("Valuation: CAPE %s (pct %s) | P/E %s | earnings yield %s | ERP vs 10y %s" % (m.get("cape"), m.get("capePct"), m.get("pe"), m.get("earnYield"), m.get("erp")))
-    L.append("Inflation: CPI %s%% (%s), 3m ago %s%% | real cash %s | real 5y %s" % (m.get("cpi"), m.get("cpiAsOf"), m.get("cpi3mAgo"), m.get("realCash"), m.get("realBond")))
+    L.append("Valuation: CAPE %s (all-time pct %s, 40-year pct %s) | P/E %s | dividend yield %s" % (m.get("cape"), m.get("capePct"), m.get("capePct40"), m.get("pe"), m.get("divYield")))
+    L.append("Inflation: CPI %s%% (%s), 3m ago %s%%, 6m ago %s%% | real cash %s | real 5y %s" % (m.get("cpi"), m.get("cpiAsOf"), m.get("cpi3mAgo"), m.get("cpi6mAgo"), m.get("realCash"), m.get("realBond")))
+    ir = m.get("inflationRegime") or {}
+    L.append("Inflation regime: %s of 4 tests (%s) | stock-bond correlation %s" % (ir.get("points"), ir.get("mode"), m.get("stockBondCorr")))
     L.append("")
     L.append("Risk regime: %s (%s)" % (s["regime"]["label"], s["regime"]["score"]))
     for p in s["regime"]["parts"]:
-        L.append("   %-22s %6s  %s" % (p["label"], p["score"], p["text"]))
+        L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
+    for c in s["regime"].get("context", []):
+        L.append("   (context) %-12s %s" % (c["label"], c["text"]))
     L.append("")
     for k, sl in s["sleeves"].items():
-        L.append("%-22s %-18s score %s" % (sl["label"], sl["stance"], sl["score"]))
+        L.append("%-22s %-18s score %s%s" % (sl["label"], sl["stance"], sl["score"], "  [" + sl["capNote"] + "]" if sl.get("capNote") else ""))
         for p in sl["parts"]:
             L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
     c = s["crypto"]

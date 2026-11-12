@@ -123,6 +123,75 @@ class Analysis(unittest.TestCase):
         self.assertEqual(r.combine(parts), 0.0)
 
 
+class Readings(unittest.TestCase):
+    def test_trend_weights_and_dropped_cross(self):
+        a = r.analyze(dates(520), ramp(520), ppy=252)
+        parts = r.trend_parts(a, cash12m=0.04)
+        self.assertEqual([p["id"] for p in parts], ["vs200", "mom12", "mom3"])
+        self.assertAlmostEqual(sum(p["weight"] for p in parts), 1.0)
+        self.assertEqual(parts[0]["weight"], parts[1]["weight"])      # the two slow readings count equally
+
+    def test_crypto_trend_leans_on_shorter_horizons(self):
+        a = r.analyze(dates(730), ramp(730, daily=0.002), ppy=365)
+        parts = {p["id"]: p for p in r.crypto_trend_parts(a, cash12m=0.04)}
+        self.assertEqual(set(parts), {"vs50", "vs100", "vs200", "mom1", "mom3", "mom12"})
+        self.assertAlmostEqual(sum(p["weight"] for p in parts.values()), 1.0)
+        self.assertEqual(parts["mom12"]["weight"], 0.10)              # the 12-month rule is unproven for crypto
+        self.assertGreater(r.combine(list(parts.values())), 0.9)
+        down = r.analyze(dates(730), ramp(730, daily=-0.002), ppy=365)
+        self.assertLess(r.combine(r.crypto_trend_parts(down, cash12m=0.04)), -0.9)
+
+    def test_valuation_is_neutral_across_the_middle_of_its_own_range(self):
+        hist = [("%04d-%02d-01" % (1980 + i // 12, i % 12 + 1), 10 + i * 0.05) for i in range(12 * 46)]   # steadily rising
+        last = hist[-1][1]
+        s_top, p_top = r.valuation_reading(hist, last)
+        self.assertEqual(p_top, 100.0)
+        self.assertEqual(s_top, -1.0)
+        window = sorted(v for d, v in hist if d >= "1985-12-01")
+        mid = window[len(window) // 2]
+        self.assertEqual(r.valuation_reading(hist, mid)[0], 0.0)
+        s_low, p_low = r.valuation_reading(hist, window[0])
+        self.assertLess(p_low, 5)
+        self.assertEqual(s_low, 1.0)
+        # between the 80th and 95th percentile it slides from 0 to -1
+        s87, p87 = r.valuation_reading(hist, window[int(len(window) * 0.875)])
+        self.assertTrue(-0.7 < s87 < -0.3, s87)
+        # values older than 40 years do not count
+        old = [("1900-01-01", 500.0)] + hist
+        self.assertEqual(r.valuation_reading(old, last)[1], 100.0)
+        self.assertEqual(r.valuation_reading([], 20), (None, None))
+        self.assertEqual(r.valuation_reading(hist[:30], 12), (None, None))
+
+    def test_volatility_reading(self):
+        self.assertEqual(r.volatility_reading(0.16, 0.16), 0)
+        self.assertAlmostEqual(r.volatility_reading(0.24, 0.16), -0.5)
+        self.assertEqual(r.volatility_reading(0.60, 0.16), -1.0)       # capped
+        self.assertAlmostEqual(r.volatility_reading(0.12, 0.16), 0.25)
+        self.assertEqual(r.volatility_reading(0.02, 0.16), 0.5)        # calm earns only half credit
+        self.assertIsNone(r.volatility_reading(None, 0.16))
+
+    def test_rate_shock_reading(self):
+        self.assertEqual(r.rate_shock_reading(0.25), 0)                # small rises are ignored
+        self.assertAlmostEqual(r.rate_shock_reading(0.625), -0.5)
+        self.assertEqual(r.rate_shock_reading(1.5), -1.0)
+        self.assertEqual(r.rate_shock_reading(0.0), 0)
+        self.assertAlmostEqual(r.rate_shock_reading(-0.3), 0.3)
+        self.assertEqual(r.rate_shock_reading(-2.0), 0.5)              # falling yields earn at most half
+        self.assertIsNone(r.rate_shock_reading(None))
+
+    def test_inflation_regime_counts_four_tests(self):
+        hot = r.inflation_regime(3.7, 3.3, 0.35, 0.43)
+        self.assertEqual((hot["points"], hot["mode"]), (4, "short"))
+        calm = r.inflation_regime(2.1, 2.4, -0.3, -0.25)
+        self.assertEqual((calm["points"], calm["mode"]), (0, "normal"))
+        two = r.inflation_regime(3.2, 3.4, 0.3, 0.0)
+        self.assertEqual((two["points"], two["mode"]), (2, "mixed"))
+        self.assertEqual(r.inflation_regime(3.2, 3.0, None, None)["mode"], "mixed")
+        blind = r.inflation_regime(None, None, None, 0.5)              # one known test is not enough to call it
+        self.assertIsNone(blind["mode"])
+        self.assertEqual(len(hot["tests"]), 4)
+
+
 class Risk(unittest.TestCase):
     def test_pearson_known_values(self):
         self.assertAlmostEqual(r.pearson([1, 2, 3, 4], [2, 4, 6, 8]), 1.0)
