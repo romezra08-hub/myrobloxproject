@@ -464,6 +464,12 @@
     (opts.noSignal || []).forEach(function (k) {
       if (scores[k]) scores[k] = { signal: null, event: null, final: 0, eventUsed: false, eventEffect: 0, unread: true };
     });
+    // The news brief scores US markets. A part whose reading comes from another market keeps
+    // that reading and ignores the brief, which would otherwise brake it on someone else's news.
+    (opts.noEvent || []).forEach(function (k) {
+      var sc = scores[k];
+      if (sc && !sc.unread) scores[k] = { signal: sc.signal, event: null, final: sc.signal === null ? 0 : sc.signal, eventUsed: false, eventEffect: 0, local: true };
+    });
     var exact = tilt(base, scores, p);
     var baseR = roundWeights(base.weights);
     var target = roundWeights(exact);
@@ -479,7 +485,7 @@
         key: k, label: LABELS[k], base: baseR[k], target: target[k], tilt: target[k] - baseR[k],
         stance: st, stanceText: STANCE_TEXT[st], amount: buy.buys[k], riskShare: risk.shares[k],
         signal: sc ? sc.signal : null, event: sc ? sc.event : null, score: sc ? sc.final : null,
-        eventEffect: sc ? sc.eventEffect : 0, unread: !!(sc && sc.unread)
+        eventEffect: sc ? sc.eventEffect : 0, unread: !!(sc && sc.unread), local: !!(sc && sc.local)
       };
     });
 

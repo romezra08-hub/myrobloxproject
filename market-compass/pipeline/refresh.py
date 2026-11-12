@@ -16,8 +16,10 @@ Design rules
   * All scoring lives here so the page and the tests share one definition.
 """
 import argparse
+import csv
 import datetime as dt
 import html
+import io
 import json
 import math
 import os
@@ -491,6 +493,91 @@ def combine(parts):
     return clamp(sum(p["score"] * p["weight"] for p in live) / w)
 
 
+def bond_index(yields, duration):
+    """A modelled total-return index for a bond kept at one maturity.
+
+    yields: its yield in percent at equal monthly steps, oldest first. Each month
+    earns a twelfth of the yield it started with, and gains or loses `duration`
+    times the change in yield. This is the usual first-order approximation; it
+    leaves out convexity and roll-down, which are small beside the yield change.
+    It stands in for a fund price where no free price history exists.
+    """
+    idx = [100.0]
+    for a, b in zip(yields, yields[1:]):
+        idx.append(idx[-1] * (1 + a / 1200.0 - duration * (b - a) / 100.0))
+    return idx
+
+
+def monthly_trend_parts(idx, cash12m):
+    """trend_parts for a monthly index, with the same three readings and weights.
+
+    The 200-day average becomes a 10-month average, which is the rule Faber (2007)
+    tested in the first place. cash12m is what cash earned over the same twelve
+    months, as a fraction.
+    """
+    if not idx or len(idx) < 13:
+        return []
+    vol = realized_vol(idx, min(24, len(idx) - 1), 12) or 0.03
+    parts = []
+    add = _part_adder(parts)
+    v = pct(idx[-1], sma(idx, 10))
+    add("vs10m", "Value vs 10-month average", v, max(0.01, 0.25 * vol), 0.45, _above_below(v, "the 10-month average"))
+    r12 = ret(idx, 12)
+    ex = None if r12 is None or cash12m is None else r12 - cash12m
+    add("mom12", "12-month return vs cash", ex, max(0.02, 0.5 * vol), 0.45,
+        "n/a" if ex is None else "%+.1f%% over 12 months, %s cash by %.1f pts" % (r12 * 100, "ahead of" if ex >= 0 else "behind", abs(ex) * 100))
+    r3 = ret(idx, 3)
+    add("mom3", "3-month return", r3, max(0.01, 0.25 * vol), 0.10,
+        "n/a" if r3 is None else "%+.1f%% over 3 months" % (r3 * 100))
+    return parts
+
+
+def target_inflation_reading(cpi, cpi3m, lo=1.0, hi=3.0):
+    """Inflation against a central bank's target band, in [-1, 1]; good for bonds is positive.
+
+    Half direction (a fall of half a point in three months is a full reading) and
+    half level, measured from the middle of the band: zero at the middle, a full
+    penalty half a point above the top of the band, a full credit as far below
+    the bottom. Above the band a central bank raises rates, which is what hurts bonds.
+    """
+    if cpi is None:
+        return None
+    mid, reach = (lo + hi) / 2.0, (hi - lo) / 2.0 + 0.5
+    level = -clamp((cpi - mid) / reach)
+    direction = 0.0 if cpi3m is None else clamp(-(cpi - cpi3m) / 0.5)   # no history: direction counts as flat
+    return clamp(0.5 * direction + 0.5 * level)
+
+
+def month_name(period):
+    """'2026-09' as 'September 2026'; anything else is returned unchanged."""
+    try:
+        return dt.date(int(period[:4]), int(period[5:7]), 1).strftime("%B %Y")
+    except (TypeError, ValueError):
+        return period
+
+
+def parse_sdmx_csv(text):
+    """SDMX CSV as {series code: [(period, value)]}, oldest first. Bad rows are skipped."""
+    out = {}
+    for row in csv.DictReader(io.StringIO(text)):
+        try:
+            out.setdefault(row["SERIES_CODE"], []).append((row["TIME_PERIOD"], float(row["OBS_VALUE"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    for v in out.values():
+        v.sort()
+    return out
+
+
+def align_monthly(named):
+    """Keep the months every series has. named: {key: [(period, value)]}. Returns (periods, {key: values})."""
+    if not named or any(not v for v in named.values()):
+        return [], {}
+    maps = {k: dict(v) for k, v in named.items()}
+    common = sorted(set.intersection(*[set(m) for m in maps.values()]))
+    return common, {k: [m[p] for p in common] for k, m in maps.items()}
+
+
 # ----------------------------------------------------------------------------
 # Feeds
 # ----------------------------------------------------------------------------
@@ -599,6 +686,49 @@ def google_news(query, when="1d", limit=14):
                       "url": (it.findtext("link") or "").strip()})
     items.sort(key=lambda x: x["t"], reverse=True)
     return items[:limit]
+
+
+# Israel's official statistics. Both publish open data services meant for programs.
+BOI_SDMX = "https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS"
+# Bank of Israel series, monthly averages: the zero-coupon government curve in shekels
+# (nominal and inflation-linked) and the inflation the bond market is pricing in.
+IL_CURVE = {
+    "y1": "ZC_TSB_ZND_01Y_MA", "y5": "ZC_TSB_ZND_05Y_MA", "y10": "ZC_TSB_ZND_10Y_MA",
+    "real5": "ZC_TSB_ZRD_05Y_MA", "expInfl5": "EXP_EXB_ZD_5Y_MA", "expInfl1": "EXP_EXP_01Y_BI_MA",
+}
+IL_BOND_DURATION = 4.8   # a 5-year zero-coupon bond at about 4%; close to a broad shekel government fund
+IL_CPI_TARGET = (1.0, 3.0)
+
+
+def boi_rate():
+    """The Bank of Israel's policy rate and the date of its next decision."""
+    d = get_json("https://boi.org.il/PublicApi/GetInterest")
+    return {"rate": float(d["currentInterest"]),
+            "next": (d.get("nextInterestDate") or "")[:10] or None,
+            "published": (d.get("lastPublishedDate") or "")[:10] or None}
+
+
+def boi_usdils():
+    """The Bank of Israel's representative rate for the US dollar: (shekels, timestamp)."""
+    d = get_json("https://boi.org.il/PublicApi/GetExchangeRate?key=USD")
+    return float(d["currentExchangeRate"]) / float(d.get("unit") or 1), (d.get("lastUpdate") or "")[:19] + "Z"
+
+
+def boi_series(flow, codes, start):
+    url = "%s/%s/1.0/%s?startperiod=%s&format=csv" % (BOI_SDMX, flow, "+".join(codes), start)
+    return parse_sdmx_csv(http_get(url, accept="text/csv, */*", timeout=60).decode("utf-8-sig", "replace"))
+
+
+def cbs_cpi(n=16):
+    """Israel's general consumer price index, newest first: [(YYYY-MM, % in the month, % over 12 months)]."""
+    d = get_json("https://api.cbs.gov.il/index/data/price?id=120010&format=json&download=false&last=%d" % n)
+    rows = [("%04d-%02d" % (int(x["year"]), int(x["month"])), x.get("percent"), x.get("percentYear"))
+            for x in d["month"][0]["date"]]
+    rows = [r for r in rows if isinstance(r[2], (int, float))]
+    rows.sort(reverse=True)
+    if not rows:
+        raise RuntimeError("no CPI rows")
+    return rows
 
 
 # ----------------------------------------------------------------------------
@@ -931,6 +1061,103 @@ def build(out_dir, verbose=True):
                                    "No reading" if macro.get("y3m") is None else "3-month T-bills yield %.2f%%%s" % (
                                        macro["y3m"], "" if rc is None else ", %.1f pts %s inflation" % (abs(rc), "above" if rc >= 0 else "below")))]}
 
+    # ---- Israel -------------------------------------------------------------
+    # Official figures for an investor whose steady money is in shekels. A reading built on
+    # US bonds says nothing about shekel bonds, so those get one of their own, built the
+    # same way as the US one: trend, yield after inflation, and inflation itself.
+    israel = {}
+
+    def fetch_boi():
+        r = boi_rate()
+        israel.update({"rate": rnd(r["rate"], 2), "rateNext": r["next"], "ratePublished": r["published"]})
+        try:
+            fx, at = boi_usdils()
+            israel["usdils"], israel["usdilsAt"] = rnd(fx, 4), at
+        except Exception as e:
+            log("  no representative dollar rate (%s)" % str(e)[:80])
+        return True
+    source("boi", fetch_boi, "Bank of Israel: policy rate, next decision date and the official dollar rate")
+
+    def fetch_il_cpi():
+        rows = cbs_cpi(16)
+        israel.update({"cpi": rows[0][2], "cpiPeriod": rows[0][0], "cpiMonth": rows[0][1],
+                       "cpiTarget": list(IL_CPI_TARGET), "cpiTrail": [r[2] for r in rows[:13]][::-1]})
+        if len(rows) > 3:
+            israel["cpi3mAgo"] = rows[3][2]
+        if len(rows) > 12:
+            israel["cpi12mAgo"] = rows[12][2]
+        return True
+    source("israelCpi", fetch_il_cpi, "Israel Central Bureau of Statistics: consumer price index")
+
+    il_curve = {}
+
+    def fetch_il_curve():
+        got = boi_series("ZCM", sorted(IL_CURVE.values()), "%04d-01-01" % (NOW().year - 6))
+        for k, code in IL_CURVE.items():
+            if got.get(code):
+                il_curve[k] = got[code]
+        if len(il_curve.get("y5", [])) < 14:
+            raise RuntimeError("5-year yield history too short")
+        return True
+    source("israelBonds", fetch_il_curve, "Bank of Israel: shekel government bond yields and expected inflation, monthly averages")
+
+    if israel.get("usdils") is not None and macro.get("usdils") is None:
+        macro["usdils"] = israel["usdils"]
+    if il_curve.get("y5"):
+        y5 = il_curve["y5"]
+        y5v = [v for _, v in y5]
+        israel["yieldsAsOf"] = y5[-1][0]
+        for k in IL_CURVE:
+            if il_curve.get(k) and il_curve[k][-1][0] == y5[-1][0]:
+                israel[k] = rnd(il_curve[k][-1][1], 2)
+        israel["y5Chg3m"] = rnd(y5v[-1] - y5v[-4], 2)
+        israel["y5Chg12m"] = rnd(y5v[-1] - y5v[-13], 2)
+        months, cols = align_monthly({k: il_curve[k] for k in ("y5", "real5") if il_curve.get(k)})
+        if len(months) >= 13:
+            israel["curve"] = dict({"from": months[-60:][0], "to": months[-1]},
+                                   **{k: [rnd(v, 2) for v in vals[-60:]] for k, vals in cols.items()})
+
+        idx = bond_index(y5v, IL_BOND_DURATION)
+        israel["bond12m"], israel["bond3m"] = rnd(ret(idx, 12)), rnd(ret(idx, 3))
+        # What cash earned over the same year: a one-year Makam bought twelve months ago paid its yield then.
+        y1_then = dict(il_curve.get("y1") or []).get(y5[-13][0])
+        il_cash12m = y1_then / 100.0 if y1_then is not None else (israel["rate"] / 100.0 if israel.get("rate") is not None else None)
+        israel["cash12m"] = rnd(il_cash12m)
+        il_tp = monthly_trend_parts(idx, il_cash12m)
+        il_t = combine(il_tp)
+        v10 = pct(idx[-1], sma(idx, 10))
+        il_trend_text = "No reading" if v10 is None else "A 5-year shekel government bond is %.1f%% %s its 10-month average; 12-month return %s" % (
+            abs(v10) * 100, "above" if v10 >= 0 else "below", "n/a" if israel["bond12m"] is None else "%+.1f%%" % (israel["bond12m"] * 100))
+
+        il_cpi, il_real = israel.get("cpi"), israel.get("real5")
+        if il_real is not None:
+            il_carry = clamp((il_real - 0.5) / 1.5)
+            il_carry_text = "5-year shekel government bonds yield %.2f%%, and the inflation-linked ones pay %.2f%% on top of inflation" % (y5v[-1], il_real)
+        elif il_cpi is not None:
+            il_carry = clamp((y5v[-1] - il_cpi - 0.5) / 1.5)
+            il_carry_text = "5-year shekel government bonds yield %.2f%%, which is %.1f pts %s inflation" % (
+                y5v[-1], abs(y5v[-1] - il_cpi), "above" if y5v[-1] >= il_cpi else "below")
+        else:
+            il_carry, il_carry_text = None, "No reading"
+        il_infl = target_inflation_reading(il_cpi, israel.get("cpi3mAgo"), *IL_CPI_TARGET)
+        il_infl_text = "No reading"
+        if il_cpi is not None:
+            was = israel.get("cpi3mAgo")
+            il_infl_text = "Israeli inflation is %.1f%% (%s)%s; the Bank of Israel aims for %g to %g%%" % (
+                il_cpi, month_name(israel.get("cpiPeriod")),
+                "" if was is None else ", %s %.1f%% three months earlier" % ("up from" if il_cpi > was else "down from" if il_cpi < was else "unchanged from", was),
+                IL_CPI_TARGET[0], IL_CPI_TARGET[1])
+        il_parts = [
+            P("trend", "Trend", il_t, 0.45, il_trend_text, il_tp),
+            P("carry", "Yield after inflation", il_carry, 0.30, il_carry_text),
+            P("inflation", "Inflation level and direction", il_infl, 0.25, il_infl_text),
+        ]
+        il_score = combine(il_parts)
+        israel["bonds"] = {"label": "Shekel government bonds", "sym": "IL5Y", "score": rnd(il_score, 3),
+                           "stance": label_for(il_score), "parts": il_parts, "asOf": y5[-1][0],
+                           "note": "Trend here is worked out from the Bank of Israel's monthly average yields for a 5-year "
+                                   "government bond. It models what a bond fund would have earned and is not a fund price"}
+
     # ---- crypto -------------------------------------------------------------
     crypto = {}
     btc_t, btc_tp = trend_block("BTC-USD", 365)
@@ -1128,6 +1355,7 @@ def build(out_dir, verbose=True):
         "charts": charts,
         "risk": risk,
         "crypto": crypto,
+        "israel": israel,
         "sectors": SECTORS,
         "headlines": short,
         "sources": sources,
@@ -1173,6 +1401,18 @@ def summary(s):
         L.append("%-22s %-18s score %s%s" % (sl["label"], sl["stance"], sl["score"], "  [" + sl["capNote"] + "]" if sl.get("capNote") else ""))
         for p in sl["parts"]:
             L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
+    il = s.get("israel") or {}
+    if il:
+        L.append("")
+        L.append("Israel (official): Bank of Israel rate %s%%, next decision %s | inflation %s%% (%s), 3m ago %s%% | dollar %s shekels" % (
+            il.get("rate"), il.get("rateNext"), il.get("cpi"), il.get("cpiPeriod"), il.get("cpi3mAgo"), il.get("usdils")))
+        L.append("Shekel government yields (%s averages): 1y %s  5y %s  10y %s | 5y inflation-linked %s | market-implied inflation 5y %s" % (
+            il.get("yieldsAsOf"), il.get("y1"), il.get("y5"), il.get("y10"), il.get("real5"), il.get("expInfl5")))
+        ib = il.get("bonds")
+        if ib:
+            L.append("%-22s %-18s score %s" % (ib["label"], ib["stance"], ib["score"]))
+            for p in ib["parts"]:
+                L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
     c = s["crypto"]
     L.append("")
     if c.get("btc"):

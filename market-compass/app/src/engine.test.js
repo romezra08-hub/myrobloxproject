@@ -502,6 +502,27 @@ test('a part with no usable signal stays at its baseline', () => {
   assert.equal(row(without, 'gold').target, row(withSignal, 'gold').target);   // other parts are untouched
 });
 
+test('a part read from another market ignores the US news brief', () => {
+  const snap = { sleeves: { us: { score: 0.4 }, bonds: { score: 0.6 }, gold: { score: 0.3 } } };
+  const brief = { generatedAt: '2026-11-12T17:00:00Z', sleeveScores: { bonds: { score: -1 }, gold: { score: -1 } } };
+  const prof = { horizon: 8, risk: 2, crypto: 'none' };
+  const braked = E.plan(prof, snap, brief, NOW);
+  const local = E.plan(prof, snap, brief, NOW, { noEvent: ['bonds'] });
+  const row = (pl, k) => pl.rows.find((r) => r.key === k);
+  assert.ok(row(braked, 'bonds').score < 0.6);                 // the brief brakes it by default
+  near(row(local, 'bonds').score, 0.6);                        // the local reading stands as it is
+  assert.equal(row(local, 'bonds').event, null);
+  assert.equal(row(local, 'bonds').eventEffect, 0);
+  assert.equal(row(local, 'bonds').local, true);
+  assert.equal(row(local, 'bonds').unread, false);
+  near(row(local, 'gold').score, row(braked, 'gold').score);   // other parts still hear the news
+  // with no reading at all there is nothing to keep, and noSignal still wins
+  const none = E.plan(prof, { sleeves: { us: { score: 0.4 } } }, brief, NOW, { noEvent: ['bonds'] });
+  assert.equal(row(none, 'bonds').score, 0);
+  const off = E.plan(prof, snap, brief, NOW, { noSignal: ['bonds'], noEvent: ['bonds'] });
+  assert.equal(row(off, 'bonds').unread, true);
+});
+
 test('the "too small to split" line follows the currency', () => {
   const target = { us: 60, intl: 0, crypto: 0, gold: 0, bonds: 40, cash: 0 };
   const P = (o) => E.normalizeProfile(o);

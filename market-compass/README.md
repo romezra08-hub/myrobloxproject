@@ -15,8 +15,9 @@ rest of this repository and shares no code with it.
 ```
 
 1. **`pipeline/refresh.py`** pulls two years of daily prices for 42 instruments, Treasury yields, the VIX,
-   valuation and inflation tables, crypto market data and the last day's headlines. It computes every indicator
-   and score and writes `snapshot.json`. Standard library only.
+   valuation and inflation tables, crypto market data, official Israeli figures (Bank of Israel rate and
+   government bond yields, Central Bureau of Statistics inflation) and the last day's headlines. It computes
+   every indicator and score and writes `snapshot.json`. Standard library only.
 2. **Claude writes the brief** from the headlines and its own web research, scoring how events lean on each part
    of the plan. The rules are in `pipeline/REFRESH.md`.
 3. **The page** (`app/market-compass.html`) reads both documents from the artifact's database, combines them with
@@ -52,8 +53,19 @@ cushion of three months of spending, then investing. They are stored under the v
 
 Country rules live in `COUNTRIES` in `app/src/app.js`. Israel is built in: amounts in shekels, tax year 2026
 figures for Keren Hishtalmut, Kupat Gemel LeHashkaa and capital gains, Israeli fund suggestions instead of
-US-listed ones, and the steady part held in shekels. US bond readings are not applied to shekel bonds, so that
-part stays at its baseline. The figures come from published summaries of the rules and need a yearly check.
+US-listed ones, and the steady part held in shekels. The tax figures come from published summaries of the
+rules and need a yearly check; gov.il and Kol Zchut refuse automated requests, so they are not read directly.
+
+Shekel bonds get their own reading (`snapshot.israel.bonds`), built like the US one from official data:
+
+- **Trend, 45%.** No free price history exists for a shekel bond fund, so the pipeline models one from the Bank
+  of Israel's monthly 5-year yield: each month earns a twelfth of the yield and gains or loses 4.8 times the
+  change in yield. That index is read against its 10-month average and against what a one-year Makam paid.
+- **Yield after inflation, 30%.** The yield on 5-year inflation-linked government bonds.
+- **Inflation, 25%.** The official 12-month figure against the Bank of Israel's 1 to 3% target, and its direction.
+
+US bond readings and the US news brief are never applied to shekel bonds. If the Israeli feeds fail, that part
+stays at its baseline.
 
 ## Layout
 

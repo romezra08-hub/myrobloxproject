@@ -15,7 +15,8 @@ A refresh replaces both. Nothing else about the page changes.
    `<dir>/snapshot.json` and `<dir>/headlines.json`. It needs outbound access to the hosts listed at the top of
    the script's feeds section (the "Market data (stocks and crypto)" cloud environment allows them).
    If prices fail the script exits without writing; stop there. A failed secondary source is fine, and the page
-   shows which sources loaded.
+   shows which sources loaded. If a feed refuses the script, leave it failed: never change request headers or
+   work around a site that is refusing automated requests.
 2. **Read what is there now.** Get `market/brief` and `market/snapshot` from the artifact database and note each
    document's `version`. Save them to files rather than printing them; the snapshot is about 110 KB.
 3. **Research.** Read `headlines.json` and the digest, then verify the main stories with web searches: Fed and
@@ -82,9 +83,14 @@ Part keys are `us`, `intl`, `bonds`, `gold` and `crypto`. Cash has no score.
   News can make the plan more careful and never bolder, so there is nothing to gain from a strong score.
 - **Stay neutral on people and politics.** Describe market consequences, not who is right. Leave personal
   details about individuals out unless the market reaction cannot be explained without them.
-- **Cover Israel.** The owner lives there. `facts.israel` carries the Bank of Israel policy rate, the date of its next
-  decision, and the latest 12-month inflation figure; the page uses them for the shekel part of the plan. Add an
-  event about Israel's economy or the shekel only when something material happened.
+- **Cover Israel.** The owner lives there. The script reads the Bank of Israel rate, the date of its next decision,
+  Israeli inflation and shekel government bond yields from official feeds, and prints them in the digest under
+  "Israel (official)". Copy the rate, date and inflation from there into `facts.israel` rather than from news
+  reports; research them only if the digest shows those sources failed. What you add is `note`: one sentence on
+  what moved the shekel. The page prefers the official figures and falls back to `facts.israel`. Add an event
+  about Israel's economy or the shekel only when something material happened.
+- **Bond scores are for US bonds.** `sleeveScores.bonds` describes US bonds. The page does not apply it to an
+  Israeli investor's shekel bonds, which have their own reading in `snapshot.israel.bonds`.
 - **Keep it small.** The whole document should stay under about 15 KB.
 - **Carry forward what still matters.** An event from last week that still drives prices stays in the list; one
   that has faded comes out.

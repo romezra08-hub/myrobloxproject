@@ -348,9 +348,24 @@
   }
 
   // --------------------------------------------------------------- data state
+  function ilData() { var s = S.snap; return s && s.israel && typeof s.israel === 'object' ? s.israel : null; }
+  /* The reading for shekel government bonds, built by the pipeline from Bank of Israel
+     yields and official inflation. Only an investor in Israel uses it. */
+  function ilBonds() {
+    var d = isIL() ? ilData() : null, b = d && d.bonds;
+    return b && isNum(b.score) && Array.isArray(b.parts) ? b : null;
+  }
   function snapForEngine() {
     if (!S.snap) return null;
-    return ageHours(S.snap.generatedAt) > IGNORE_SIGNALS_D * 24 ? null : S.snap;
+    if (ageHours(S.snap.generatedAt) > IGNORE_SIGNALS_D * 24) return null;
+    var b = ilBonds(), k;
+    if (!b) return S.snap;
+    var out = {}, sl = {};
+    for (k in S.snap) out[k] = S.snap[k];
+    for (k in S.snap.sleeves) sl[k] = S.snap.sleeves[k];
+    sl.bonds = b;
+    out.sleeves = sl;
+    return out;
   }
   function currentPlan() { return E.plan(S.profile, snapForEngine(), S.brief, Date.now(), planOpts()); }
 
@@ -387,8 +402,9 @@
 
   // ---------------------------------------------------------------- situation
   /* Country rules. Israel's figures are for tax year 2026 and come from published
-     summaries of the rules, not from the Tax Authority directly. The refresh brief
-     may supply a newer Bank of Israel rate and inflation figure. */
+     summaries of the rules, not from the Tax Authority directly. The rate and inflation
+     here are only a fallback: the pipeline reads both from the Bank of Israel and the
+     Central Bureau of Statistics on every refresh. */
   var COUNTRIES = {
     IL: { name: 'Israel', cur: '₪', small: 1800, tiny: 90, taxYear: 2026,
       rate: 3.25, rateAsOf: 'October 2026', cpi: 1.6, cpiAsOf: 'September 2026', inflation: 2, bondSpread: 0.75,
@@ -400,22 +416,30 @@
   function C() { return COUNTRIES[S.profile.country] || COUNTRIES.other; }
   function isIL() { return S.profile.country === 'IL'; }
   function ilFacts() {
-    var c = COUNTRIES.IL;
-    var f = S.brief && E.briefIsFresh(S.brief, Date.now()) && S.brief.facts && S.brief.facts.israel;
-    var live = f && isNum(f.rate);
-    return {
-      rate: live ? f.rate : c.rate, rateAsOf: live ? dateShort(S.brief.generatedAt) : c.rateAsOf,
-      cpi: f && isNum(f.cpi) ? f.cpi : c.cpi, cpiAsOf: f && isNum(f.cpi) && f.cpiPeriod ? str(f.cpiPeriod, 30) : c.cpiAsOf,
-      next: f && f.next ? str(f.next, 12) : null
-    };
+    var c = COUNTRIES.IL, d = ilData() || {};
+    var f = (S.brief && E.briefIsFresh(S.brief, Date.now()) && S.brief.facts && S.brief.facts.israel) || null;
+    var o = { rate: c.rate, rateAsOf: c.rateAsOf, cpi: c.cpi, cpiAsOf: c.cpiAsOf, next: null, official: false, yieldsAsOf: null };
+    if (f && isNum(f.rate)) { o.rate = f.rate; o.rateAsOf = dateShort(S.brief.generatedAt); }
+    if (f && isNum(f.cpi)) { o.cpi = f.cpi; if (f.cpiPeriod) o.cpiAsOf = str(f.cpiPeriod, 30); }
+    if (f && f.next) o.next = str(f.next, 12);
+    if (isNum(d.rate)) { o.rate = d.rate; o.rateAsOf = dateShort(S.snap.generatedAt); o.official = true; if (d.rateNext) o.next = str(d.rateNext, 12); }
+    if (isNum(d.cpi)) { o.cpi = d.cpi; if (d.cpiPeriod) o.cpiAsOf = dateShortMonth(str(d.cpiPeriod, 7)); }
+    ['y1', 'y5', 'y10', 'real5', 'expInfl5'].forEach(function (k) { o[k] = isNum(d[k]) ? d[k] : null; });
+    if (d.yieldsAsOf) o.yieldsAsOf = dateShortMonth(str(d.yieldsAsOf, 7));
+    var nt = o.next ? parseTime(o.next + 'T12:00:00Z') : null;
+    if (nt === null || nt < Date.now() - 864e5) o.next = null;   // a decision date already behind us is not "next"
+    return o;
   }
   /* What the engine needs to know about where you live: the size below which splitting a
-     purchase is pointless, local yields for the steady part, and which parts have no usable
-     signal. US bond readings say nothing about shekel bonds, so that part stays at baseline. */
+     purchase is pointless, local yields for the steady part, and how the bond part is read.
+     Shekel bonds use their own reading and ignore the US news brief. If that reading is
+     missing, the part stays at baseline: a US bond reading says nothing about shekel bonds. */
   function planOpts() {
     if (!isIL()) return { small: COUNTRIES.other.small };
     var f = ilFacts(), c = COUNTRIES.IL;
-    return { small: c.small, noSignal: ['bonds'], local: { cash: f.rate, bond: f.rate + c.bondSpread, inflation: c.inflation } };
+    var o = { small: c.small, local: { cash: f.rate, bond: isNum(f.y5) ? f.y5 : f.rate + c.bondSpread, inflation: c.inflation } };
+    if (ilBonds()) o.noEvent = ['bonds']; else o.noSignal = ['bonds'];
+    return o;
   }
   function ilIncomeTax(monthly) {
     var c = COUNTRIES.IL, prev = 0, tax = 0, top = 0;
@@ -621,7 +645,7 @@
       if (isIL()) { var il = ilFacts(); return lead + 'Shekel money-market funds follow the Bank of Israel rate, ' + il.rate + '%, about ' + (il.rate - il.cpi).toFixed(1) + ' points above inflation.'; }
       return lead + (y && y !== 'No reading' ? y + '.' : 'Your steady anchor.');
     }
-    if (row.unread && row.target > 0) return 'Kept at its baseline. The bond readings on this page are for US bonds, and yours should be shekel bonds.';
+    if (row.unread && row.target > 0) return 'Kept at its baseline. The Israeli bond figures did not load, and a US bond reading says nothing about shekel bonds.';
     if (row.stance === 'none') {
       if (row.key === 'crypto') {
         if (S.profile.crypto === 'none') return 'You chose to hold none.';
@@ -644,7 +668,7 @@
       (moved !== 0 ? ' (' + (moved > 0 ? '+' : MINUS) + Math.abs(moved) + (Math.abs(moved) === 1 ? ' point).' : ' points).') : '.');
     if (row.target > 0) line += ' It holds ' + row.target + '% of your money and carries about ' + Math.max(0, Math.round(row.riskShare * 100)) + '% of the risk.';
     box.appendChild(h('p', { class: 'sub' }, line));
-    if (row.unread) box.appendChild(h('p', { class: 'sub' }, 'No reading is applied here. The bond signals on this page are built on US bonds and US inflation, and yours should be shekel bonds, which follow the Bank of Israel. That bank was holding its rate while the US was raising, so borrowing the US reading would mislead. This part stays at its baseline.'));
+    if (row.unread) box.appendChild(h('p', { class: 'sub' }, 'No reading is applied here. Your bonds should be shekel bonds, and their reading comes from Bank of Israel yields and Israeli inflation. Those figures did not load this time. A reading built on US bonds and US inflation would mislead, so this part stays at its baseline until they do.'));
     if (row.key !== 'cash' && isNum(row.score) && !row.unread) {
       box.appendChild(h('p', { class: 'sub' }, pl.lean.down > 0
         ? 'Overall reading ' + signedNum(row.score, 2) + ' on a scale of ' + MINUS + '1 to +1. At your setting, a full negative reading trims a part by ' + Math.round(pl.lean.down * 100) + '% of its size and a full positive one adds ' + Math.round(pl.lean.up * 100) + '%.'
@@ -659,12 +683,13 @@
           if (bits.length) parts.appendChild(h('p', { class: 'note' }, bits.join(' · ')));
         }
       });
-      var ev = pl.eventsUsed && S.brief.sleeveScores && S.brief.sleeveScores[row.key];
+      var ev = !row.local && pl.eventsUsed && S.brief.sleeveScores && S.brief.sleeveScores[row.key];
       if (ev && isNum(ev.score)) {
         parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, 'News'), dv(ev.score), h('span', { class: 'part-text' }, str(ev.why, 300))));
       }
       box.appendChild(parts);
       if (sl.capNote) box.appendChild(h('p', { class: 'note' }, str(sl.capNote, 200) + '.'));
+      if (row.local) box.appendChild(h('p', { class: 'note' }, (sl.note ? str(sl.note, 320) + '. ' : '') + 'The news brief covers US markets, so it is not applied to this part.'));
       if (ev && isNum(ev.score)) {
         box.appendChild(h('p', { class: 'note' }, row.eventEffect < -0.004
           ? 'The news is gloomier than prices, so it made this reading more careful by ' + Math.abs(row.eventEffect).toFixed(2) + '. News can only ever do that: it never makes the plan bolder.'
@@ -779,7 +804,7 @@
       var det = h('details', { class: 'alloc-item' + (r.target === 0 ? ' zero' : ''), id: 'row-' + r.key, open: !!S.open[r.key] },
         h('summary', null,
           h('span', { class: 'swatch', style: { background: COLOR[r.key] } }),
-          h('span', { class: 'alloc-name' }, r.label, pl.lean.down > 0 || r.stance === 'none' ? chip(r.stanceText, tone, r.stance === 'none' ? null : ico) : null),
+          h('span', { class: 'alloc-name' }, r.label, pl.lean.down > 0 || r.stance === 'none' ? chip(r.stance === 'base' && r.target !== r.base ? 'Near baseline' : r.stanceText, tone, r.stance === 'none' ? null : ico) : null),
           h('span', { class: 'alloc-pct num' }, r.target + '%'),
           h('span', { class: 'alloc-amt num' }, money(Math.round(r.amount))),
           h('span', { class: 'caret', 'aria-hidden': 'true' }, '▶'),
@@ -855,7 +880,9 @@
             { name: 'Cautious case', color: 'var(--line-2)', values: lo, width: 1.5 }, { name: 'Paid in', color: 'var(--ink-2)', values: paid, width: 1.5 }],
           labels: yrs, xLabels: ['Today', 'Year ' + p.horizon], tick: function (v) { return moneyShort(v); }, fmt: function (v) { return money(Math.round(v)); } }),
         h('p', { class: 'note' }, 'History suggests the result lands between the cautious and hopeful cases about two times in three; the worst outcomes lie outside them. Yearly returns assumed after ' + o.inflation + '% inflation: US stocks ' + ex.us.toFixed(1) + '%, international stocks ' + ex.intl.toFixed(1) + '%, bonds ' + ex.bonds.toFixed(1) + '%, cash ' + ex.cash.toFixed(1) + '%, gold ' + ex.gold.toFixed(1) + '%, crypto 0% (it has no earnings or interest to forecast from, so the plan counts on nothing).'),
-        isIL() ? h('p', { class: 'note' }, 'Bond and cash figures use the Bank of Israel rate of ' + ilFacts().rate + '%, with bonds assumed to yield ' + C().bondSpread + ' points more, and ' + o.inflation + '% inflation, the middle of the bank\u2019s target.') : null,
+        isIL() ? h('p', { class: 'note' }, isNum(ilFacts().y5)
+          ? 'Cash uses the Bank of Israel rate of ' + ilFacts().rate + '% and bonds the 5-year government yield of ' + ilFacts().y5.toFixed(2) + '%' + (ilFacts().yieldsAsOf ? ' (' + ilFacts().yieldsAsOf + ' average)' : '') + ', both measured against ' + o.inflation + '% inflation, the middle of the bank\u2019s target.'
+          : 'Bond and cash figures use the Bank of Israel rate of ' + ilFacts().rate + '%, with bonds assumed to yield ' + C().bondSpread + ' points more, and ' + o.inflation + '% inflation, the middle of the bank\u2019s target.') : null,
         h('p', { class: 'note' }, 'Cost matters as much as any of this. ' + (isIL() ? 'Tracking funds are the cheap ones; compare the management fee (dmei nihul) before you buy.' : 'The funds suggested here charge about 0.05% a year.') + ' A fund or adviser charging 1% would take about ' + Math.round(o.feeDrag * 100) + '% of the final amount on money invested today.')));
     }
 
@@ -946,15 +973,10 @@
     if (f.jobs && isNum(f.jobs.unemployment)) tiles.appendChild(tile('Unemployment', f.jobs.unemployment.toFixed(1) + '%', str(f.jobs.period, 30)));
     if (isNum(m.vix)) tiles.appendChild(tile('VIX', m.vix.toFixed(1), isNum(m.vixAvg1y) ? '1-year average ' + m.vixAvg1y.toFixed(1) : ''));
     if (isNum(m.dxy)) tiles.appendChild(tile('US dollar index', m.dxy.toFixed(1), isNum(m.dxyVs200) ? pct(m.dxyVs200) + ' vs 200-day average' : ''));
-    if (isIL()) {
-      var ilf = ilFacts();
-      tiles.appendChild(tile('Bank of Israel rate', ilf.rate.toFixed(2) + '%', ilf.next ? 'next decision ' + dateShort(ilf.next) : 'as of ' + ilf.rateAsOf));
-      tiles.appendChild(tile('Israeli inflation, 12 months', ilf.cpi.toFixed(1) + '%', ilf.cpiAsOf + ' \u00b7 target 1 to 3%'));
-      if (isNum(m.usdils)) tiles.appendChild(tile('One US dollar in shekels', '\u20AA' + m.usdils.toFixed(2), isNum(m.usdils12m) ? pct(m.usdils12m) + ' in 12 months' + (isNum(m.usdils3m) ? ', ' + pct(m.usdils3m) + ' in 3' : '') : ''));
-    }
     if (isNum(m.cape)) tiles.appendChild(tile('Shiller P/E (US stocks)', m.cape.toFixed(1), isNum(m.capePct40) ? 'higher than ' + Math.round(m.capePct40) + '% of the last 40 years' : isNum(m.capePct) ? 'higher than ' + Math.round(m.capePct) + '% of history' : ''));
     if (isNum(m.stockBondCorr)) tiles.appendChild(tile('Stocks and bonds, 3 months', signedNum(m.stockBondCorr, 2), m.stockBondCorr > 0.2 ? 'moving together: bonds are not cushioning' : m.stockBondCorr < -0.2 ? 'moving opposite: bonds are cushioning' : 'moving independently'));
-    root.appendChild(h('section', { class: 'stack' }, h('h2', { class: 'section-title' }, 'Rates, inflation and valuation'), tiles));
+    root.appendChild(h('section', { class: 'stack' }, h('h2', { class: 'section-title' }, isIL() ? 'US rates, inflation and valuation' : 'Rates, inflation and valuation'), tiles));
+    if (isIL()) israelSection(root, s);
 
     var ir = m.inflationRegime;
     if (ir && Array.isArray(ir.tests) && ir.mode) {
@@ -1010,6 +1032,54 @@
         h('thead', null, h('tr', null, ['Asset', 'Price', 'Today', '1 month', '3 months', '12 months', 'vs 200-day', '3-month path'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tb)),
       h('p', { class: 'note' }, 'Prices from Yahoo Finance, fetched ' + dateTime(s.generatedAt) + '. Fund returns include dividends where available.')));
     roBucket = null;
+  }
+  /* Israel: official figures, and the reading the plan uses for shekel bonds. */
+  function israelSection(root, s) {
+    var m = s.macro || {}, d = ilData() || {}, f = ilFacts(), ta = s.assets && s.assets['^TA125.TA'];
+    var tiles = h('div', { class: 'tiles' });
+    tiles.appendChild(tile('Bank of Israel rate', f.rate.toFixed(2) + '%', f.next ? 'next decision ' + dateShort(f.next) : 'as of ' + f.rateAsOf));
+    tiles.appendChild(tile('Inflation, 12 months', f.cpi.toFixed(1) + '%', f.cpiAsOf + (isNum(d.cpi3mAgo) ? ' \u00b7 was ' + d.cpi3mAgo.toFixed(1) + '% 3 months before' : '') + ' \u00b7 target 1 to 3%'));
+    if (isNum(f.y5)) tiles.appendChild(tile('5-year government bond', f.y5.toFixed(2) + '%', (isNum(d.y5Chg3m) ? signedNum(d.y5Chg3m, 2) + ' pts in 3 months' : '') + (f.yieldsAsOf ? ' \u00b7 ' + f.yieldsAsOf + ' average' : '')));
+    if (isNum(f.real5)) tiles.appendChild(tile('5-year inflation-linked bond', signedNum(f.real5, 2) + '%', 'what it pays on top of inflation'));
+    if (isNum(f.expInfl5)) tiles.appendChild(tile('Inflation the bond market expects', f.expInfl5.toFixed(1) + '%', 'a year, over the next 5 years'));
+    if (isNum(m.usdils)) tiles.appendChild(tile('One US dollar in shekels', '\u20AA' + m.usdils.toFixed(2), isNum(m.usdils12m) ? pct(m.usdils12m) + ' in 12 months' + (isNum(m.usdils3m) ? ', ' + pct(m.usdils3m) + ' in 3' : '') : ''));
+    if (ta && isNum(ta.px)) tiles.appendChild(tile('Tel Aviv 125', nf(ta.px, 0), isNum(ta.ret12m) ? pct(ta.ret12m) + ' in 12 months' : ''));
+    root.appendChild(h('section', { class: 'stack' }, h('h2', { class: 'section-title' }, 'Israel: rates, inflation and the shekel'), tiles,
+      h('p', { class: 'note' }, f.official ? 'From the Bank of Israel and the Central Bureau of Statistics, read ' + dateTime(s.generatedAt) + '. Bond yields are monthly averages.' : 'The official feeds did not load, so the rate and inflation shown are the last figures built into this page.')));
+
+    var b = ilBonds();
+    if (!b) return;
+    var parts = h('div', { class: 'parts' });
+    b.parts.forEach(function (p) {
+      parts.appendChild(h('div', { class: 'part' }, h('span', { class: 'part-label' }, str(p.label, 60) + ' \u00b7 ' + Math.round((p.weight || 0) * 100) + '%'), dv(p.score), h('span', { class: 'part-text' }, str(p.text, 260))));
+      if (Array.isArray(p.detail)) {
+        var bits = p.detail.filter(function (x) { return isNum(x.score); }).map(function (x) { return str(x.text, 120); });
+        if (bits.length) parts.appendChild(h('p', { class: 'note' }, bits.join(' \u00b7 ')));
+      }
+    });
+    var cv = d.curve, chart = null;
+    if (cv && Array.isArray(cv.y5) && cv.y5.length > 12) {
+      var n = cv.y5.length, t0 = parseTime(str(cv.from, 7) + '-15T12:00:00Z'), labels = [];
+      for (var i = 0; i < n; i++) {
+        var dt = t0 === null ? null : new Date(t0); if (dt) dt.setUTCMonth(dt.getUTCMonth() + i);
+        labels.push(dt ? dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
+      }
+      var series = [{ name: '5-year bond', color: COLOR.bonds, values: cv.y5 }];
+      var legend = [h('span', null, h('i', { style: { background: COLOR.bonds } }), '5-year government bond')];
+      if (Array.isArray(cv.real5) && cv.real5.length === n) {
+        series.push({ name: 'Inflation-linked', color: 'var(--muted)', values: cv.real5, width: 1.5 });
+        legend.push(h('span', null, h('i', { style: { background: 'var(--muted)', height: '1.5px' } }), 'Inflation-linked: yield on top of inflation'));
+      }
+      chart = h('div', { class: 'stack tight' }, h('div', { class: 'legend' }, legend),
+        lineChart({ height: 170, baseline: 0, series: series, labels: labels, xLabels: [dateShortMonth(str(cv.from, 7)), dateShortMonth(str(cv.to, 7))],
+          tick: function (v) { return (Math.round(v * 10) / 10) + '%'; }, fmt: function (v) { return v.toFixed(2) + '%'; },
+          label: 'Yields on 5-year shekel government bonds, ordinary and inflation-linked, monthly' }));
+    }
+    root.appendChild(card('Shekel government bonds',
+      'The reading your plan uses for its bond part. It is built the same way as the US one, but from Israeli figures: trend, yield after inflation, and inflation itself.',
+      h('div', { class: 'row' }, scoreChip(b.score), h('span', { class: 'num' }, 'Reading ' + signedNum(b.score, 2))),
+      parts, chart,
+      h('p', { class: 'note' }, (b.note ? str(b.note, 320) + '. ' : '') + 'When yields rise, bonds you already hold lose value; when they fall, they gain.')));
   }
   function dateShortMonth(ym) {
     var t = parseTime(ym + '-15T12:00:00Z');
@@ -1175,7 +1245,7 @@
     if (ft.known) L.push('ORDER FOR THIS DEPOSIT: ' + money(Math.round(ft.toDebt)) + ' to debt, ' + money(Math.round(ft.toSavings)) + ' to the cushion (aim ' + ft.months + ' months of spending), ' + money(Math.round(ft.invest)) + ' invested.');
     if (isIL()) {
       var ilf = ilFacts(), cc = C();
-      L.push('ISRAEL (tax year ' + cc.taxYear + ', from published summaries, not verified against the Tax Authority): Bank of Israel rate ' + ilf.rate + '%; inflation ' + ilf.cpi + '% (' + ilf.cpiAsOf + '); capital gains tax 25% of the gain after inflation, on sale; Keren Hishtalmut exempt salary ceiling ' + money(cc.studyCeil) + ' a month, tax-free after 6 years, self-employed cap ' + money(cc.studySelfCap) + ' a year; Kupat Gemel LeHashkaa cap ' + money(cc.gemelCap) + ' a year; US-listed funds are a poor fit for Israelis (dividend withholding, US estate tax above $60,000), so use Israeli tracking funds or Irish-domiciled funds; the bond and cash parts are held in shekels and US bond readings are not applied to them.' + (sit.income ? ' Top income-tax rate at this income: ' + ilIncomeTax(sit.income).top + '%.' : ''));
+      L.push('ISRAEL (tax year ' + cc.taxYear + ', from published summaries, not verified against the Tax Authority): Bank of Israel rate ' + ilf.rate + '%; inflation ' + ilf.cpi + '% (' + ilf.cpiAsOf + '); capital gains tax 25% of the gain after inflation, on sale; Keren Hishtalmut exempt salary ceiling ' + money(cc.studyCeil) + ' a month, tax-free after 6 years, self-employed cap ' + money(cc.studySelfCap) + ' a year; Kupat Gemel LeHashkaa cap ' + money(cc.gemelCap) + ' a year; US-listed funds are a poor fit for Israelis (dividend withholding, US estate tax above $60,000), so use Israeli tracking funds or Irish-domiciled funds; the bond and cash parts are held in shekels and US bond readings are not applied to them.' + (ilBonds() ? ' The bond part uses its own reading, built from Bank of Israel yields and official Israeli inflation (5-year government yield ' + ilf.y5 + '%, inflation-linked ' + ilf.real5 + '%, market-implied inflation ' + ilf.expInfl5 + '%), and the US news brief is not applied to it.' : ' The Israeli bond figures did not load, so the bond part stays at its baseline.') + (sit.income ? ' Top income-tax rate at this income: ' + ilIncomeTax(sit.income).top + '%.' : ''));
       L.push('NEXT STEPS SHOWN TO THE PERSON: ' + nextSteps(pl).map(function (st, i) { return (i + 1) + '. ' + st[0]; }).join(' '));
     }
     L.push('PLAN (baseline% -> target%, amount of this deposit): ' + pl.rows.map(function (r) { return r.label + ' ' + r.base + '->' + r.target + '% ' + money(Math.round(r.amount)); }).join('; ') + '.');
@@ -1185,8 +1255,9 @@
     L.push('RULES OF THE MODEL: leans are small (a full negative reading trims a part by ' + Math.round(pl.lean.down * 100) + '%, a full positive adds ' + Math.round(pl.lean.up * 100) + '%); news can only make the plan more careful; act only when a part is 5 points or a quarter of its size off target; check monthly at most.');
     if (s) {
       L.push('DATA AS OF ' + s.generatedAt + '.');
-      Object.keys(s.sleeves || {}).forEach(function (k) {
-        var sl = s.sleeves[k];
+      var se = snapForEngine() || s;   // for Israel the bond reading listed is the shekel one the plan uses
+      Object.keys(se.sleeves || {}).forEach(function (k) {
+        var sl = se.sleeves[k];
         L.push(sl.label + ' reading ' + (isNum(sl.score) ? sl.score.toFixed(2) : 'n/a') + ' (' + sl.stance + '): ' + (sl.parts || []).map(function (p) { return p.label + ' [' + (isNum(p.score) ? p.score.toFixed(2) : 'n/a') + '] ' + p.text; }).join(' | '));
       });
       L.push('Risk conditions ' + (s.regime && isNum(s.regime.score) ? s.regime.score.toFixed(2) : 'n/a') + ': ' + ((s.regime && s.regime.parts) || []).map(function (p) { return p.text; }).join(' | '));
@@ -1337,7 +1408,7 @@
     { t: 'Tax is 25% of the gain after inflation, and only when you sell.', d: 'Nothing is due while you hold. Dividends are taxed at 25% as well. A further surtax applies only above about \u20AA721,560 of yearly income.', src: 'PwC tax summary for Israel (2026)', s: 3, use: 'The plan rebalances with new money, so that selling is the last resort.' },
     { t: 'Avoid US-listed funds.', d: 'An Irish-domiciled fund pays 15% US tax on dividends inside the fund. A US-listed fund held from Israel has a quarter or more withheld, and US assets above $60,000 can face US estate tax of up to 40%. Israel itself has no inheritance tax, which is why this catches people out.', src: 'Globes, The US estate tax trap for Israeli investors', s: 3, use: 'The examples are Israeli tracking funds or Irish-domiciled funds, never VOO or VTI.' },
     { t: 'Tracking mutual funds usually cost nothing to buy or sell.', d: 'Israeli mutual funds, index trackers included, do not charge a separate trading commission, unlike exchange-traded funds. You still pay the yearly management fee, and a bank may charge for custody.', src: 'Meitav; Globes', s: 2, use: 'They are the first suggestion for small monthly amounts.' },
-    { t: 'Keep the steady part of your money in shekels.', d: 'The dollar has ranged from about \u20AA2.80 to \u20AA3.82 in two years. Your rent and bills are in shekels, so the part of the plan meant to be stable should be too.', src: 'Bank of Israel; exchange-rate data', s: 3, use: 'Bonds and cash are shekel instruments, and US bond readings are not applied to them.' },
+    { t: 'Keep the steady part of your money in shekels.', d: 'The dollar has ranged from about \u20AA2.80 to \u20AA3.82 in two years. Your rent and bills are in shekels, so the part of the plan meant to be stable should be too.', src: 'Bank of Israel; exchange-rate data', s: 3, use: 'Bonds and cash are shekel instruments. The bond part is read from Bank of Israel yields and Israeli inflation, never from US bonds.' },
     { t: 'Your country is already a large bet.', d: 'Your salary, home and pension all depend on Israel\u2019s economy. A strong run at home (the Tel Aviv 125 rose about 70% in two years) tempts people to add more just when it is dearest.', src: 'Dimson, Marsh and Staunton on single-country risk', s: 2, use: 'Israeli shares are a modest part of the international slice, not the core.' },
     { t: 'A Kupat Gemel LeHashkaa trades a higher fee for flexibility.', d: 'It takes up to \u20AA83,641 a year, lets you switch investment tracks without tax, and is taxed at 25% of the gain after inflation when you withdraw.', src: 'Globes, Changes that will affect personal finances in 2026', s: 2, use: 'Offered beside a trading account as one of two sensible homes for the plan.' },
     { t: 'Crypto is taxed like any other asset.', d: 'Gains are taxed at 25%. Frequent trading can be treated as a business and taxed at up to 50%. Keep every record; banks may ask where the money came from.', src: 'Israeli court rulings and Tax Authority guidance, as reported', s: 2, use: 'The plan suggests a Bitcoin tracking fund inside your ordinary account.' },
@@ -1415,8 +1486,8 @@
     if (isIL()) root.appendChild(card('What is different for Israel', 'The market readings are global. What you do with them is local.',
       h('ul', { class: 'bullets' },
         h('li', null, h('b', null, 'Amounts are in shekels. '), 'Prices of funds and coins on the Markets and Crypto tabs stay in dollars, because that is how they are quoted.'),
-        h('li', null, h('b', null, 'The steady part is in shekels. '), 'Bonds and cash mean Israeli government bonds, Makam and money-market funds. The readings for US bonds and the US inflation tests are not applied to them, so that part stays at its baseline.'),
-        h('li', null, h('b', null, 'Growth estimates use Israeli rates. '), 'Cash is expected to earn the Bank of Israel rate, bonds a little more, both measured against 2% inflation.'),
+        h('li', null, h('b', null, 'The steady part is in shekels. '), 'Bonds and cash mean Israeli government bonds, Makam and money-market funds. The bond part has its own reading, built the same way as the US one from the Bank of Israel\u2019s yield curve and the official price index. US bond readings, the US inflation tests and the US news brief are not applied to it. If the Israeli figures fail to load, that part stays at its baseline.'),
+        h('li', null, h('b', null, 'Growth estimates use Israeli rates. '), 'Cash is expected to earn the Bank of Israel rate and bonds the 5-year government yield, both measured against 2% inflation.'),
         h('li', null, h('b', null, 'Your details change the order, not the mix. '), 'Debt costing 7% a year or more is paid first, then a cushion of three months of spending (six if your income is irregular), and only the rest is invested.'),
         h('li', null, h('b', null, 'Currency is a risk the model does not hedge. '), 'Stocks, gold and crypto are priced in dollars. The plan shows the exchange rate and leaves it alone.'),
         h('li', null, h('b', null, 'The tax figures are for 2026 '), 'and come from published summaries, not the Tax Authority. They will change.'))));

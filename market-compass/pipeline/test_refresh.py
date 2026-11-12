@@ -235,6 +235,66 @@ class Risk(unittest.TestCase):
         self.assertIsNone(r.risk_table({"a": (dts[:60], path(a)[:60])}))   # under half a year: no table
 
 
+class Israel(unittest.TestCase):
+    def test_bond_index_earns_the_yield_when_nothing_moves(self):
+        idx = r.bond_index([4.0] * 13, 4.8)
+        self.assertEqual(len(idx), 13)
+        self.assertAlmostEqual(idx[-1] / idx[0] - 1, (1 + 0.04 / 12) ** 12 - 1, places=9)
+
+    def test_bond_index_loses_duration_times_a_rise_in_yield(self):
+        idx = r.bond_index([4.0, 5.0], 4.8)
+        self.assertAlmostEqual(idx[1] / idx[0] - 1, 0.04 / 12 - 0.048, places=9)
+        up = r.bond_index([4.0, 3.5], 4.8)
+        self.assertGreater(up[1], up[0] * 1.02)   # a fall in yield is a gain
+
+    def test_monthly_trend_matches_the_daily_weights_and_direction(self):
+        falling = r.bond_index([5.0 - 0.1 * i for i in range(20)], 4.8)   # yields falling: prices rising
+        parts = r.monthly_trend_parts(falling, 0.03)
+        self.assertEqual([p["id"] for p in parts], ["vs10m", "mom12", "mom3"])
+        self.assertAlmostEqual(sum(p["weight"] for p in parts), 1.0)
+        self.assertTrue(all(p["score"] > 0 for p in parts))
+        rising = r.bond_index([3.0 + 0.1 * i for i in range(20)], 4.8)
+        self.assertLess(r.combine(r.monthly_trend_parts(rising, 0.03)), -0.5)
+        self.assertEqual(r.monthly_trend_parts(falling[:12], 0.03), [])   # under a year: no reading
+
+    def test_monthly_trend_measures_against_cash(self):
+        flat = r.bond_index([4.0] * 20, 4.8)                              # earns about 4.1% a year
+        by_id = lambda parts: {p["id"]: p for p in parts}
+        self.assertGreater(by_id(r.monthly_trend_parts(flat, 0.02))["mom12"]["score"], 0)
+        self.assertLess(by_id(r.monthly_trend_parts(flat, 0.06))["mom12"]["score"], 0)
+        self.assertIsNone(by_id(r.monthly_trend_parts(flat, None))["mom12"]["score"])
+
+    def test_inflation_is_read_against_the_target_band(self):
+        self.assertAlmostEqual(r.target_inflation_reading(2.0, 2.0), 0.0)            # middle of 1 to 3, steady
+        self.assertGreater(r.target_inflation_reading(1.0, 1.0), 0)                  # low inflation suits bonds
+        self.assertLess(r.target_inflation_reading(3.5, 3.5), 0)
+        self.assertAlmostEqual(r.target_inflation_reading(3.5, 3.5), -0.5)           # full level penalty, no direction
+        self.assertAlmostEqual(r.target_inflation_reading(4.5, 3.5), -1.0)           # high and rising
+        self.assertGreater(r.target_inflation_reading(2.5, 3.2), r.target_inflation_reading(2.5, 2.5))  # falling helps
+        self.assertAlmostEqual(r.target_inflation_reading(3.5, None), -0.5)          # no history counts as no change
+        self.assertIsNone(r.target_inflation_reading(None, 2.0))
+
+    def test_sdmx_csv_is_grouped_sorted_and_tolerant(self):
+        text = ("SERIES_CODE,FREQ,TIME_PERIOD,OBS_VALUE\n"
+                "A,M,2026-02,3.5\nA,M,2026-01,3.4\nB,M,2026-01,1.1\nA,M,2026-03,\nB,M,2026-02,oops\n")
+        got = r.parse_sdmx_csv(text)
+        self.assertEqual(got["A"], [("2026-01", 3.4), ("2026-02", 3.5)])
+        self.assertEqual(got["B"], [("2026-01", 1.1)])
+        self.assertEqual(r.parse_sdmx_csv("<html>blocked</html>"), {})
+
+    def test_month_name(self):
+        self.assertEqual(r.month_name("2026-09"), "September 2026")
+        self.assertEqual(r.month_name("soon"), "soon")
+        self.assertIsNone(r.month_name(None))
+
+    def test_align_monthly_keeps_shared_months_only(self):
+        months, cols = r.align_monthly({"a": [("2026-01", 1.0), ("2026-02", 2.0), ("2026-03", 3.0)],
+                                        "b": [("2026-02", 20.0), ("2026-03", 30.0), ("2026-04", 40.0)]})
+        self.assertEqual(months, ["2026-02", "2026-03"])
+        self.assertEqual(cols, {"a": [2.0, 3.0], "b": [20.0, 30.0]})
+        self.assertEqual(r.align_monthly({"a": [("2026-01", 1.0)], "b": []}), ([], {}))
+
+
 class Headlines(unittest.TestCase):
     def test_rank_prefers_newsrooms_and_drops_filler(self):
         self.assertEqual(r.headline_rank({"src": "Reuters", "title": "Fed holds rates"}), 0)
