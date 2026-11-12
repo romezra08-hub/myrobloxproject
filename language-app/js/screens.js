@@ -151,6 +151,7 @@
         h("div.mini-stats", h("div", h("b", st.seen), h("small", t("wordsKnown"))), h("div", h("b", st.due), h("small", t("toReview"))))),
       root.LSHabits.journeyCard(p),
       p.plan ? h("div.plan-line", "📌 ", h("span", { dir: "auto" }, p.plan)) : null,
+      focusChips(app, p),
       h("button.hero-card", { type: "button", onclick: startDaily },
         h("div.hero-emoji", "🎯"),
         h("div.hero-text",
@@ -173,6 +174,14 @@
         h("div", h("b", x("family")), h("div.small.muted", x("familySub")),
           others.length ? h("div.row.wrap.small", others.map((o) => h("span.chip", `${o.avatar} ${o.name} 🔥${ST.streak(o.id)}`))) : null)));
     app.mount(el);
+  }
+
+  function focusChips(app, p) {
+    const L2 = I.getLang();
+    const lbl = { he: "היום אני רוצה לתרגל:", en: "Today I want to practice:", ru: "Сегодня хочу тренировать:" }[L2];
+    const opts = [["mix", "🎲", { he: "הכול", en: "Mix", ru: "Всё" }], ["listen", "👂", { he: "שמיעה", en: "Listening", ru: "Слух" }], ["speak", "🗣️", { he: "דיבור", en: "Speaking", ru: "Речь" }], ["write", "✍️", { he: "כתיבה", en: "Writing", ru: "Письмо" }]];
+    const cur = p.focus || "mix";
+    return h("div.focus-row", h("span.small.muted", lbl), h("div.focus-chips", opts.map(([k, e, n]) => h("button.focus-chip" + (cur === k ? ".on" : ""), { type: "button", onclick: () => { ST.updateProfile(p.id, { focus: k }); app.refreshProfile(); root.LSUI.sfx("tap"); app.go("#/home"); } }, e + " " + n[L2]))));
   }
 
   function sections(p) {

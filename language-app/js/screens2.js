@@ -281,7 +281,10 @@
         onComplete: () => {
           const score = total ? right / total : 0;
           const r = prog.grammar[g.id] || {};
-          prog.grammar[g.id] = { best: Math.max(r.best || 0, score), done: (r.done || 0) + 1, last: Date.now() };
+          // Spaced grammar review: 3 → 7 → 14 → 30 days (only once the lesson is passed).
+          const n = (r.done || 0) + 1;
+          const gap = [3, 7, 14, 30, 60][Math.min(n - 1, 4)];
+          prog.grammar[g.id] = { best: Math.max(r.best || 0, score), done: n, last: Date.now(), due: score >= 0.7 ? Date.now() + gap * 864e5 : Date.now() + 864e5 };
           ST.saveProgress(p.id);
         },
       });

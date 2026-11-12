@@ -81,6 +81,12 @@
   // ---- exercise selection by strength ----
   function exerciseFor(it, card, ctx) {
     const s = SRS.strength(card);
+    // Learner's chosen focus for today (autonomy): bias exercise types, never for brand-new items.
+    if (ctx.focus && ctx.focus !== "mix" && s >= 1 && Math.random() < 0.55) {
+      if (ctx.focus === "listen") return it._type === "phrase" ? { kind: "buildListen", item: it } : { kind: "mc", dir: "listen", item: it };
+      if (ctx.focus === "speak" && ctx.canListen) return { kind: "speak", item: it };
+      if (ctx.focus === "write") return s >= 2 ? { kind: "dictation", item: it } : (it._type === "phrase" ? { kind: "build", item: it } : { kind: "type", item: it });
+    }
     const canListen = ctx.canListen;
     const r = Math.random();
     if (it._type === "phrase") {
@@ -138,7 +144,7 @@
   // (present, then immediately retrieve) -> new phrase -> speaking -> a final mixed recap.
   function buildDaily(profile, prog, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen, target: profile.target };
+    const ctx = { canListen: !!opts.canListen, target: profile.target, focus: profile.focus };
     const steps = [];
     const T = profile.target;
 
@@ -194,6 +200,14 @@
     if (fresh.length) U.sample(fresh, Math.min(4, fresh.length)).forEach((it) => mixed.push({ kind: "mc", dir: Math.random() < 0.5 ? "h2t" : "listen", item: it, learning: true }));
     if (ctx.canListen && fresh.length) mixed.push({ kind: "speak", item: fresh[0], learning: true });
 
+    // Spaced grammar review: a few questions from a grammar lesson that's due again.
+    const gDue = ((root.LS_DATA.grammar) || []).filter((g) => g.target === T && prog.grammar[g.id] && prog.grammar[g.id].due && prog.grammar[g.id].due <= Date.now());
+    if (gDue.length) {
+      const g = gDue[0];
+      const kinds = { choice: "gchoice", fill: "gfill", order: "gorder", fix: "gfix" };
+      const gs = U.sample(g.exercises || [], 3).map((ex) => ({ kind: kinds[ex.type] || "gchoice", ex, grammarReview: g.id }));
+      mixed.splice(Math.floor(mixed.length / 2), 0, ...gs);
+    }
     steps.push(...mixed);
     return { steps, newIds: fresh.map((f) => f.id).concat(phraseSteps.filter((s) => s.kind === "intro").map((s) => s.item.id)), day: today };
   }
@@ -201,7 +215,7 @@
   // Lesson on one vocabulary topic: new words from the topic + reviews from the topic.
   function buildTopic(profile, prog, topicId, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen, target: profile.target };
+    const ctx = { canListen: !!opts.canListen, target: profile.target, focus: profile.focus };
     const list = vocab().filter((v) => v.topic === topicId).map((v) => item(v.id));
     const fresh = unseen(prog, list).slice(0, opts.newCount || 6);
     const old = U.shuffle(list.filter((v) => prog.cards[v.id])).slice(0, 10);
@@ -220,7 +234,7 @@
 
   function buildSituation(profile, prog, sitId, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen, target: profile.target };
+    const ctx = { canListen: !!opts.canListen, target: profile.target, focus: profile.focus };
     const list = phrases().filter((p) => p.sit === sitId).map((p) => item(p.id));
     const fresh = unseen(prog, list).slice(0, 4);
     const old = U.shuffle(list.filter((p) => prog.cards[p.id])).slice(0, 6);

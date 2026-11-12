@@ -126,6 +126,15 @@
         if (correct) ls.right = (ls.right || 0) + 1; else ls.wrong = (ls.wrong || 0) + 1;
       }
       if (opts.onResult) opts.onResult(step, correct);
+      if (step.grammarReview && !step.requeued) {
+        const gr = prog.grammar[step.grammarReview] || {};
+        gr.rv = (gr.rv || 0) + 1; gr.rvOk = (gr.rvOk || 0) + (correct ? 1 : 0);
+        if (gr.rv % 3 === 0) {
+          const ok = gr.rvOk >= 2; gr.done = (gr.done || 1) + (ok ? 1 : 0);
+          gr.due = Date.now() + (ok ? [3, 7, 14, 30, 60][Math.min(gr.done - 1, 4)] : 1) * 864e5; gr.rvOk = 0;
+        }
+        prog.grammar[step.grammarReview] = gr;
+      }
       ST.saveProgress(profile.id);
 
       // Mistake? Ask again a little later (immediate re-retrieval), in an easier form.
