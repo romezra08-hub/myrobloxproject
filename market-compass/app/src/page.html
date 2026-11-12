@@ -1,0 +1,58 @@
+<title>Market Compass</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Inter:wght@400..700&display=swap">
+<style>
+/*{{CSS}}*/
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+        <circle cx="15" cy="15" r="13" fill="none" style="stroke: var(--ink)" stroke-width="1.6"/>
+        <path d="M15 4.5 L18 15 L15 25.5 L12 15 Z" style="fill: var(--line-2)"/>
+        <path d="M15 4.5 L18 15 L12 15 Z" style="fill: var(--needle)"/>
+        <circle cx="15" cy="15" r="1.7" style="fill: var(--surface); stroke: var(--ink)" stroke-width="1.2"/>
+      </svg>
+      <span class="brand-name">Market Compass</span>
+    </div>
+    <div class="fresh" id="fresh" aria-live="polite">
+      <span class="fresh-item"><span class="dot"></span>Loading market data</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <a class="tab" href="#plan" data-view="plan">Plan</a>
+    <a class="tab" href="#markets" data-view="markets">Markets</a>
+    <a class="tab" href="#crypto" data-view="crypto">Crypto</a>
+    <a class="tab" href="#events" data-view="events">Events</a>
+    <a class="tab" href="#ask" data-view="ask">Ask</a>
+    <a class="tab" href="#method" data-view="method">Method</a>
+  </nav>
+
+  <div id="banner" hidden></div>
+
+  <main>
+    <section class="view" id="view-plan" aria-label="Plan"></section>
+    <section class="view" id="view-markets" aria-label="Markets" hidden></section>
+    <section class="view" id="view-crypto" aria-label="Crypto" hidden></section>
+    <section class="view" id="view-events" aria-label="Events" hidden></section>
+    <section class="view" id="view-ask" aria-label="Ask" hidden></section>
+    <section class="view" id="view-method" aria-label="Method" hidden></section>
+  </main>
+
+  <footer class="foot">
+    Market Compass is an educational tool, not personal financial advice. It cannot see your taxes, income or obligations,
+    and no model can predict markets. Prices can be delayed. Anything you invest can lose value.
+  </footer>
+</div>
+
+<script>
+window.MC_CONFIG = /*{{CONFIG}}*/{};
+</script>
+<script>
+/*{{ENGINE}}*/
+</script>
+<script>
+/*{{APP}}*/
+</script>
