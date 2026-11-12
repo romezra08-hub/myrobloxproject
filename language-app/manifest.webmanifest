@@ -1,0 +1,9 @@
+{
+  "name": "Learn Together",
+  "short_name": "Learn Together",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f4ef",
+  "theme_color": "#3a5bd9",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
