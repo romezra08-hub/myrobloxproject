@@ -92,3 +92,7 @@ Sources: https://ideals.illinois.edu/items/19069 ; https://www.cambridge.org/cor
 ## Round 8
 - **Reading while listening with synchronized highlighting:** colouring words as they're spoken improved meaning recall and recognition speed (Jung & Zhang 2024, 87 learners). Eye-tracking shows it changes how readers follow the text (Gerbier et al. 2015). Evidence is small-scale. → Conversations and example sentences now use **karaoke highlighting** (each word lights up as it's spoken, on voices that report word timing).
 Sources: https://www.degruyterbrill.com/document/doi/10.1515/iral-2023-0232/html ; https://hal.archives-ouvertes.fr/hal-01192870/file/eg_SLaTE2015_revision_TRACK_2015-06-18.pdf ; https://durham-repository.worktribe.com/OutputFile/1219137
+
+## Round 9
+- **Discriminative contrast:** interleaving helps most when categories are highly similar, because seeing them side by side highlights the differences (Birnbaum, Kornell, Bjork & Bjork 2013; Carvalho & Goldstone). → Letter quizzes now include look-alike letters as answer options (Ш/Щ, И/Й, Ь/Ъ/Ы, b/d/p/q, m/n, u/v/w…).
+Sources: https://link.springer.com/content/pdf/10.3758/s13421-013-0371-0.pdf ; https://pcl.sitehost.iu.edu/papers/cueCategorySequence.pdf ; https://link.springer.com/10.3758/s13421-020-01074-w

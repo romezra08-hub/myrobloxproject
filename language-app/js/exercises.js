@@ -357,7 +357,12 @@
     const l = step.letter;
     const T = ctx.T;
     const all = C.alphabet(T);
-    const others = U.sample(all.filter((x) => x.upper !== l.upper), 3);
+    // Discriminative contrast: put look-alike letters side by side (Birnbaum et al. 2013).
+    const LOOKALIKE = [["Ш", "Щ", "Ц"], ["И", "Й", "Н"], ["Ь", "Ъ", "Ы", "Б"], ["Е", "Ё", "Э", "З"], ["Л", "П", "Д"], ["Р", "Г", "Я"], ["Ж", "Х", "К"], ["С", "О", "Э"], ["Ч", "У"], ["Ю", "О"],
+      ["B", "D", "P", "Q"], ["M", "N", "W"], ["U", "V", "W", "Y"], ["I", "J", "L"], ["C", "K", "S"], ["G", "J", "Q"], ["E", "F"], ["H", "N"], ["A", "E"]];
+    const group = LOOKALIKE.find((g) => g.includes(l.upper)) || [];
+    const similar = U.shuffle(all.filter((x) => x.upper !== l.upper && group.includes(x.upper))).slice(0, 2);
+    const others = similar.concat(U.sample(all.filter((x) => x.upper !== l.upper && !similar.includes(x)), 3 - similar.length));
     const opts = U.shuffle([l].concat(others));
     const ex = l.example || {};
     let promptEl, title;
