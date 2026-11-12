@@ -103,7 +103,7 @@
   // ---------- typing (production / spelling) ----------
   function typeInput(ctx, onEnter) {
     const input = h("input.answer", { type: "text", autocomplete: "off", autocapitalize: "off", spellcheck: "false", lang: ctx.T, dir: "ltr", placeholder: t("typeHere") });
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); onEnter(); } });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); onEnter(); } });
     const wantKb = ctx.T === "ru" ? ctx.profile.kb !== false : !!ctx.profile.kb;
     const kb = keyboard(input, ctx.T);
     const kbWrap = h("div.kb-wrap", kb);

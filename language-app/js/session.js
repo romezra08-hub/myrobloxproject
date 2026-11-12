@@ -32,6 +32,7 @@
     const onKey = (e) => {
       if (e.key === "Enter" && !mainBtn.disabled && checkFn && !(e.target && e.target.tagName === "TEXTAREA")) {
         if (e.target && e.target.tagName === "INPUT" && mainBtn.dataset.mode === "check") return; // input handles its own Enter
+        if (e.target === mainBtn) return; // the focused main button gets a native click
         e.preventDefault();
         checkFn();
       }
