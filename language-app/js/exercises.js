@@ -454,7 +454,49 @@
     return h("div.ex.gorder", prompt(t("q_build")), ex.tr ? h("div.help-prompt", L(pick(ex.tr, [ctx.H]), ctx.H)) : null, tw.el);
   }
 
+  // ---------- Russian stress: hear the word, tap the stressed syllable ----------
+  function stress(step, ctx) {
+    const it = step.item;
+    const word = it.ru;
+    // split into syllable-ish chunks: each chunk ends after a vowel (consonants attach forward)
+    const chars = [...word];
+    const sylls = []; let cur = "", stressedIdx = -1;
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      if (c === "\u0301") { stressedIdx = sylls.length; continue; }
+      cur += c;
+      if (/[аеёиоуыэюяАЕЁИОУЫЭЮЯ]/.test(c)) {
+        if (chars[i + 1] === "\u0301") { stressedIdx = sylls.length; i++; }
+        if (/ё/i.test(c)) stressedIdx = sylls.length;
+        sylls.push(cur); cur = "";
+      }
+    }
+    if (cur) { if (sylls.length) sylls[sylls.length - 1] += cur; else sylls.push(cur); }
+    let answered = false;
+    const row = h("div.stress-row", { lang: "ru", dir: "ltr" });
+    sylls.forEach((s, i) => {
+      const b = h("button.stress-syl", { type: "button" }, s);
+      b.addEventListener("click", () => {
+        if (answered) return; answered = true;
+        const ok = i === stressedIdx;
+        b.classList.add(ok ? "right" : "wrong");
+        row.children[stressedIdx] && row.children[stressedIdx].classList.add("right");
+        ctx.finish({ correct: ok, answer: word, answerLang: "ru", sub: hlp(it, ctx) });
+      });
+      row.appendChild(b);
+    });
+    if (!ctx.muted) setTimeout(() => SP.speak(word, "ru", { rate: ctx.rate * 0.85 }), 250);
+    ctx.setCheck(false);
+    return h("div.ex.stress",
+      prompt(pick({ he: "איפה ההטעמה? הקשיבו ולחצו על ההברה החזקה", en: "Where's the stress? Listen and tap the strong syllable", ru: "Где ударение? Послушайте и нажмите на ударный слог" })),
+      h("div.listen-prompt", speakerBtn(word, "ru", { big: true, withSlow: true })),
+      h("div.help-word", L(hlp(it, ctx), ctx.H)),
+      row);
+  }
+  root.LSExStressable = (it) => it && it.ru && /\u0301/.test(it.ru) && !/\s/.test(it.ru) && U.ruVowelCount(it.ru) >= 2;
+
   const R = {
+    stress,
     intro, mc, type, dictation, speak, match, letterIntro, letterQuiz,
     build: (s, c) => build(s, c, false),
     buildListen: (s, c) => build(s, c, true),

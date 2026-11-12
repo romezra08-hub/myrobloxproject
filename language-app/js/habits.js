@@ -88,5 +88,26 @@
       h("div.field", h("span", tx("reminder")), h("div.row", time, h("button.btn.ghost", { type: "button", onclick: () => downloadReminder(time.value, "🗣️ " + pick({ he: "לומדים ביחד — 10 דקות", en: "Learn Together — 10 minutes", ru: "Учим вместе — 10 минут" })) }, "📅 " + tx("reminderBtn")))));
   }
 
-  root.LSHabits = { levelChip, levelOf, totalXp, mysteryBonus, settingsCard, downloadReminder };
+  // Narrative framing (stronger than badges in gamification research): each level is a stop on a trip.
+  const JOURNEY = {
+    en: [["🇮🇱", "Tel Aviv"], ["🏝️", "Cyprus"], ["🏛️", "Athens"], ["🍕", "Rome"], ["🗼", "Paris"], ["🌷", "Amsterdam"], ["☘️", "Dublin"], ["💂", "London"], ["🏰", "Edinburgh"], ["🌋", "Reykjavik"], ["🍁", "Toronto"], ["🦞", "Boston"], ["🗽", "New York"], ["🌉", "San Francisco"], ["🌴", "Hawaii"], ["🦘", "Sydney"]],
+    ru: [["🇮🇱", "Tel Aviv"], ["🕌", "Istanbul"], ["🏖️", "Sochi"], ["🍵", "Kazan"], ["🏛️", "Moscow"], ["🎭", "Saint Petersburg"], ["⛪", "Suzdal"], ["🌊", "Volga"], ["🏔️", "Ural Mountains"], ["🚂", "Trans-Siberian"], ["💧", "Lake Baikal"], ["🐻", "Kamchatka"], ["⚓", "Vladivostok"], ["❄️", "Murmansk"], ["🌌", "Northern Lights"], ["🏆", "Fluent!"]],
+  };
+  const JT = { trip: { he: "המסע שלך", en: "Your journey", ru: "Ваше путешествие" }, next: { he: "התחנה הבאה:", en: "Next stop:", ru: "Следующая остановка:" }, here: { he: "את/ה ב-", en: "You're in", ru: "Вы в" } };
+  function journeyCard(profile) {
+    const l = levelOf(totalXp(profile.id));
+    const list = JOURNEY[profile.target] || JOURNEY.en;
+    const cur = list[Math.min(l.lvl - 1, list.length - 1)], nxt = list[Math.min(l.lvl, list.length - 1)];
+    const road = h("div.journey-road", list.slice(Math.max(0, l.lvl - 2), l.lvl + 3).map((st, i, arr) => {
+      const idx = Math.max(0, l.lvl - 2) + i;
+      return h("span.stop" + (idx < l.lvl - 1 ? ".past" : idx === l.lvl - 1 ? ".now" : ""), { title: st[1] }, st[0]);
+    }));
+    return h("div.card.journey",
+      h("div.journey-top", h("b", "🗺️ " + pick(JT.trip)), h("span.small", pick(JT.here) + " " + cur[0] + " " + cur[1])),
+      road,
+      h("div.mini-bar", h("i", { style: { width: l.pct + "%" } })),
+      h("div.small.muted", pick(JT.next) + " " + nxt[0] + " " + nxt[1] + " · " + l.pct + "%"));
+  }
+
+  root.LSHabits = { journeyCard, levelChip, levelOf, totalXp, mysteryBonus, settingsCard, downloadReminder };
 })(window);

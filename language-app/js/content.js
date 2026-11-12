@@ -91,7 +91,9 @@
     }
     if (s === 0) return { kind: "mc", dir: "t2h", item: it };
     if (s === 1) return r < 0.3 ? { kind: "type", item: it } : { kind: "mc", dir: r < 0.65 ? "h2t" : "listen", item: it };
+    if (s === 2 && ctx.target === "ru" && root.LSExStressable && root.LSExStressable(it) && r < 0.2) return { kind: "stress", item: it };
     if (s === 2) return r < 0.5 ? { kind: "type", item: it } : { kind: "mc", dir: r < 0.75 ? "listen" : "h2t", item: it };
+    if (ctx.target === "ru" && root.LSExStressable && root.LSExStressable(it) && r > 0.85) return { kind: "stress", item: it };
     if (canListen && r < 0.2) return { kind: "speak", item: it };
     if (r < 0.55) return { kind: "type", item: it };
     if (r < 0.8) return { kind: "dictation", item: it };
@@ -136,7 +138,7 @@
   // (present, then immediately retrieve) -> new phrase -> speaking -> a final mixed recap.
   function buildDaily(profile, prog, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen };
+    const ctx = { canListen: !!opts.canListen, target: profile.target };
     const steps = [];
     const T = profile.target;
 
@@ -199,7 +201,7 @@
   // Lesson on one vocabulary topic: new words from the topic + reviews from the topic.
   function buildTopic(profile, prog, topicId, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen };
+    const ctx = { canListen: !!opts.canListen, target: profile.target };
     const list = vocab().filter((v) => v.topic === topicId).map((v) => item(v.id));
     const fresh = unseen(prog, list).slice(0, opts.newCount || 6);
     const old = U.shuffle(list.filter((v) => prog.cards[v.id])).slice(0, 10);
@@ -218,7 +220,7 @@
 
   function buildSituation(profile, prog, sitId, opts) {
     opts = opts || {};
-    const ctx = { canListen: !!opts.canListen };
+    const ctx = { canListen: !!opts.canListen, target: profile.target };
     const list = phrases().filter((p) => p.sit === sitId).map((p) => item(p.id));
     const fresh = unseen(prog, list).slice(0, 4);
     const old = U.shuffle(list.filter((p) => prog.cards[p.id])).slice(0, 6);
@@ -242,7 +244,7 @@
   }
 
   function buildMistakes(profile, prog, opts) {
-    const ctx = { canListen: !!(opts && opts.canListen) };
+    const ctx = { canListen: !!(opts && opts.canListen), target: profile.target };
     const ids = hardest(prog, 12);
     const steps = [];
     ids.forEach((id) => { const it = item(id); if (it._type === "word") steps.push({ kind: "intro", item: it, review: true }); });
