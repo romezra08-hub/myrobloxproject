@@ -44,6 +44,10 @@ ASSETS = {            # what may be forecast: snapshot key -> name shown on the 
 }
 HORIZONS = (7, 30, 90)    # days, for the five markets above
 HOT_HORIZON = 1       # days, for the snapshot's hot names
+DAILY = ("^TA125.TA",)   # also forecast one day ahead, every day: the one market with a tested edge at that length
+ROOM = {1: 0.03}         # how far a call with no named news may sit from the starting figure, by days ...
+ROOM_LONGER = 0.05       # ... and for longer calls
+ROOM_NEWS = 0.12         # with a named, dated item
 NEWS_CALLS_A_DAY = 3  # one-day calls allowed on other well-known names, each resting on a named news item
 P_MIN, P_MAX = 0.05, 0.95
 KEEP_CLOSED = 400
@@ -100,10 +104,36 @@ def price_of(snapshot, asset):
     return float(px) if isinstance(px, (int, float)) and not isinstance(px, bool) and px > 0 else None
 
 
+def rows_of(snapshot, asset):
+    """The asset's row in the main table and in the hot-names table, whichever exist."""
+    main = (snapshot.get("assets") or {}).get(asset)
+    return [r for r in (main, hot_info(snapshot, asset)) if r]
+
+
+def as_of(snapshot, asset):
+    """The date of the asset's latest session in this snapshot, or None."""
+    for row in rows_of(snapshot, asset):
+        if isinstance(row.get("asOf"), str) and row["asOf"]:
+            return row["asOf"]
+    return None
+
+
 def base_rate(snapshot, asset, horizon):
-    """How often this asset rose over a stretch this long in the recent past: the naive forecast."""
+    """Where a forecast starts: the figure refresh.py worked out from the tests in
+    research/forecast_lab.py. For a snapshot made before those existed, the share of rises
+    over the two years it holds."""
+    for row in rows_of(snapshot, asset):
+        v = (row.get("start") or {}).get(str(horizon))
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 < v < 1:
+            return round(float(v), 3)
     v = info_of(snapshot, asset).get("up1d" if horizon <= 1 else "up1w" if horizon <= 7 else "up1m" if horizon <= 30 else "up3m")
     return round(float(v), 3) if isinstance(v, (int, float)) and 0 <= v <= 1 else None
+
+
+def room(horizon, news):
+    """How far from the starting figure a call may sit. Tests found nothing in price behaviour
+    that improves on the start, so only named news earns more room, and not much."""
+    return ROOM_NEWS if news else ROOM.get(horizon, ROOM_LONGER)
 
 
 def resolve(record, snapshot):
@@ -115,6 +145,10 @@ def resolve(record, snapshot):
         px = price_of(snapshot, f["asset"])
         if now < due - GRACE or px is None:
             still.append(f)          # not due yet, or no price today: try again next time
+            continue
+        seen = as_of(snapshot, f["asset"])
+        if f.get("startAsOf") and seen and seen <= f["startAsOf"] and (now - due).total_seconds() < 6 * 86400:
+            still.append(f)          # its market has not traded since the call (a holiday or a weekend): wait for a session
             continue
         up = px > f["startPx"]
         g = dict(f)
@@ -143,7 +177,10 @@ def clean_new(item, snapshot):
     if isinstance(horizon, bool) or not isinstance(horizon, int):
         return None, "%r: horizonDays must be a whole number" % (asset,)
     news = " ".join(str(item.get("news") or "").split())[:200]
-    if horizon == HOT_HORIZON:
+    daily = horizon == HOT_HORIZON and asset in DAILY
+    if daily:
+        pass
+    elif horizon == HOT_HORIZON:
         if asset not in hot_names(snapshot) and not (news and hot_info(snapshot, asset)):
             return None, "%r: a one-day forecast needs one of today's hot names, or a well-known name with a news item" % (asset,)
     elif asset not in ASSETS:
@@ -167,21 +204,27 @@ def clean_new(item, snapshot):
         digits = 4 if px < 10 else 2
         low, high = round(low, digits), round(high, digits)
     runs = item.get("runs")
+    base = base_rate(snapshot, asset, horizon)
+    said = min(P_MAX, max(P_MIN, float(p)))                    # never certain
+    p = said if base is None else min(base + room(horizon, news), max(base - room(horizon, news), said))
     made = snapshot["generatedAt"]
     due = (parse_time(made) + dt.timedelta(days=horizon)).strftime("%Y-%m-%dT%H:%M:%SZ")
     why = " ".join(str(item.get("why") or "").split())[:WHY_MAX]
-    return {
+    out = {
         "id": "%s:%d:%s" % (asset, horizon, made[:10]),
-        "asset": asset, "name": ASSETS.get(asset) if horizon != HOT_HORIZON else (str(hot_info(snapshot, asset).get("name") or asset)[:40]),
-        "kind": hot_info(snapshot, asset).get("kind") if horizon == HOT_HORIZON else None,
+        "asset": asset, "name": ASSETS.get(asset) if horizon != HOT_HORIZON or daily else (str(hot_info(snapshot, asset).get("name") or asset)[:40]),
+        "kind": hot_info(snapshot, asset).get("kind") if horizon == HOT_HORIZON and not daily else None,
         "horizonDays": horizon,
-        "madeAt": made, "dueAt": due, "startPx": px,
-        "pUp": round(min(P_MAX, max(P_MIN, float(p))), 3),     # never certain
-        "low": low, "high": high, "base": base_rate(snapshot, asset, horizon), "why": why,
+        "madeAt": made, "dueAt": due, "startPx": px, "startAsOf": as_of(snapshot, asset),
+        "pUp": round(p, 3),
+        "low": low, "high": high, "base": base, "why": why,
         "news": news or None, "onNews": bool(news),
         "runs": runs if isinstance(runs, int) and not isinstance(runs, bool) and 1 <= runs <= 9 else 1,
-        "extra": horizon == HOT_HORIZON and asset not in hot_names(snapshot),   # called only because of the news
-    }, None
+        "extra": horizon == HOT_HORIZON and not daily and asset not in hot_names(snapshot),   # called only because of the news
+    }
+    if abs(said - p) > 0.0005:
+        out["said"] = round(said, 3)        # what the forecaster asked for before it was held near the start
+    return out, None
 
 
 def trust(closed):
@@ -214,6 +257,10 @@ def script_range(snapshot, asset, horizon):
     a, px = info_of(snapshot, asset), price_of(snapshot, asset)
     if px is None:
         return None
+    for row in rows_of(snapshot, asset):        # the tested range from refresh.py, when the snapshot has one
+        band = (row.get("rng") or {}).get(str(horizon))
+        if isinstance(band, list) and len(band) == 2 and all(isinstance(v, (int, float)) for v in band) and band[0] < 0 < band[1]:
+            return px * math.exp(band[0]), px * math.exp(band[1])
     vols = [v for v in (a.get("vol20"), a.get("vol60")) if isinstance(v, (int, float)) and v > 0]
     vol = sum(vols) / len(vols) if vols else None
     band = (a.get("band") or {}).get(str(horizon))
@@ -288,9 +335,45 @@ def add(record, new_items, snapshot):
             "trust": None if k is None else {"k": k, "n": n}}, problems
 
 
+METHOD = """How to forecast. This is the whole method; follow it every time.
+- Each asset's line in the digest gives a starting figure. It is the long-run share of rises for
+  that market or kind of asset. Tested on years it had not seen, it beat every alternative
+  tried, including the share of rises over the last two years. For coins and currencies
+  nothing beat 50%, so they start at 50%.
+- A model using trend, momentum, last week's and last month's move, distance from the high
+  and the size of recent swings was tested the same way. It did not beat the starting figure
+  at any length, for any kind of asset. So none of those is a reason to move: not the shape
+  of a chart, not a run, not a fall, not a calm or a wild month.
+- The Tel Aviv 125 figures already include the one thing that is known and not in its price:
+  what US shares did after Tel Aviv closed. Do not add it again.
+- Move from the starting figure only for dated evidence that is not yet in the price. Name it
+  in "why" and state it in "news". The script holds a call with no "news" within 3 points of
+  the start for one day and 5 points for longer, and a call with "news" within 12 points.
+- News that everyone has read is already in the price. After a shock such as a chief executive
+  leaving, a data breach or a hack, studies find no reliable drift: stay at the start. The
+  exception is confirmed bad news about the business itself, such as a profit warning, an
+  accounting restatement or fraud: shade two or three points toward more of the same.
+- Do not count on shares drifting after results: for large well-known companies that has gone.
+- Where a market already prices the question, use it. If your searches show what futures,
+  options or prediction markets imply, treat that as better informed than your own guess.
+- Never use pundit targets, social-media mood, elections or the calendar.
+- Give pUp to the nearest point. If you found no news on a name, say so in "why" and give the
+  starting figure. A forecast of 52% is a good forecast if such calls come true 52% of the time.
+- Ranges are set by the script and held 80% of prices in the tests. Give "low" and "high" only
+  to widen one, when a dated event falls inside the window: a central bank decision, a
+  company's results, or a shock still unfolding. If your searches show the move that options
+  price for a company's results, make the range 1.2 to 1.4 times that move either side.
+- Do not copy the plan's readings, and do not try to be consistent with earlier forecasts."""
+
+
 def feedback(record):
-    """What the forecaster is told about its own record before it forecasts again: totals only,
-    never an individual call, so that it learns its habits without anchoring on yesterday."""
+    """What the forecaster reads before it forecasts again: the method, then its own record in
+    totals only, never an individual call, so that it learns its habits without anchoring on
+    yesterday."""
+    return METHOD + "\n\n" + record_feedback(record)
+
+
+def record_feedback(record):
     c = [f for f in record["closed"] if isinstance(f.get("base"), (int, float)) and isinstance(f.get("up"), bool)]
     if len(c) < 20:
         return "Your record so far: %d calls scored, too few to say anything about. Forecast as instructed." % len(c)
@@ -303,14 +386,14 @@ def feedback(record):
         came = sum(1 for f in rows if f["up"]) / float(len(rows))
         mine = sum((f["pUp"] - (1.0 if f["up"] else 0.0)) ** 2 for f in rows) / len(rows)
         naive = sum((f["base"] - (1.0 if f["up"] else 0.0)) ** 2 for f in rows) / len(rows)
-        L.append("  %-34s %3d calls | you said %2.0f%% on average, the usual figure was %2.0f%%, it rose %2.0f%% of the time | your score %.3f, naive %.3f (%s)" % (
+        L.append("  %-34s %3d calls | you said %2.0f%% on average, the starting figure was %2.0f%%, it rose %2.0f%% of the time | your score %.3f, the starting figure alone %.3f (%s)" % (
             label, len(rows), said * 100, usual * 100, came * 100, mine, naive, "you were better" if mine < naive - 0.002 else "you were worse" if mine > naive + 0.002 else "no difference"))
     for h in sorted({f["horizonDays"] for f in c}):
         line("%d-day calls" % h, [f for f in c if f["horizonDays"] == h])
     line("calls resting on a named news item", [f for f in c if f.get("onNews")])
     line("calls with no named news item", [f for f in c if not f.get("onNews")])
-    line("when you said MORE likely than usual", [f for f in c if f["pUp"] > f["base"] + 0.005])
-    line("when you said LESS likely than usual", [f for f in c if f["pUp"] < f["base"] - 0.005])
+    line("when you said MORE likely than the start", [f for f in c if f["pUp"] > f["base"] + 0.005])
+    line("when you said LESS likely than the start", [f for f in c if f["pUp"] < f["base"] - 0.005])
     line("coins", [f for f in c if f.get("kind") == "crypto" or f["asset"].endswith("-USD")])
     line("shares and other markets", [f for f in c if not (f.get("kind") == "crypto" or f["asset"].endswith("-USD"))])
     L.append("  What you said against what happened:")
@@ -326,7 +409,7 @@ def feedback(record):
             share * 100, "about right" if 0.72 <= share <= 0.88 else "too narrow, widen them" if share < 0.72 else "too wide, tighten them"))
     k, n = trust(record["closed"])
     if k is not None:
-        L.append("  On this record, the best-scoring use of your calls would have been to take %.0f%% of each departure from the usual figure. "
+        L.append("  On this record, the best-scoring use of your calls would have been to take %.0f%% of each departure from the starting figure. "
                  "The page now applies that correction. %s" % (k * 100, "Your departures have added nothing so far: make them only for news you can name." if k < 0.25
                                                              else "Your departures have been too large: make smaller ones." if k < 0.8 else "Your departures have been about the right size."))
     return "\n".join(L)

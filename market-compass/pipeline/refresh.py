@@ -16,6 +16,7 @@ Design rules
   * All scoring lives here so the page and the tests share one definition.
 """
 import argparse
+import bisect
 import csv
 import datetime as dt
 import html
@@ -113,6 +114,58 @@ NEWS_DROP_TITLE = re.compile(r"price prediction|prediction market|releases? q\d|
 LAST_HALVING = dt.date(2024, 4, 20)  # fourth Bitcoin halving
 FORECAST_ASSETS = ["SPY", "^TA125.TA", "BTC-USD", "IAU", "ILS=X"]   # the same five as forecasts.py
 
+# ---- where a forecast starts -------------------------------------------------------------------
+# Constants from research/forecast_lab.py, which scored each rule only on years it had not seen
+# (2008-2026 for funds and gold, 2019-2026 for single shares, coins and currencies):
+#   * The long-run share of rises beat the share over the two years this script holds, which it
+#     used before, at every length: by about 0.5% of the Brier score over a week, 3% over a
+#     month and 10% over a quarter. Over a quarter the old figure was worse than a coin flip.
+#   * A model adding trend, momentum, recent moves, distance from the high and swing size did
+#     not beat the long-run share anywhere. Nothing here uses it.
+#   * For coins and currencies no rate beat 50%, so they start at 50%.
+#   * The old ranges held 51-78% of outcomes where they promised 80%. A swing forecast mixing
+#     the last 5, 20, 60 and 250 days, times how far prices of that kind really landed measured
+#     in swings (10th and 90th percentile), held 69-85% and scored better almost everywhere.
+#   * Tel Aviv closes hours before New York. The US move after its close predicted the Tel Aviv
+#     125's next session (it rose 37% of the time after the US fell 1% or more, 68% after it
+#     rose 1% or more) and, faintly, its next week.
+# Run forecast_lab.py freeze to refresh them; they drift slowly.
+START_UP = {
+    "fund":       {"1": 0.533, "7": 0.564, "30": 0.606, "90": 0.65},
+    "SPY":        {"1": 0.536, "7": 0.577, "30": 0.637, "90": 0.687},
+    "^TA125.TA":  {"1": 0.547, "7": 0.581, "30": 0.63, "90": 0.676},
+    "stock":      {"1": 0.517, "7": 0.54, "30": 0.564, "90": 0.596},
+    "crypto":     {"1": 0.5, "7": 0.5, "30": 0.5, "90": 0.5},
+    "gold":       {"1": 0.528, "7": 0.557, "30": 0.568, "90": 0.645},
+    "IAU":        {"1": 0.525, "7": 0.555, "30": 0.566, "90": 0.639},
+    "fx":         {"1": 0.5, "7": 0.5, "30": 0.5, "90": 0.5},
+}
+RANGE_MIX = {
+    "fund:1":    {"vol": [0.181, 0.188, 0.077, 0.28], "z": [-1.418, 1.415]},
+    "fund:7":    {"vol": [0.155, 0.121, 0.071, 0.317], "z": [-1.455, 1.484]},
+    "fund:30":   {"vol": [0.092, 0.106, 0.027, 0.381], "z": [-1.446, 1.54]},
+    "fund:90":   {"vol": [0.076, 0.083, 0.0, 0.431], "z": [-1.29, 1.562]},
+    "stock:1":   {"vol": [0.083, 0.126, 0.161, 0.312], "z": [-1.342, 1.387]},
+    "stock:7":   {"vol": [0.047, 0.091, 0.204, 0.378], "z": [-1.352, 1.439]},
+    "stock:30":  {"vol": [0.015, 0.099, 0.174, 0.465], "z": [-1.311, 1.515]},
+    "stock:90":  {"vol": [0.019, 0.089, 0.116, 0.515], "z": [-1.236, 1.606]},
+    "crypto:1":  {"vol": [0.09, 0.122, 0.045, 0.456], "z": [-1.217, 1.263]},
+    "crypto:7":  {"vol": [0.054, 0.082, 0.016, 0.543], "z": [-1.268, 1.388]},
+    "crypto:30": {"vol": [0.009, 0.0, 0.148, 0.595], "z": [-1.273, 1.556]},
+    "crypto:90": {"vol": [0.02, 0.064, 0.357, 0.342], "z": [-1.257, 1.763]},
+    "gold:1":    {"vol": [0.107, 0.197, 0.299, 0.29], "z": [-1.255, 1.301]},
+    "gold:7":    {"vol": [0.05, 0.149, 0.386, 0.288], "z": [-1.222, 1.422]},
+    "gold:30":   {"vol": [0.0, 0.255, 0.185, 0.353], "z": [-1.145, 1.743]},
+    "gold:90":   {"vol": [0.0, 0.0, 0.373, 0.329], "z": [-0.963, 2.026]},
+    "fx:1":      {"vol": [0.215, 0.176, 0.165, 0.351], "z": [-1.274, 1.252]},
+    "fx:7":      {"vol": [0.241, 0.088, 0.151, 0.38], "z": [-1.305, 1.29]},
+    "fx:30":     {"vol": [0.075, 0.042, 0.249, 0.43], "z": [-1.365, 1.293]},
+    "fx:90":     {"vol": [0.067, 0.037, 0.239, 0.356], "z": [-1.404, 1.412]},
+}
+TEL_AVIV_LAG = {"1": 0.388, "7": 0.187}    # added to the log-odds per 1% of US move the Tel Aviv close has not seen
+LAG_CLIP = 3.0       # a US move counts up to 3% either way
+FORECAST_KIND = {"SPY": "fund", "^TA125.TA": "fund", "BTC-USD": "crypto", "IAU": "gold", "ILS=X": "fx"}
+
 # Well-known shares and coins from which the "hot names" are drawn: each day the five of each
 # with the best twelve months. They exist only for the one-day forecasts on the Forecasts tab,
 # which the owner asked for as a test. Nothing in the plan uses them.
@@ -132,7 +185,7 @@ HOT_COINS = {
     "AAVE-USD": "Aave", "NEAR-USD": "Near",
 }
 HOT_KEEP = ("px", "asOf", "chg1d", "ret1w", "ret1m", "ret3m", "ret12m", "vs50", "vs200", "vol20", "up1d", "up1w",
-            "annAll", "volAll", "mdd", "band")
+            "annAll", "volAll", "mdd")
 
 
 def hot_picks(table, symbols, n=5):
@@ -420,6 +473,68 @@ def typical_range(px, vol, days, ppy=252, band=None, vol_all=None):
     return sig(px * math.exp(-1.2816 * sd), 5), sig(px * math.exp(1.2816 * sd), 5)
 
 
+def start_up(sym, kind, days):
+    """Where a forecast of "higher after `days` days" starts: the long-run share of rises for this
+    market if it has one of its own, else for its kind. None for an unknown kind."""
+    v = (START_UP.get(sym) or START_UP.get(kind) or {}).get(str(days))
+    return float(v) if isinstance(v, (int, float)) else None
+
+
+def start_range(series, kind, days, ppy=252):
+    """The band the price should land in four times out of five after `days` days, as (low, high)
+    log moves from today's price. The swing is forecast from the last 5, 20, 60 and 250 days
+    in the mix that forecast it best, and stretched by how far prices of this kind have really
+    landed, which is further than the bell curve says. None on a short history."""
+    mix = RANGE_MIX.get("%s:%d" % (kind, days))
+    if not mix:
+        return None
+    var = 0.0
+    for w, k in zip(mix["vol"], (5, 20, 60, 250)):
+        v = realized_vol(series, k, ppy)
+        if v is None:
+            return None
+        var += w * v * v / ppy
+    if var <= 0:
+        return None
+    sd = math.sqrt(var * max(1, int(round(days * ppy / 365.0))))
+    return [round(mix["z"][0] * sd, 5), round(mix["z"][1] * sd, 5)]
+
+
+def forecast_start(sym, kind, series, ppy, days):
+    """{"start": {days: chance}, "rng": {days: [low, high]}} for the lengths asked."""
+    out = {"start": {}, "rng": {}}
+    for d in days:
+        p, band = start_up(sym, kind, d), start_range(series, kind, d, ppy)
+        if p is not None:
+            out["start"][str(d)] = p
+        if band:
+            out["rng"][str(d)] = band
+    return out
+
+
+def us_gap(us_dates, us_px, since):
+    """The US move, in percent, from the last US close before the date `since` to the latest
+    US close. With `since` the date of Tel Aviv's latest session, this is what the Tel Aviv
+    price has not seen. None if there is no earlier US close."""
+    i = bisect.bisect_left(us_dates, since) - 1
+    if i < 0 or us_px[i] <= 0 or us_px[-1] <= 0:
+        return None
+    return 100.0 * math.log(us_px[-1] / us_px[i])
+
+
+def shift_odds(p, by):
+    """Move a probability by `by` on the log-odds scale."""
+    p = min(0.98, max(0.02, p))
+    return 1.0 / (1.0 + math.exp(-(math.log(p / (1 - p)) + by)))
+
+
+def range_px(px, band):
+    """A (low, high) pair of log moves as prices, or None."""
+    if px is None or not band:
+        return None
+    return sig(px * math.exp(band[0]), 5), sig(px * math.exp(band[1]), 5)
+
+
 def max_drawdown(series):
     """The deepest fall from an earlier high, as a negative fraction (0 when the series never fell)."""
     peak, worst = None, 0.0
@@ -675,6 +790,25 @@ def align_monthly(named):
 # ----------------------------------------------------------------------------
 # Feeds
 # ----------------------------------------------------------------------------
+def with_live(dates, closes, meta):
+    """Add the latest quote as a bar of its own when the daily bars have not caught up with it.
+
+    The feed sometimes lists a session that has just closed only in its quote, not yet among
+    the daily bars (seen for Tel Aviv, hours after its close). Without this the snapshot would
+    carry the previous session's price, and forecasts would be started and scored a day stale.
+    The quote's date is taken on the exchange's own clock."""
+    px, t = meta.get("regularMarketPrice"), meta.get("regularMarketTime")
+    ok = all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (px, t))
+    if not ok or not dates:
+        return dates, closes
+    off = meta.get("gmtoffset")
+    off = off if isinstance(off, (int, float)) and not isinstance(off, bool) and abs(off) <= 14 * 3600 else 0
+    day = dt.datetime.fromtimestamp(t + off, dt.timezone.utc).strftime("%Y-%m-%d")
+    if day <= dates[-1]:
+        return dates, closes
+    return dates + [day], closes + [float(px)]
+
+
 def yahoo_spark(symbols, rng="2y", interval="1d"):
     """Batched closes: {symbol: (dates, closes, meta)}. One request per ~10 symbols."""
     out = {}
@@ -701,7 +835,8 @@ def yahoo_spark(symbols, rng="2y", interval="1d"):
                 if len(pairs) < 30:
                     continue
                 dates = [dt.datetime.fromtimestamp(t, dt.timezone.utc).strftime("%Y-%m-%d") for t, _ in pairs]
-                out[r["symbol"]] = (dates, [float(c) for _, c in pairs], resp.get("meta", {}))
+                dates, closes = with_live(dates, [float(c) for _, c in pairs], resp.get("meta", {}))
+                out[r["symbol"]] = (dates, closes, resp.get("meta", {}))
             except Exception:
                 continue
     return out
@@ -896,7 +1031,19 @@ def build(out_dir, verbose=True):
         d, c, a = series[s]
         info = analyze(d, c, a, ppy)
         info.update({"name": name, "group": group, "totalReturn": total})
+        if s in FORECAST_KIND:
+            info.update(forecast_start(s, FORECAST_KIND[s], c, ppy, (1, 7, 30, 90)))
         assets[s] = info
+
+    # Tel Aviv closes before New York: fold in the US move its price has not seen.
+    ta = assets.get("^TA125.TA")
+    if ta and ta.get("start") and "SPY" in series:
+        gap = us_gap(series["SPY"][0], series["SPY"][1], ta["asOf"])
+        if gap is not None:
+            ta["usGap"], ta["startPlain"] = rnd(gap, 2), dict(ta["start"])
+            for d, per_pct in TEL_AVIV_LAG.items():
+                if d in ta["start"]:
+                    ta["start"][d] = round(shift_odds(ta["start"][d], per_pct * clamp(gap, -LAG_CLIP, LAG_CLIP)), 3)
 
     def A(sym, key=None):
         a = assets.get(sym)
@@ -1273,6 +1420,8 @@ def build(out_dir, verbose=True):
             row = {k: info.get(k) for k in HOT_KEEP}
             row["name"] = HOT_COINS.get(s) or HOT_STOCKS.get(s)
             row["kind"] = "crypto" if s in HOT_COINS else "stock"
+            px = series[s][1] if s in series else got[s][1]
+            row.update(forecast_start(s, row["kind"], px, ppy, (1,)))
             hot["assets"][s] = row
         if len(hot["assets"]) < 20:
             raise RuntimeError("only %d of the hot-name series loaded" % len(hot["assets"]))
@@ -1538,31 +1687,33 @@ def summary(s):
             for p in ib["parts"]:
                 L.append("   %-24s w%.2f %6s  %s" % (p["label"], p["weight"], p["score"], p["text"]))
     L.append("")
-    L.append("Forecast guide (the naive rule and a typical 80% range; see forecasts.py):")
+    L.append("Forecast guide: where each forecast starts and the range it must at least cover (see forecasts.py):")
+    pc = lambda v: "n/a" if v is None else "%.0f%%" % (v * 100)
+    span = lambda r_: "n/a" if not r_ else "%s to %s" % r_
     for k in FORECAST_ASSETS:
         a = s["assets"].get(k)
         if not a:
             continue
-        vols = [v for v in (a.get("vol20"), a.get("vol60")) if v]
-        vol = sum(vols) / len(vols) if vols else None
-        ppy = 365 if k.endswith("-USD") else 252
-        r7, r30, r90 = (typical_range(a["px"], vol, d, ppy, (a.get("band") or {}).get(str(d)), a.get("volAll")) for d in (7, 30, 90))
-        share = lambda key: "n/a" if a.get(key) is None else "%.0f%%" % (a[key] * 100)
-        rng = lambda r_: "n/a" if not r_ else "%s to %s" % r_
-        L.append("   %-10s %-22s price %-9s rose in %s of weeks, %s of months, %s of quarters | 1w %s 1m %s 3m %s 12m %s vs200d %s | typical range 1w %s, 1m %s, 3m %s" % (
-            k, a["name"][:22], a["px"], share("up1w"), share("up1m"), share("up3m"),
-            f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("ret3m")), f(a.get("ret12m")), f(a.get("vs200")), rng(r7), rng(r30), rng(r90)))
+        st, rg = a.get("start") or {}, a.get("rng") or {}
+        line = "   %-10s %-22s price %-9s starts at %s for a week, %s for a month, %s for a quarter | 1w %s 1m %s 3m %s 12m %s vs200d %s | 80%% range 1w %s, 1m %s, 3m %s" % (
+            k, a["name"][:22], a["px"], pc(st.get("7")), pc(st.get("30")), pc(st.get("90")),
+            f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("ret3m")), f(a.get("ret12m")), f(a.get("vs200")),
+            span(range_px(a["px"], rg.get("7"))), span(range_px(a["px"], rg.get("30"))), span(range_px(a["px"], rg.get("90"))))
+        if a.get("usGap") is not None:
+            plain = a.get("startPlain") or {}
+            line += " | tomorrow: starts at %s, range %s. The US moved %+.1f%% after Tel Aviv's last close, which is already counted here (without it: %s tomorrow, %s for a week)" % (
+                pc(st.get("1")), span(range_px(a["px"], rg.get("1"))), a["usGap"], pc(plain.get("1")), pc(plain.get("7")))
+        L.append(line)
     hot = s.get("hot") or {}
     if hot.get("stocks") or hot.get("coins"):
         L.append("")
         L.append("Hot names: the five shares and five coins with the best 12 months (one-day forecasts; see forecasts.py):")
         for k in (hot.get("stocks") or []) + (hot.get("coins") or []):
             a = hot["assets"][k]
-            r1 = typical_range(a["px"], a.get("vol20"), 1, 365 if a.get("kind") == "crypto" else 252, (a.get("band") or {}).get("1"), a.get("volAll"))
-            L.append("   %-9s %-14s price %-9s 12m %s | rose on %s of days | today %s 1w %s 1m %s vs50d %s | typical range tomorrow %s" % (
-                k, (a.get("name") or "")[:14], a["px"], f(a.get("ret12m")),
-                "n/a" if a.get("up1d") is None else "%.0f%%" % (a["up1d"] * 100),
-                f(a.get("chg1d")), f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs50")), "n/a" if not r1 else "%s to %s" % r1))
+            L.append("   %-9s %-14s price %-9s 12m %s | starts at %s | today %s 1w %s 1m %s vs50d %s | 80%% range tomorrow %s" % (
+                k, (a.get("name") or "")[:14], a["px"], f(a.get("ret12m")), pc((a.get("start") or {}).get("1")),
+                f(a.get("chg1d")), f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs50")),
+                span(range_px(a["px"], (a.get("rng") or {}).get("1")))))
     if hot.get("assets"):
         picked = set((hot.get("stocks") or []) + (hot.get("coins") or []))
         rest = sorted(((abs(v.get("chg1d") or 0), k) for k, v in hot["assets"].items() if k not in picked), reverse=True)

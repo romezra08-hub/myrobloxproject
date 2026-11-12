@@ -17,6 +17,29 @@ def read(name):
         return f.read()
 
 
+LAB_NAMES = {"SPY": "US stocks", "^TA125.TA": "Tel Aviv 125", "BTC-USD": "Bitcoin", "IAU": "Gold",
+             "ILS=X": "Dollar in shekels", "hot shares": "Hot shares", "hot coins": "Hot coins"}
+
+
+def lab_for_page(lab):
+    """The few rows of research/forecast_lab.json the Forecasts tab shows: for each market and
+    length that is actually forecast, the old rule's score, the new starting figure's, and how
+    often the old and new ranges held the price."""
+    ranges = {(x["group"], x["days"]): x for x in lab.get("range", [])}
+    rows = []
+    for x in lab.get("chance", []):
+        market = x["group"] in LAB_NAMES and not x["group"].startswith("hot") and x["days"] != 1
+        hot = x["group"].startswith("hot") and x["days"] == 1
+        if not (market or hot or (x["group"] == "^TA125.TA" and x["days"] == 1)):
+            continue
+        rg = ranges.get((x["group"], x["days"])) or {}
+        rows.append({"name": LAB_NAMES[x["group"]], "days": x["days"], "n": x["n"], "old": x["now"],
+                     "start": x["coin"] if x["pick"] == "coin" else x[x["pick"]], "coin": x["pick"] == "coin",
+                     "inOld": (rg.get("now") or {}).get("inside"), "inNew": (rg.get("new") or {}).get("inside")})
+    return {"symbols": lab.get("symbols"), "firstTestYear": lab.get("firstTestYear"), "rows": rows,
+            "telAviv": lab.get("telAviv")}
+
+
 def main():
     cfg_path = os.path.join(HERE, "config.json")
     config = {}
@@ -43,6 +66,10 @@ def main():
         if os.path.exists(blind_path):
             with open(blind_path, encoding="utf-8") as f:
                 data["blind"] = json.load(f)
+        lab_path = os.path.join(HERE, "..", "research", "forecast_lab.json")       # where forecasts start, tested
+        if os.path.exists(lab_path):
+            with open(lab_path, encoding="utf-8") as f:
+                data["lab"] = lab_for_page(json.load(f))
         research = json.dumps(data, separators=(",", ":"))
     if page.count("/*{{RESEARCH}}*/null") != 1:
         sys.exit("placeholder /*{{RESEARCH}}*/null must appear exactly once")

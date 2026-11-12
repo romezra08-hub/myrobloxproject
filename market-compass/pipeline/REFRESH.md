@@ -35,25 +35,37 @@ mechanically, so that whether they are worth anything is a matter of record. The
 
 1. `python3 forecasts.py resolve --snapshot <dir>/snapshot.json --in <saved market/forecasts> --out resolved.json`
    scores every forecast that has come due, from the snapshot's prices.
-2. `python3 forecasts.py feedback --in resolved.json` prints the forecaster's own record in totals. Claude reads
-   it and corrects for it. It is the only view of earlier calls Claude takes.
+2. `python3 forecasts.py feedback --in resolved.json` prints the method (how to forecast, in full) and then the
+   forecaster's own record in totals. Claude reads both, follows the method and corrects for the record. It is the
+   only view of earlier calls Claude takes. The method lives in the script so that it can change without touching
+   the routine.
 3. Claude writes `new_forecasts.json`: for each of `SPY`, `^TA125.TA`, `BTC-USD`, `IAU` and `ILS=X`, an object
-   `{asset, horizonDays: 7, pUp, low, high, why}`, on Mondays a second with `horizonDays: 30`, and on the first
-   Monday of a month a third with `horizonDays: 90`. Also one with
-   `horizonDays: 1` for each of the ten "Hot names" in the digest (the five shares and five coins with the best
-   twelve months), scored at the next refresh, and up to three more one-day calls on other well-known names hit
-   by a specific piece of news, each with a `news` field stating it. Any call may carry `news`; those calls are
-   scored as a group of their own. `pUp` is the probability that the price is higher at the due
-   date; `low` and `high` bound an 80% range.
+   `{asset, horizonDays: 7, pUp, why}`, on Mondays a second with `horizonDays: 30`, and on the first Monday of a
+   month a third with `horizonDays: 90`. Also one with `horizonDays: 1` for `^TA125.TA` and for each of the ten
+   "Hot names" in the digest (the five shares and five coins with the best twelve months), and up to three more
+   one-day calls on other well-known names hit by a specific piece of news, each with a `news` field stating it.
+   Any call may carry `news`; those calls are scored as a group of their own. `pUp` is the probability that the
+   price is higher at the due date; `low` and `high` are given only to widen the script's range.
 4. `python3 forecasts.py add --snapshot ... --in resolved.json --new new_forecasts.json --out forecasts.json`
-   fills in the starting price, the due date and the naive base rate, and refuses a second forecast for the same
-   asset, horizon and day.
+   fills in the starting price, the due date, the starting figure and the range, holds the call near the starting
+   figure, and refuses a second forecast for the same asset, horizon and day.
 
-The forecaster supplies a probability and a reason. The range is set by the script from each asset's own past
-moves, and the forecaster may only widen it. A call stays within 3 points of the naive rule for one day and 5
-points beyond that, unless it names dated evidence that is not yet in the price. It starts from the naive rule in
-the digest's "Forecast guide" (how often the asset rose over such a stretch in the last two years) and moves only
-as far as the evidence justifies. It does not read its earlier forecasts first.
+Where a call starts is not left to judgement. `refresh.py` puts a starting chance (`start`) and an 80% range
+(`rng`) on each forecast asset, from constants chosen by `research/forecast_lab.py`, which scored the candidates
+only on years they had not seen:
+
+- The long-run share of rises beat the share over the last two years (the old rule) at every length. A model
+  adding trend, momentum, recent moves and swing size beat nothing, so no call may move for those.
+- Coins and currencies start at 50%: no rate beat a coin flip for them.
+- Ranges come from a swing forecast (the last 5, 20, 60 and 250 days, mixed) times how far prices of that kind
+  really landed. The old ranges held 51-78% of outcomes; these held 69-85%.
+- Tel Aviv closes before New York, so the Tel Aviv 125 figure for one day and one week includes the US move its
+  price has not seen. That is why it alone among the five markets gets a daily one-day call.
+
+`forecasts.py add` holds a call with no `news` within 3 points of the start for one day and 5 for longer, and one
+with `news` within 12; what the forecaster asked for is kept in `said`. A one-day call whose market has not
+traded since it was made (a holiday) waits for the next session instead of being scored on an unchanged price.
+Re-run `forecast_lab.py fetch`, `test` and `freeze` a few times a year and paste the constants into `refresh.py`.
 
 ## Brief schema
 

@@ -26,9 +26,33 @@ class Adding(unittest.TestCase):
 
     def test_certainty_is_not_allowed(self):
         s = snap("2026-11-12T21:10:00Z", SPY=750.0, BTC=70000.0)
+        for a in s["assets"].values():
+            del a["up1w"], a["up1m"]                                # no starting figure to hold the call to
         rec, _ = fc.add(fc.empty(), [{"asset": "SPY", "horizonDays": 7, "pUp": 1.0}, {"asset": "BTC-USD", "horizonDays": 30, "pUp": 0}], s)
         got = {f["asset"]: f["pUp"] for f in rec["open"]}
         self.assertEqual(got, {"SPY": 0.95, "BTC-USD": 0.05})
+
+    def test_a_call_is_held_near_the_starting_figure_unless_news_is_named(self):
+        s = snap("2026-11-12T21:10:00Z", SPY=750.0, BTC=70000.0)   # starts at 55% for a week, 60% for a month
+        rec, _ = fc.add(fc.empty(), [{"asset": "SPY", "horizonDays": 7, "pUp": 0.80},
+                                     {"asset": "BTC-USD", "horizonDays": 7, "pUp": 0.80, "news": "Regulator approved the fund today"},
+                                     {"asset": "SPY", "horizonDays": 30, "pUp": 0.30},
+                                     {"asset": "BTC-USD", "horizonDays": 30, "pUp": 0.62}], s)
+        got = {(f["asset"], f["horizonDays"]): f for f in rec["open"]}
+        self.assertEqual((got[("SPY", 7)]["pUp"], got[("SPY", 7)]["said"]), (0.60, 0.80))          # 5 points of room
+        self.assertEqual((got[("BTC-USD", 7)]["pUp"], got[("BTC-USD", 7)]["said"]), (0.67, 0.80))  # 12 with named news
+        self.assertEqual(got[("SPY", 30)]["pUp"], 0.55)
+        self.assertEqual(got[("BTC-USD", 30)]["pUp"], 0.62)                                        # inside the room: untouched
+        self.assertNotIn("said", got[("BTC-USD", 30)])
+
+    def test_the_tested_starting_figure_and_range_are_used_when_the_snapshot_has_them(self):
+        s = snap("2026-11-12T21:10:00Z", SPY=100.0)
+        s["assets"]["SPY"].update({"start": {"7": 0.577}, "rng": {"7": [-0.02, 0.03]}, "vol20": 0.5,
+                                   "band": {"7": [-0.2, 0.2]}, "volAll": 0.5})
+        rec, _ = fc.add(fc.empty(), [{"asset": "SPY", "horizonDays": 7, "pUp": 0.5}], s)
+        f = rec["open"][0]
+        self.assertEqual((f["base"], f["pUp"]), (0.577, 0.527))
+        self.assertEqual((f["low"], f["high"]), (round(100 * 2.718281828 ** -0.02, 2), round(100 * 2.718281828 ** 0.03, 2)))
 
     def test_bad_forecasts_are_refused_with_a_reason(self):
         s = snap("2026-11-12T21:10:00Z", SPY=750.0)
@@ -67,6 +91,22 @@ class HotNames(unittest.TestCase):
                                "TRX-USD": {"px": px.get("TRX", 0.3), "name": "Tron", "kind": "crypto", "up1d": 0.5},
                                "NVDA": {"px": 180.0, "name": "Nvidia", "kind": "stock", "up1d": 0.55}}}
         return s
+
+    def test_tel_aviv_gets_a_one_day_call_every_day(self):
+        s = self.snap("2026-11-12T21:10:00Z")
+        s["assets"]["^TA125.TA"] = {"px": 3960.0, "start": {"1": 0.61, "7": 0.60}, "rng": {"1": [-0.01, 0.012]}}
+        rec, problems = fc.add(fc.empty(), [{"asset": "^TA125.TA", "horizonDays": 1, "pUp": 0.70},
+                                            {"asset": "SPY", "horizonDays": 1, "pUp": 0.5}], s)
+        self.assertEqual(len(problems), 1)                          # SPY has no daily call
+        f = rec["open"][0]
+        self.assertEqual((f["name"], f["base"], f["pUp"], f["extra"], f["kind"]), ("Tel Aviv 125", 0.61, 0.64, False, None))
+        self.assertEqual(f["high"], round(3960.0 * 2.718281828 ** 0.012, 2))
+
+    def test_a_hot_name_starts_from_its_own_row(self):
+        s = self.snap("2026-11-12T21:10:00Z")
+        s["hot"]["assets"]["MU"].update({"start": {"1": 0.517}, "rng": {"1": [-0.04, 0.05]}})
+        rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.60}], s)
+        self.assertEqual((rec["open"][0]["base"], rec["open"][0]["pUp"]), (0.517, 0.547))
 
     def test_one_day_calls_are_for_todays_hot_names_only(self):
         s = self.snap("2026-11-12T21:10:00Z")
@@ -124,6 +164,23 @@ class HotNames(unittest.TestCase):
         rec3, _ = fc.add(rec, [{"asset": "DDD", "horizonDays": 1, "pUp": 0.5, "news": "x"}], nxt)          # a new day, a new allowance
         self.assertEqual(len(rec3["open"]), 4)
 
+    def test_a_call_waits_for_a_session_when_its_market_was_shut(self):
+        s = self.snap("2026-11-25T21:10:00Z")
+        s["hot"]["assets"]["MU"]["asOf"] = "2026-11-25"
+        rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.55}], s)
+        self.assertEqual(rec["open"][0]["startAsOf"], "2026-11-25")
+        holiday = self.snap("2026-11-26T21:10:00Z")                 # US markets shut: same price, same session date
+        holiday["hot"]["assets"]["MU"]["asOf"] = "2026-11-25"
+        waiting = fc.resolve(rec, holiday)
+        self.assertEqual((len(waiting["open"]), len(waiting["closed"])), (1, 0))
+        nxt = self.snap("2026-11-27T21:10:00Z", MU=410.0)
+        nxt["hot"]["assets"]["MU"]["asOf"] = "2026-11-27"
+        done = fc.resolve(waiting, nxt)
+        self.assertEqual((len(done["open"]), done["closed"][0]["up"]), (0, True))
+        stuck = self.snap("2026-12-03T21:10:00Z")                   # a feed frozen for a week does not hold a call open for ever
+        stuck["hot"]["assets"]["MU"]["asOf"] = "2026-11-25"
+        self.assertEqual(len(fc.resolve(rec, stuck)["closed"]), 1)
+
     def test_a_friday_call_waits_for_monday(self):
         rec, _ = fc.add(fc.empty(), [{"asset": "MU", "horizonDays": 1, "pUp": 0.58}], self.snap("2026-11-13T21:10:00Z"))
         self.assertEqual(len(fc.resolve(rec, self.snap("2026-11-14T09:00:00Z"))["closed"]), 0)
@@ -159,7 +216,7 @@ class Learning(unittest.TestCase):
         rec["closed"] = self.closed(100, 0.7, 0.5, 6)
         for i, f in enumerate(rec["closed"]):
             f["id"] = "old%d" % i
-        out, _ = fc.add(rec, [{"asset": "SPY", "horizonDays": 7, "pUp": 0.65}], s)
+        out, _ = fc.add(rec, [{"asset": "SPY", "horizonDays": 7, "pUp": 0.65, "news": "Results beat forecasts today"}], s)
         f = out["open"][0]
         self.assertEqual(out["trust"], {"k": 0.313, "n": 100})
         self.assertEqual((f["pUp"], f["base"], f["pAdj"]), (0.65, 0.55, 0.581))   # under a third of the 10-point departure
@@ -175,7 +232,8 @@ class Learning(unittest.TestCase):
         rec = fc.empty()
         rec["closed"] = self.closed(100, 0.7, 0.5, 5)
         text = fc.feedback(rec)
-        self.assertIn("you said 70% on average, the usual figure was 50%, it rose 50% of the time", text)
+        self.assertIn("you said 70% on average, the starting figure was 50%, it rose 50% of the time", text)
+        self.assertTrue(text.startswith("How to forecast"))         # the method comes with the record, every time
         self.assertIn("you were worse", text)
         self.assertIn("added nothing", text)
         for i, f in enumerate(rec["closed"]):
@@ -184,7 +242,7 @@ class Learning(unittest.TestCase):
         self.assertRegex(text, r"calls resting on a named news item\s+30 calls")
         self.assertIn("calls with no named news item", text)
         self.assertRegex(text, r"said 55% or more\s+100 calls \| on average you said 70% and it rose 50% of the time")
-        self.assertNotIn("why", text)
+        self.assertNotIn("why", fc.record_feedback(rec))
 
     def test_three_month_calls_are_allowed_for_the_five_markets(self):
         s = snap("2026-11-12T21:10:00Z", SPY=750.0)
@@ -261,8 +319,8 @@ class Resolving(unittest.TestCase):
     def setUp(self):
         s = snap("2026-11-12T21:10:00Z", SPY=750.0, BTC=70000.0)
         self.rec, _ = fc.add(fc.empty(), [
-            {"asset": "SPY", "horizonDays": 7, "pUp": 0.7, "low": 730, "high": 770},
-            {"asset": "BTC-USD", "horizonDays": 7, "pUp": 0.4, "low": 60000, "high": 76000},
+            {"asset": "SPY", "horizonDays": 7, "pUp": 0.65, "low": 730, "high": 770, "news": "Results beat forecasts today"},
+            {"asset": "BTC-USD", "horizonDays": 7, "pUp": 0.45, "low": 60000, "high": 76000, "news": "An exchange was hacked today"},
             {"asset": "SPY", "horizonDays": 30, "pUp": 0.6},
         ], s)
 
@@ -275,11 +333,11 @@ class Resolving(unittest.TestCase):
         self.assertEqual(len(out["open"]), 1)                                      # the 30-day one waits
         by = {f["asset"]: f for f in out["closed"]}
         self.assertTrue(by["SPY"]["up"])
-        self.assertAlmostEqual(by["SPY"]["brier"], 0.09)                           # said 70%, it rose: (0.7 - 1)^2
+        self.assertAlmostEqual(by["SPY"]["brier"], 0.1225)                         # said 65%, it rose: (0.65 - 1)^2
         self.assertAlmostEqual(by["SPY"]["baseBrier"], (0.55 - 1) ** 2)
         self.assertTrue(by["SPY"]["inRange"])
         self.assertFalse(by["BTC-USD"]["up"])
-        self.assertAlmostEqual(by["BTC-USD"]["brier"], 0.16)                       # said 40% up, it fell: (0.4 - 0)^2
+        self.assertAlmostEqual(by["BTC-USD"]["brier"], 0.2025)                     # said 45% up, it fell: (0.45 - 0)^2
         self.assertAlmostEqual(by["BTC-USD"]["change"], 65000.0 / 70000.0 - 1, places=5)
         self.assertFalse(by["SPY"]["late"])
 

@@ -372,5 +372,70 @@ class Headlines(unittest.TestCase):
         self.assertIsNone(r.headline_rank({"src": "Reuters", "title": "Dogecoin price prediction for 2030"}))
 
 
+class ForecastStart(unittest.TestCase):
+    """Where a forecast starts: constants tested in research/forecast_lab.py."""
+
+    def wave(self, n=600, swing=0.01):
+        px, out = 100.0, []
+        for i in range(n):
+            px *= math.exp(swing if i % 2 else -swing)
+            out.append(px)
+        return out
+
+    def test_a_market_uses_its_own_long_run_rate_and_a_share_its_kinds(self):
+        self.assertEqual(r.start_up("SPY", "fund", 30), r.START_UP["SPY"]["30"])
+        self.assertEqual(r.start_up("NVDA", "stock", 1), r.START_UP["stock"]["1"])
+        self.assertEqual(r.start_up("BTC-USD", "crypto", 90), 0.5)      # nothing beat a coin flip for coins
+        self.assertEqual(r.start_up("ILS=X", "fx", 7), 0.5)             # nor for currencies
+        self.assertIsNone(r.start_up("XYZ", "unknown", 7))
+        for row in r.START_UP.values():
+            self.assertTrue(all(0.45 <= row[d] <= 0.75 for d in ("1", "7", "30", "90")))
+        self.assertGreater(r.START_UP["SPY"]["90"], r.START_UP["SPY"]["7"])   # more time, more chance of a rise
+
+    def test_the_range_widens_with_time_and_with_swing(self):
+        calm, wild = self.wave(swing=0.01), self.wave(swing=0.03)
+        w, m = r.start_range(calm, "fund", 7), r.start_range(calm, "fund", 30)
+        self.assertTrue(w[0] < 0 < w[1] and m[0] < w[0] and m[1] > w[1])
+        self.assertAlmostEqual(r.start_range(wild, "fund", 7)[1] / w[1], 3.0, places=2)
+        self.assertIsNone(r.start_range(calm[:200], "fund", 7))         # too short for the 250-day swing
+        self.assertIsNone(r.start_range(calm, "unknown", 7))
+
+    def test_every_kind_and_length_has_a_range_recipe(self):
+        for kind in ("fund", "stock", "crypto", "gold", "fx"):
+            for d in (1, 7, 30, 90):
+                mix = r.RANGE_MIX["%s:%d" % (kind, d)]
+                self.assertEqual(len(mix["vol"]), 4)
+                self.assertTrue(mix["z"][0] < -0.9 and mix["z"][1] > 1.2 and sum(mix["vol"]) > 0.5)
+
+    def test_forecast_start_fills_only_what_it_can(self):
+        out = r.forecast_start("SPY", "fund", self.wave(), 252, (7, 30))
+        self.assertEqual(sorted(out["start"]), ["30", "7"])
+        self.assertEqual(sorted(out["rng"]), ["30", "7"])
+        short = r.forecast_start("NEW", "stock", self.wave(100), 252, (1,))
+        self.assertEqual((short["start"], short["rng"]), ({"1": r.START_UP["stock"]["1"]}, {}))
+
+    def test_a_session_missing_from_the_daily_bars_is_added_from_the_quote(self):
+        d, c = ["2026-11-10", "2026-11-11"], [3977.57, 3952.0]
+        quote = {"regularMarketPrice": 3959.46, "regularMarketTime": 1794497090, "gmtoffset": 7200}   # 12 Nov, 17:24 in Tel Aviv
+        self.assertEqual(r.with_live(d, c, quote), (d + ["2026-11-12"], c + [3959.46]))
+        self.assertEqual(r.with_live(d + ["2026-11-12"], c + [3959.0], quote), (d + ["2026-11-12"], c + [3959.0]))   # already there
+        self.assertEqual(r.with_live(d, c, {}), (d, c))
+        self.assertEqual(r.with_live(d, c, {"regularMarketPrice": None, "regularMarketTime": 1794497090}), (d, c))
+        late = {"regularMarketPrice": 1.0, "regularMarketTime": 1794527000, "gmtoffset": -18000}     # 23:43 UTC is still the 12th in New York
+        self.assertEqual(r.with_live(["2026-11-12"], [1.1], late), (["2026-11-12"], [1.1]))
+
+    def test_the_us_move_tel_aviv_has_not_seen(self):
+        dates, px = ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"], [100.0, 101.0, 100.0, 102.0]
+        self.assertAlmostEqual(r.us_gap(dates, px, "2026-11-12"), 100 * math.log(102 / 100.0))     # Tel Aviv traded today: today's US move
+        self.assertAlmostEqual(r.us_gap(dates, px, "2026-11-11"), 100 * math.log(102 / 101.0))     # last traded yesterday: two US days
+        self.assertIsNone(r.us_gap(dates, px, "2026-11-09"))
+        self.assertAlmostEqual(r.shift_odds(0.5, 0.0), 0.5)
+        up = r.shift_odds(0.547, r.TEL_AVIV_LAG["1"] * 1.0)             # the US rose 1% after the close
+        self.assertTrue(0.62 < up < 0.66)
+        self.assertAlmostEqual(r.shift_odds(up, -r.TEL_AVIV_LAG["1"]), 0.547, places=6)
+        self.assertEqual(r.range_px(100.0, [-0.02, 0.03]), (r.sig(100 * math.exp(-0.02), 5), r.sig(100 * math.exp(0.03), 5)))
+        self.assertIsNone(r.range_px(100.0, None))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

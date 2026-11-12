@@ -1533,6 +1533,46 @@
   }
   function fcSpan(f) { return { 1: '1 day', 7: '1 week', 30: '1 month', 90: '3 months' }[f.horizonDays] || (f.horizonDays + ' days'); }
   /* The blind test of 12 November 2026: anonymous cases dated after the model's training ended. */
+  // Where each call starts, and the test that chose it (research/forecast_lab.py).
+  function labCard() {
+    var L = RESEARCH && RESEARCH.lab;
+    if (!L || !Array.isArray(L.rows) || !L.rows.length) return null;
+    var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '\u2013'; };
+    var span = { 1: '1 day', 7: '1 week', 30: '1 month', 90: '3 months' };
+    var tb = h('tbody');
+    L.rows.forEach(function (x) {
+      var gain = isNum(x.old) && isNum(x.start) && x.old > 0 ? (1 - x.start / x.old) * 100 : null;
+      tb.appendChild(h('tr', null,
+        h('th', { scope: 'row' }, x.name, h('span', { class: 'sym' }, span[x.days] || x.days + ' days')),
+        h('td', { class: 'num' }, isNum(x.old) ? x.old.toFixed(4) : '\u2013'),
+        h('td', { class: 'num' }, isNum(x.start) ? x.start.toFixed(4) : '\u2013', x.coin ? h('span', { class: 'sym' }, '50%') : null),
+        h('td', { class: 'num ' + (isNum(gain) ? dirClass(gain) : '') }, isNum(gain) ? signedNum(gain, 1) + '%' : '\u2013'),
+        h('td', { class: 'num' }, pc0(x.inOld)), h('td', { class: 'num' }, pc0(x.inNew))));
+    });
+    var body = [
+      h('ul', { class: 'bullets' },
+        h('li', null, h('b', null, 'Long-run rates won. '), 'How often a market rose over all the history on hand beat how often it rose in the last two years, which these calls started from before. The gain is small over a day or a week and large over a month or a quarter, where the old figure was often worse than a coin flip.'),
+        h('li', null, h('b', null, 'Chart reading lost. '), 'A model using trend, momentum, last week\u2019s and last month\u2019s move, distance from the high and the size of recent swings was tested the same way. It did not beat the plain long-run rate for any kind of asset at any length, so a call may not move for any of those.'),
+        h('li', null, h('b', null, 'Coins and currencies start at 50%. '), 'For them no rate did better than a coin flip on years it had not seen.'),
+        h('li', null, h('b', null, 'The old ranges were too narrow. '), 'They were meant to hold the price four times in five. The last two columns show how often they did, and how often the new ones did.')),
+      h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['Call', 'Old rule', 'New start', 'Better by', 'Old range held', 'New range held'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tb)),
+      h('p', { class: 'note' }, 'Scores are Brier scores: lower is better and always saying 50% scores 0.2500. Each rule was fitted on earlier years and scored on later ones, from ' + (L.firstTestYear || 2008) + ' for funds and gold and from 2019 for single shares, coins and currencies' + (isNum(L.symbols) ? ', across ' + L.symbols + ' symbols' : '') + '. The hot shares were picked knowing they did well, which flatters every column for them equally.')
+    ];
+    var ta = L.telAviv && L.telAviv.days && L.telAviv.days['1'];
+    if (ta && Array.isArray(ta.groups)) {
+      var tg = h('tbody');
+      ta.groups.forEach(function (g) {
+        tg.appendChild(h('tr', null, h('th', { scope: 'row' }, str(g.label, 40)), h('td', { class: 'num' }, String(g.n)), h('td', { class: 'num' }, pc0(g.rose))));
+      });
+      body.push(h('h3', null, 'The one edge the test found: Tel Aviv closes before New York'));
+      body.push(h('p', { class: 'prose' }, 'The Tel Aviv price has not seen what US shares did after it closed. Over ' + L.telAviv.bars + ' sessions from ' + L.telAviv.from + ' to ' + L.telAviv.to + ', that US move told a good deal about Tel Aviv\u2019s next session, and using it improved the one-day score by ' + signedNum(ta.skill * 100, 1) + '% on years it had not seen. So the Tel Aviv 125 gets a one-day call every day, with the US move already counted in where it starts. This is a forecasting edge, not a trading one: Tel Aviv opens at the new price before anyone can buy.'));
+      body.push(h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['After Tel Aviv closed', 'Sessions', 'Tel Aviv rose next session'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tg)));
+    }
+    return card.apply(null, ['Where each call starts, and the test behind it', 'Before any news is read, every call starts from a figure and a range. Both were chosen by testing the alternatives on long price histories.'].concat(body));
+  }
+
   function blindCard() {
     var B = RESEARCH && RESEARCH.blind;
     if (!B || !B.all || !B.all['1']) return null;
@@ -1577,14 +1617,14 @@
     var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '–'; };
     var head = h('section', { class: 'card stack' },
       h('span', { class: 'eyebrow' }, 'Calls made from the news' + (d && d.updatedAt ? ' · updated ' + dateTime(d.updatedAt) : '')),
-      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the ten hottest shares and coins are to be higher tomorrow. Monthly and three-month calls are added on Mondays. Every call is scored against what happened.'),
+      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the Tel Aviv 125 and the ten hottest shares and coins are to be higher tomorrow. Monthly and three-month calls are added on Mondays. Every call starts from a tested figure and is scored against what happened.'),
       h('p', { class: 'prose' }, 'You asked for predictions, so here they are, with nowhere to hide. The research on this page says calls like these are right about half the time. This record will show whether these do any better. They do not move your plan.'));
     if (sc.n > 0) {
       head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored, worth about ' + Math.max(1, Math.round(sc.effN)) + ' independent calls')));
       head.appendChild(h('div', { class: 'tiles' },
         tile('Right way round', sc.calls ? sc.hits + ' of ' + sc.calls : '–', sc.calls ? pc0(sc.hits / sc.calls) + '; a coin would land between ' + pc0(0.5 - sc.luck) + ' and ' + pc0(0.5 + sc.luck) + ' on this many' : ''),
         tile('Score', isNum(sc.brier) ? sc.brier.toFixed(3) : '–', 'lower is better; always saying 50% scores 0.250'),
-        tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
+        tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting the starting figure and reading no news'),
         tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
       head.appendChild(h('p', { class: 'note' }, v[2] + (isNum(sc.skillLow) && isNum(sc.skill)
         ? ' Measured against the naive rule, skill so far is ' + signedNum(sc.skill * 100, 1) + '%, and luck alone could put it anywhere from ' + signedNum(sc.skillLow * 100, 0) + '% to ' + signedNum(sc.skillHigh * 100, 0) + '%. Only when that whole range is above zero does the record show skill.'
@@ -1631,10 +1671,10 @@
           h('td', { class: 'num' }, dateShort(f.dueAt)),
           h('td', { class: 'txt' }, f.onNews && f.news ? h('span', null, chip('News', 'warn'), ' ', h('b', null, str(f.news, 200) + '. ')) : null, str(f.why, 320))));
       });
-      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made. One-day calls are on the five shares and five coins with the best twelve months, plus up to three other well-known names a day that were hit by news.',
+      root.appendChild(card('Open calls', 'The chance that the price is higher on the due date than it was when the call was made. One-day calls are on the Tel Aviv 125, the five shares and five coins with the best twelve months, and up to three other well-known names a day that were hit by news.',
         h('div', { class: 'table-scroll' }, h('table', { class: 'fc' },
-          h('thead', null, h('tr', null, ['Market', 'Chance higher', 'Usually', 'Price then', '80% range', 'Due', 'Why'].map(function (t, i) { return h('th', { scope: 'col', class: i === 6 ? 'txt' : null }, t); }))), tb)),
-        h('p', { class: 'note' }, '"Usually" is how often that market rose over a stretch this long in the recent past. A call close to it means the news changed little. A one-day call made on a Friday is scored on Monday.')));
+          h('thead', null, h('tr', null, ['Market', 'Chance higher', 'Starts at', 'Price then', '80% range', 'Due', 'Why'].map(function (t, i) { return h('th', { scope: 'col', class: i === 6 ? 'txt' : null }, t); }))), tb)),
+        h('p', { class: 'note' }, '"Starts at" is where the call began before any news was read: the long-run share of rises for that market or kind of asset, which scored best on years it had not seen. A call with no named news is held within 3 points of it for one day and 5 points for longer; a call resting on named news, within 12. A one-day call made on a Friday is scored on Monday.')));
     }
     if (closed.length) {
       var tc = h('tbody');
@@ -1653,13 +1693,15 @@
         h('div', { class: 'table-scroll' }, h('table', null,
           h('thead', null, h('tr', null, ['Market', 'Made', 'Said', 'What happened', 'Call', 'Score'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tc))));
     }
+    var lab = labCard();
+    if (lab) root.appendChild(lab);
     var blind = blindCard();
     if (blind) root.appendChild(blind);
     root.appendChild(card('How to read this', null,
       h('ul', { class: 'bullets' },
         h('li', null, h('b', null, 'A call is a probability, not a promise. '), 'Saying 60% and being wrong four times in ten is what 60% means. The score rewards being confident when right and punishes being confident when wrong.'),
         h('li', null, h('b', null, 'Claude does not mark its own work. '), 'The starting price, the due date and the result are set by a script from market prices. Claude supplies only the probability, the range and the reason, and a call cannot be changed after it is made.'),
-        h('li', null, h('b', null, 'It learns from its own record. '), 'Before each new set of calls Claude is shown how its earlier ones turned out, in totals only. After 40 scored calls a script also works out how far Claude\u2019s departures from the usual figure have deserved to be believed, and shrinks new calls by that much, starting from the assumption that there is no skill. The ranges are set by the script from each asset\u2019s own past moves, and Claude may only widen them. If the departures prove worthless, the calls fall back to the usual figure, which is the best a forecaster without an edge can do.'),
+        h('li', null, h('b', null, 'It learns from its own record. '), 'Before each new set of calls Claude is shown how its earlier ones turned out, in totals only. After 40 scored calls a script also works out how far Claude\u2019s departures from the usual figure have deserved to be believed, and shrinks new calls by that much, starting from the assumption that there is no skill. The ranges are set by the script from a tested recipe, and Claude may only widen them. If the departures prove worthless, the calls fall back to the usual figure, which is the best a forecaster without an edge can do.'),
         h('li', null, h('b', null, 'Give it months, not days. '), 'A forecaster who is right 55% of the time needs about 620 independent calls to be told from a coin, and one who is right 53% needs about 1,700. Calls that overlap or move together count for fewer. That is why the scoreboard counts independent calls and gives a range for skill.'),
         h('li', null, h('b', null, 'Do not put money on a call. '), 'A week is mostly noise, and 80% ranges are wide for a reason. If the record after a few months is no better than the naive rule, that is the answer to whether news can be traded.'))));
   }

@@ -101,6 +101,20 @@ Sudden company news gets its own test. Each day the forecaster looks for shocks 
 from the wider list. Any call may carry a `news` line naming the item it rests on, and the page scores those
 calls as a group against all the others, which shows whether news of that kind can be used.
 
+`research/forecast_lab.py` decides where each call starts. On ten years of daily prices for 108 shares, funds,
+coins and currencies (more for US stock funds, gold and Bitcoin, back to 1990, 2000 and 2014), it fitted each candidate on earlier years and
+scored it on later ones. The long-run share of rises beat the two-year share the calls used to start from: by
+about 0.5% of the Brier score over a week, 3% over a month and 10% over a quarter. A model using trend, momentum,
+recent moves, distance from the high and swing size beat nothing, at any length, so calls may not move for those.
+For coins and currencies no rate beat 50%. The old ranges held 51-78% of outcomes instead of 80%; ranges built
+from a mixed swing forecast held 69-85%. The one edge it found is mechanical: Tel Aviv closes before New York,
+and the US move after its close predicted the Tel Aviv 125's next session (it rose 37% of the time after the US
+fell 1% or more, 68% after it rose 1% or more; 3.6% better Brier score on unseen years). `refresh.py` carries
+the resulting constants and writes a starting chance and a range for each forecast asset; `forecasts.py` holds a
+call within 3 points of the start for one day and 5 for longer unless it names news (then 12), and adds a daily
+one-day call on the Tel Aviv 125. The script also now waits for a real session before scoring a one-day call, and
+adds the latest quote when the source's daily bars lag, which had left the Tel Aviv price a session stale.
+
 `research/blind_test.py` is a test that could be scored at once. It builds anonymous cases from hot names on
 dates after the model's training ended, hands them to fresh forecasters, and scores the answers only afterwards.
 On 12 November 2026, over 150 cases, the calls were right way round 47% of the time for the next day and 53% for
@@ -158,6 +172,7 @@ readings N trading days early, and `--late FILE` on the backtest reports such a 
 | `research/history_fetch.py` | Replays the pipeline's readings on history |
 | `research/backtest.js`, `backtest.test.js` | Runs the engine over that history; its tests |
 | `research/history.json`, `results.json` | The replayed history and the results the page shows |
+| `research/forecast_lab.py`, `forecast_lab.json` | The test of where forecasts should start, and its results (needs numpy) |
 | `research/blind_test.py`, `blind_*.json` | The blind forecasting test: cases, key, answers and results |
 | `app/market-compass.html` | The built page |
 
@@ -169,6 +184,7 @@ python3 market-compass/pipeline/test_refresh.py
 
 ```bash
 python3 market-compass/pipeline/test_forecasts.py
+python3 market-compass/research/test_forecast_lab.py     # needs numpy
 ```
 
 ```bash
