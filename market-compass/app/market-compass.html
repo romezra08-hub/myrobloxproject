@@ -972,8 +972,19 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
    * averaged: 0 is perfect, and always saying 50% earns 0.25. `skill` compares the forecaster
    * with the naive rule, which quotes how often that asset rose over such a stretch in the
    * past: above zero the forecasts added something, below zero silence would have done better.
-   * No verdict is given on fewer than 60 forecasts.
+   *
+   * Telling skill from luck is harder than it looks. Calls that overlap in time, or are made on
+   * assets that move together, are not independent: 100 of them may be worth 20. So the record is
+   * also given an effective size (`effN`) and a likely range for its skill (`skillLow`,
+   * `skillHigh`), found by resampling whole weeks of calls. A verdict of ahead or behind is given
+   * only when that whole range lies on one side of zero.
    */
+  var FC_OVERLAP = { 1: 1, 7: 5, 30: 21, 90: 63 };   // trading days each call spans, so how many daily calls overlap
+  var FC_TOGETHER = 2;                                // assets rise and fall together: about half as many independent bets
+  function fcWeek(f, i) {
+    var t = f && f.madeAt ? Date.parse(f.madeAt) : NaN;
+    return isFinite(t) ? 'w' + Math.floor(t / 6048e5) : 'i' + Math.floor(i / 5);
+  }
   function scoreForecasts(closed) {
     var list = (closed || []).filter(function (f) {
       return f && isNum(f.pUp) && f.pUp >= 0 && f.pUp <= 1 && typeof f.up === 'boolean';
@@ -992,8 +1003,7 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
       var base = bN ? bSum / bN : null;
       return {
         n: n, hits: hits, calls: calls, brier: n ? sum / n : null, baseBrier: base,
-        // nineteen coin-flippers in twenty would land within this distance of 50% on this many calls
-        luck: calls ? 1.96 * Math.sqrt(0.25 / calls) : null,
+        luck: null,
         // compared on the same forecasts, and only where a base rate was recorded
         skill: bN && base > 0 ? 1 - (bMine / bN) / base : null,
         inRange: rN ? inR / rN : null,
@@ -1001,7 +1011,34 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
       };
     };
     var out = one(list);
-    out.verdict = out.n < 60 || out.skill === null ? 'early' : out.skill > 0.05 ? 'ahead' : out.skill < -0.05 ? 'behind' : 'level';
+    // how many independent calls the record is really worth
+    var eff = 0;
+    list.forEach(function (f) { eff += 1 / ((FC_OVERLAP[f.horizonDays] || Math.max(1, f.horizonDays * 5 / 7)) * FC_TOGETHER); });
+    out.effN = eff;
+    // nineteen coin-flippers in twenty would land within this distance of 50% on that many calls
+    var effCalls = out.n ? eff * out.calls / out.n : 0;
+    out.luck = effCalls >= 1 ? Math.min(0.5, 1.96 * Math.sqrt(0.25 / effCalls)) : null;
+    // a likely range for skill: resample whole weeks, so calls that share their luck stay together
+    out.skillLow = null; out.skillHigh = null;
+    var blocks = {}, keys = [];
+    list.forEach(function (f, i) {
+      if (!(isNum(f.base) && f.base >= 0 && f.base <= 1)) return;
+      var k = fcWeek(f, i), o = f.up ? 1 : 0;
+      if (!blocks[k]) { blocks[k] = [0, 0]; keys.push(k); }
+      blocks[k][0] += (f.pUp - o) * (f.pUp - o); blocks[k][1] += (f.base - o) * (f.base - o);
+    });
+    if (keys.length >= 6) {
+      var seed = 20261112, rnd = function () { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+      var draws = [];
+      for (var r = 0; r < 400; r++) {
+        var a = 0, b = 0;
+        for (var j = 0; j < keys.length; j++) { var blk = blocks[keys[Math.floor(rnd() * keys.length)]]; a += blk[0]; b += blk[1]; }
+        if (b > 0) draws.push(1 - a / b);
+      }
+      draws.sort(function (x, y) { return x - y; });
+      if (draws.length >= 100) { out.skillLow = draws[Math.floor(0.05 * (draws.length - 1))]; out.skillHigh = draws[Math.ceil(0.95 * (draws.length - 1))]; }
+    }
+    out.verdict = out.skill === null || out.skillLow === null || eff < 25 ? 'early' : out.skillLow > 0 ? 'ahead' : out.skillHigh < 0 ? 'behind' : 'level';
     // do the calls that rest on a named news item do any better than the rest?
     out.byNews = { yes: one(list.filter(function (f) { return f.onNews === true; })), no: one(list.filter(function (f) { return f.onNews !== true; })) };
     out.byHorizon = {};
@@ -2552,7 +2589,7 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
      starting price and scores each call from prices; the forecaster supplies only a probability,
      a range and a reason. Nothing here moves the plan. */
   var FC_VERDICT = {
-    early: ['Too early to say', '', 'Fewer than 60 calls have been scored. Until then a good or bad run is mostly luck.'],
+    early: ['Too early to say', '', 'These calls overlap in time and move together, so they are worth fewer independent calls than they look. Until there are enough, a good or bad run is mostly luck.'],
     ahead: ['Ahead of the naive rule', 'pos', 'So far these calls have done better than simply quoting how often each asset usually rises. That can still be luck: calls made on neighbouring days overlap, so they count for fewer than they look.'],
     level: ['No better than the naive rule', '', 'So far these calls have added nothing over simply quoting how often each asset usually rises. That is what the research predicts.'],
     behind: ['Worse than the naive rule', 'neg', 'So far you would have done better by ignoring these calls and quoting how often each asset usually rises.']
@@ -2610,13 +2647,15 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
       h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the ten hottest shares and coins are to be higher tomorrow. Monthly and three-month calls are added on Mondays. Every call is scored against what happened.'),
       h('p', { class: 'prose' }, 'You asked for predictions, so here they are, with nowhere to hide. The research on this page says calls like these are right about half the time. This record will show whether these do any better. They do not move your plan.'));
     if (sc.n > 0) {
-      head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored')));
+      head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored, worth about ' + Math.max(1, Math.round(sc.effN)) + ' independent calls')));
       head.appendChild(h('div', { class: 'tiles' },
         tile('Right way round', sc.calls ? sc.hits + ' of ' + sc.calls : '–', sc.calls ? pc0(sc.hits / sc.calls) + '; a coin would land between ' + pc0(0.5 - sc.luck) + ' and ' + pc0(0.5 + sc.luck) + ' on this many' : ''),
         tile('Score', isNum(sc.brier) ? sc.brier.toFixed(3) : '–', 'lower is better; always saying 50% scores 0.250'),
         tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
         tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
-      head.appendChild(h('p', { class: 'note' }, v[2]));
+      head.appendChild(h('p', { class: 'note' }, v[2] + (isNum(sc.skillLow) && isNum(sc.skill)
+        ? ' Measured against the naive rule, skill so far is ' + signedNum(sc.skill * 100, 1) + '%, and luck alone could put it anywhere from ' + signedNum(sc.skillLow * 100, 0) + '% to ' + signedNum(sc.skillHigh * 100, 0) + '%. Only when that whole range is above zero does the record show skill.'
+        : '')));
       var tr = d && d.trust;
       if (tr && isNum(tr.k)) head.appendChild(callout('info', 'The record now corrects new calls',
         'Looking back over ' + tr.n + ' scored calls, the best use of them would have been to take ' + Math.round(tr.k * 100) + '% of each departure from the usual figure. New calls show that corrected chance beside the one Claude gave.' +
@@ -2687,8 +2726,8 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
       h('ul', { class: 'bullets' },
         h('li', null, h('b', null, 'A call is a probability, not a promise. '), 'Saying 60% and being wrong four times in ten is what 60% means. The score rewards being confident when right and punishes being confident when wrong.'),
         h('li', null, h('b', null, 'Claude does not mark its own work. '), 'The starting price, the due date and the result are set by a script from market prices. Claude supplies only the probability, the range and the reason, and a call cannot be changed after it is made.'),
-        h('li', null, h('b', null, 'It learns from its own record. '), 'Before each new set of calls Claude is shown how its earlier ones turned out, in totals only. After 60 scored calls a script also works out how far Claude\u2019s departures from the usual figure have deserved to be believed, and shrinks new calls by that much. If the departures prove worthless, the calls fall back to the usual figure, which is the best a forecaster without an edge can do.'),
-        h('li', null, h('b', null, 'Give it months, not days. '), 'Markets rise more often than they fall, so anyone who always says "up" looks clever for a while. The fair test is against the naive rule, over at least 60 calls.'),
+        h('li', null, h('b', null, 'It learns from its own record. '), 'Before each new set of calls Claude is shown how its earlier ones turned out, in totals only. After 40 scored calls a script also works out how far Claude\u2019s departures from the usual figure have deserved to be believed, and shrinks new calls by that much, starting from the assumption that there is no skill. The ranges are set by the script from each asset\u2019s own past moves, and Claude may only widen them. If the departures prove worthless, the calls fall back to the usual figure, which is the best a forecaster without an edge can do.'),
+        h('li', null, h('b', null, 'Give it months, not days. '), 'A forecaster who is right 55% of the time needs about 620 independent calls to be told from a coin, and one who is right 53% needs about 1,700. Calls that overlap or move together count for fewer. That is why the scoreboard counts independent calls and gives a range for skill.'),
         h('li', null, h('b', null, 'Do not put money on a call. '), 'A week is mostly noise, and 80% ranges are wide for a reason. If the record after a few months is no better than the naive rule, that is the answer to whether news can be traded.'))));
   }
 
@@ -2972,6 +3011,16 @@ window.MC_RESEARCH = {"from":"1997-06","to":"2026-10","months":353,"cost":0.001,
       { t: 'Money for a deposit should not ride the stock market.', d: 'US shares have lost money in about one year in four, one three-year stretch in seven and one five-year stretch in eight. A purchase date does not wait for a recovery.', src: 'S&P 500 returns since 1926, as summarised by fund managers', s: 3, use: 'Choosing "a home" as the goal lowers the ceiling on shares for each year remaining: none under two years, 30% at three to five, 60% at seven to ten.' }
     ] }
   ];
+  /* Third research round, November 2026: forecasting itself. */
+  LIBRARY_MORE.push({ theme: 'Forecasting', intro: 'What is known about predicting prices over days and weeks, and about telling a good forecaster from a lucky one.', items: [
+    { t: 'Nothing known shifts a short-term call by more than a few points.', d: 'Across the published signals for shares, indexes, coins and currencies, none reliably moves the odds of a rise over a day or a week by more than two to four points. Effects found in research shrink by about a quarter when tested on new data and by more than half once published.', src: 'Goyal, Welch and Zafirov (2024); McLean and Pontiff (2016)', s: 3, use: 'Daily calls start from how often each asset usually rises and move at most a few points.' },
+    { t: 'The size of a move can be forecast. Its direction cannot.', d: 'Wild days cluster, so tomorrow\u2019s likely range can be judged from recent swings. Prices also have fatter tails than a bell curve: a move three times the usual size arrives four or five times as often as the bell curve says.', src: 'Corsi (2009); Poon and Granger (2003)', s: 3, use: 'Every call carries an 80% range set from the asset\u2019s own past moves.' },
+    { t: 'After a shock, the next day is close to a coin flip.', d: 'A chief executive\u2019s sudden exit, a data breach or an exchange hack moves the price on the day, and studies find no reliable drift afterwards. News about the business itself is the exception: companies caught misstating their accounts lost about 40% in all.', src: 'Event studies of executive departures and data breaches; Karpoff, Lee and Martin (2008); Chan (2003)', s: 2, use: 'News calls stay near even odds with a wider range, unless the news is about the business itself.' },
+    { t: 'Hot names carry no edge over days, and a hidden drag over months.', d: 'Last year\u2019s winners used to beat the losers by about 11% a year; since the 1990s that has roughly halved, and it is worth nothing over a day or a week. A share that swings 80% a year is more likely than not to be lower in three months, because big swings eat compound growth.', src: 'Jegadeesh and Titman, as updated; Daniel and Moskowitz (2016); arithmetic of volatility drag', s: 2, use: 'One-day calls on hot names start from each one\u2019s own usual figure, not from its run.' },
+    { t: 'Telling skill from luck takes hundreds of calls.', d: 'A forecaster who is right 55% of the time needs about 620 independent calls to be told from a coin. One who is right 53% needs about 1,700. Calls that overlap or move together count for far fewer than they look.', src: 'Standard statistics; Wilks (2010)', s: 3, use: 'The Forecasts tab counts independent calls and shows a range for skill.' },
+    { t: 'Averaging several forecasts beats any one of them.', d: 'Across 30 studies, averaging cut error by about 12%, with most of the gain from the first five to ten forecasts. Most winners of recent AI forecasting tournaments average several runs.', src: 'Armstrong, Combining Forecasts (2001); Satopaa and others (2021); Metaculus AI tournaments (2024 to 2026)', s: 3, use: 'The record script can average several independent sets of calls. That is switched off for now, because it multiplies what each daily refresh costs.' },
+    { t: 'AI forecasters have not beaten market prices.', d: 'On questions about world events the best AI systems now score close to expert human forecasters. On questions a liquid market already prices, almost none did better than simply quoting the market.', src: 'Halawi and others (2024); ForecastBench (2025 to 2026), with one unreviewed analysis of its market questions', s: 2, use: 'Why these calls are a test, kept apart from your plan.' }
+  ] });
   /* Israel: added after the second research round. */
   var LIBRARY_IL_MORE = [
     { t: 'With little income, some gains can come out tax-free.', d: 'Every resident has 2.25 credit points, worth ₪6,534 a year. If your salary does not use them, they can be set against the 25% tax on investment gains, which covers about ₪26,000 of gain a year. The bank withholds the tax regardless, so you have to file a refund request to get it back. The lower income-tax brackets and the extra points for discharged soldiers do not apply to gains.', src: 'Israeli accountants’ guides, as reported in 2026. Not confirmed with the Tax Authority', s: 1, use: 'Shown in your next steps when your income is low. Confirm it with an adviser before relying on it.' },

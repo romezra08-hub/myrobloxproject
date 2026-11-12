@@ -585,12 +585,23 @@ test('forecasts are scored against a coin and against the naive rule', () => {
   near(s.inRange, 2 / 3);
   assert.equal(s.verdict, 'early');               // four forecasts prove nothing
   // perfect calls beat the naive rule once there are enough of them; confident wrong ones lose to it
-  const good = Array.from({ length: 60 }, (_, i) => f(i % 2 ? 0.9 : 0.1, i % 2 === 1, 0.5, true));
+  const day = (o) => Object.assign(o, { horizonDays: 1 });
+  const good = Array.from({ length: 60 }, (_, i) => day(f(i % 2 ? 0.9 : 0.1, i % 2 === 1, 0.5, true)));
   assert.equal(E.scoreForecasts(good).verdict, 'ahead');
-  const bad = Array.from({ length: 60 }, (_, i) => f(i % 2 ? 0.1 : 0.9, i % 2 === 1, 0.5, true));
+  const bad = Array.from({ length: 60 }, (_, i) => day(f(i % 2 ? 0.1 : 0.9, i % 2 === 1, 0.5, true)));
   assert.equal(E.scoreForecasts(bad).verdict, 'behind');
-  const same = Array.from({ length: 60 }, (_, i) => f(0.55, i % 2 === 1, 0.55, true));
+  const same = Array.from({ length: 60 }, (_, i) => day(f(0.55, i % 2 === 1, 0.55, true)));
   assert.equal(E.scoreForecasts(same).verdict, 'level');
+  // overlapping calls count for less: 60 one-day calls are worth 30, 60 one-week calls only 6
+  near(E.scoreForecasts(good).effN, 30);
+  near(E.scoreForecasts(good.map((x) => Object.assign({}, x, { horizonDays: 7 }))).effN, 6);
+  assert.equal(E.scoreForecasts(good.map((x) => Object.assign({}, x, { horizonDays: 7 }))).verdict, 'early');   // not enough independent calls
+  // a lucky-looking record with a wide range of possible skill gets no verdict either way
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const noisy = Array.from({ length: 120 }, () => day(f(0.45 + rnd() * 0.2, rnd() < 0.56, 0.52, true)));
+  const sn = E.scoreForecasts(noisy);
+  assert.ok(sn.skillLow < 0 && sn.skillHigh > sn.skillLow);
+  assert.equal(sn.verdict, 'level');
   // broken rows are ignored rather than counted
   assert.equal(E.scoreForecasts([{ pUp: 'high', up: true }, { pUp: 0.6 }, null, f(0.6, true, null, null)]).n, 1);
   assert.equal(E.scoreForecasts([f(0.6, true, null, null)]).skill, null);
@@ -602,7 +613,7 @@ test('forecasts are scored against a coin and against the naive rule', () => {
   assert.equal(E.scoreForecasts([f(0.7, true, 0.5, true)]).adjBrier, null);
   // calls that rest on a named news item are counted apart from the rest
   const news = E.scoreForecasts([Object.assign(f(0.7, true, 0.5, true), { onNews: true }), f(0.6, false, 0.5, true), f(0.4, false, 0.5, true)]);
-  near(E.scoreForecasts(Array.from({ length: 100 }, (_, i) => f(0.6, i % 2 === 0, 0.5, true))).luck, 0.098);   // 100 calls: within about 10 points
+  near(E.scoreForecasts(Array.from({ length: 100 }, (_, i) => Object.assign(f(0.6, i % 2 === 0, 0.5, true), { horizonDays: 1 }))).luck, 1.96 * Math.sqrt(0.25 / 50));   // 100 one-day calls are worth 50
   assert.equal(news.byNews.yes.n, 1);
   assert.equal(news.byNews.no.n, 2);
   assert.equal(news.byNews.yes.hits, 1);

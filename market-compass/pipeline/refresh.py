@@ -132,7 +132,7 @@ HOT_COINS = {
     "AAVE-USD": "Aave", "NEAR-USD": "Near",
 }
 HOT_KEEP = ("px", "asOf", "chg1d", "ret1w", "ret1m", "ret3m", "ret12m", "vs50", "vs200", "vol20", "up1d", "up1w",
-            "annAll", "volAll", "mdd")
+            "annAll", "volAll", "mdd", "band")
 
 
 def hot_picks(table, symbols, n=5):
@@ -380,14 +380,40 @@ def analyze(dates, px, tr=None, ppy=252):
     out["annAll"] = rnd((tr[-1] / tr[0]) ** (float(ppy) / span) - 1) if span >= ppy and tr[0] > 0 else None
     out["volAll"] = rnd(realized_vol(tr, span, ppy)) if span >= 60 else None
     out["mdd"] = rnd(max_drawdown(tr))
+    # Where the price actually landed over 1, 7, 30 and 90 days in our own history: the middle 80%.
+    out["band"] = {str(d): b for d, b in ((d, own_band(px, max(1, round(d * ppy / 365.0)))) for d in (1, 7, 30, 90)) if b}
     return out
 
 
-def typical_range(px, vol, days, ppy=252):
-    """The band a price lands in about 80% of the time after `days` calendar days, given its yearly
-    swing: 1.28 standard deviations either side, with no drift assumed. A starting point for a
-    forecaster to widen or shift, not a forecast."""
-    if px is None or not vol or vol <= 0:
+def own_band(series, bars):
+    """The middle 80% of this asset's own moves over `bars` bars, as (low, high) log returns measured
+    from its typical move, so that a strong past trend does not tilt the band. Real prices have
+    fatter tails than the bell curve, and this reads them off directly. None on a short history."""
+    n = len(series or []) - bars
+    if n < 120:
+        return None
+    moves = sorted(math.log(series[i + bars] / series[i]) for i in range(n) if series[i] > 0 and series[i + bars] > 0)
+    if len(moves) < 120:
+        return None
+    mid = moves[len(moves) // 2]
+    return [round(moves[int(0.10 * (len(moves) - 1))] - mid, 5), round(moves[int(round(0.90 * (len(moves) - 1)))] - mid, 5)]
+
+
+def typical_range(px, vol, days, ppy=252, band=None, vol_all=None):
+    """The band a price lands in about 80% of the time after `days` calendar days, with no drift
+    assumed. A starting point for a forecaster to widen or shift, not a forecast.
+
+    Given the asset's own band (see own_band) it uses that, stretched or shrunk by how today's
+    swing compares with the swing over the whole history. Otherwise it falls back on the bell
+    curve: 1.28 standard deviations either side."""
+    if px is None:
+        return None
+    if band and vol and vol_all:
+        scale = clamp(vol / vol_all, 0.6, 1.8)
+        return sig(px * math.exp(band[0] * scale), 5), sig(px * math.exp(band[1] * scale), 5)
+    if band:
+        return sig(px * math.exp(band[0]), 5), sig(px * math.exp(band[1]), 5)
+    if not vol or vol <= 0:
         return None
     bars = days * ppy / 365.0
     sd = vol * math.sqrt(bars / ppy)
@@ -1520,7 +1546,7 @@ def summary(s):
         vols = [v for v in (a.get("vol20"), a.get("vol60")) if v]
         vol = sum(vols) / len(vols) if vols else None
         ppy = 365 if k.endswith("-USD") else 252
-        r7, r30, r90 = (typical_range(a["px"], vol, d, ppy) for d in (7, 30, 90))
+        r7, r30, r90 = (typical_range(a["px"], vol, d, ppy, (a.get("band") or {}).get(str(d)), a.get("volAll")) for d in (7, 30, 90))
         share = lambda key: "n/a" if a.get(key) is None else "%.0f%%" % (a[key] * 100)
         rng = lambda r_: "n/a" if not r_ else "%s to %s" % r_
         L.append("   %-10s %-22s price %-9s rose in %s of weeks, %s of months, %s of quarters | 1w %s 1m %s 3m %s 12m %s vs200d %s | typical range 1w %s, 1m %s, 3m %s" % (
@@ -1532,7 +1558,7 @@ def summary(s):
         L.append("Hot names: the five shares and five coins with the best 12 months (one-day forecasts; see forecasts.py):")
         for k in (hot.get("stocks") or []) + (hot.get("coins") or []):
             a = hot["assets"][k]
-            r1 = typical_range(a["px"], a.get("vol20"), 1, 365 if a.get("kind") == "crypto" else 252)
+            r1 = typical_range(a["px"], a.get("vol20"), 1, 365 if a.get("kind") == "crypto" else 252, (a.get("band") or {}).get("1"), a.get("volAll"))
             L.append("   %-9s %-14s price %-9s 12m %s | rose on %s of days | today %s 1w %s 1m %s vs50d %s | typical range tomorrow %s" % (
                 k, (a.get("name") or "")[:14], a["px"], f(a.get("ret12m")),
                 "n/a" if a.get("up1d") is None else "%.0f%%" % (a["up1d"] * 100),

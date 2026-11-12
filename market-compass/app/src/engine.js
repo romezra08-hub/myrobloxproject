@@ -562,8 +562,19 @@
    * averaged: 0 is perfect, and always saying 50% earns 0.25. `skill` compares the forecaster
    * with the naive rule, which quotes how often that asset rose over such a stretch in the
    * past: above zero the forecasts added something, below zero silence would have done better.
-   * No verdict is given on fewer than 60 forecasts.
+   *
+   * Telling skill from luck is harder than it looks. Calls that overlap in time, or are made on
+   * assets that move together, are not independent: 100 of them may be worth 20. So the record is
+   * also given an effective size (`effN`) and a likely range for its skill (`skillLow`,
+   * `skillHigh`), found by resampling whole weeks of calls. A verdict of ahead or behind is given
+   * only when that whole range lies on one side of zero.
    */
+  var FC_OVERLAP = { 1: 1, 7: 5, 30: 21, 90: 63 };   // trading days each call spans, so how many daily calls overlap
+  var FC_TOGETHER = 2;                                // assets rise and fall together: about half as many independent bets
+  function fcWeek(f, i) {
+    var t = f && f.madeAt ? Date.parse(f.madeAt) : NaN;
+    return isFinite(t) ? 'w' + Math.floor(t / 6048e5) : 'i' + Math.floor(i / 5);
+  }
   function scoreForecasts(closed) {
     var list = (closed || []).filter(function (f) {
       return f && isNum(f.pUp) && f.pUp >= 0 && f.pUp <= 1 && typeof f.up === 'boolean';
@@ -582,8 +593,7 @@
       var base = bN ? bSum / bN : null;
       return {
         n: n, hits: hits, calls: calls, brier: n ? sum / n : null, baseBrier: base,
-        // nineteen coin-flippers in twenty would land within this distance of 50% on this many calls
-        luck: calls ? 1.96 * Math.sqrt(0.25 / calls) : null,
+        luck: null,
         // compared on the same forecasts, and only where a base rate was recorded
         skill: bN && base > 0 ? 1 - (bMine / bN) / base : null,
         inRange: rN ? inR / rN : null,
@@ -591,7 +601,34 @@
       };
     };
     var out = one(list);
-    out.verdict = out.n < 60 || out.skill === null ? 'early' : out.skill > 0.05 ? 'ahead' : out.skill < -0.05 ? 'behind' : 'level';
+    // how many independent calls the record is really worth
+    var eff = 0;
+    list.forEach(function (f) { eff += 1 / ((FC_OVERLAP[f.horizonDays] || Math.max(1, f.horizonDays * 5 / 7)) * FC_TOGETHER); });
+    out.effN = eff;
+    // nineteen coin-flippers in twenty would land within this distance of 50% on that many calls
+    var effCalls = out.n ? eff * out.calls / out.n : 0;
+    out.luck = effCalls >= 1 ? Math.min(0.5, 1.96 * Math.sqrt(0.25 / effCalls)) : null;
+    // a likely range for skill: resample whole weeks, so calls that share their luck stay together
+    out.skillLow = null; out.skillHigh = null;
+    var blocks = {}, keys = [];
+    list.forEach(function (f, i) {
+      if (!(isNum(f.base) && f.base >= 0 && f.base <= 1)) return;
+      var k = fcWeek(f, i), o = f.up ? 1 : 0;
+      if (!blocks[k]) { blocks[k] = [0, 0]; keys.push(k); }
+      blocks[k][0] += (f.pUp - o) * (f.pUp - o); blocks[k][1] += (f.base - o) * (f.base - o);
+    });
+    if (keys.length >= 6) {
+      var seed = 20261112, rnd = function () { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+      var draws = [];
+      for (var r = 0; r < 400; r++) {
+        var a = 0, b = 0;
+        for (var j = 0; j < keys.length; j++) { var blk = blocks[keys[Math.floor(rnd() * keys.length)]]; a += blk[0]; b += blk[1]; }
+        if (b > 0) draws.push(1 - a / b);
+      }
+      draws.sort(function (x, y) { return x - y; });
+      if (draws.length >= 100) { out.skillLow = draws[Math.floor(0.05 * (draws.length - 1))]; out.skillHigh = draws[Math.ceil(0.95 * (draws.length - 1))]; }
+    }
+    out.verdict = out.skill === null || out.skillLow === null || eff < 25 ? 'early' : out.skillLow > 0 ? 'ahead' : out.skillHigh < 0 ? 'behind' : 'level';
     // do the calls that rest on a named news item do any better than the rest?
     out.byNews = { yes: one(list.filter(function (f) { return f.onNews === true; })), no: one(list.filter(function (f) { return f.onNews !== true; })) };
     out.byHorizon = {};

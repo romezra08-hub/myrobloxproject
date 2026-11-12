@@ -276,6 +276,29 @@ class BaseRates(unittest.TestCase):
         self.assertLess(a["volAll"], 0.001)
         self.assertIsNone(r.analyze(dates(120), ramp(120))["annAll"])   # under a year: no yearly figure
 
+    def test_own_band_reads_the_middle_eighty_percent_of_real_moves(self):
+        import random
+        rng = random.Random(3)
+        px = [100.0]
+        for _ in range(600):
+            px.append(px[-1] * math.exp(rng.gauss(0.002, 0.01)))          # a steady upward drift with noise
+        lo, hi = r.own_band(px, 1)
+        self.assertAlmostEqual(lo, -1.2816 * 0.01, delta=0.003)           # close to the bell curve when moves are bell-shaped
+        self.assertAlmostEqual(hi, 1.2816 * 0.01, delta=0.003)
+        self.assertAlmostEqual(lo + hi, 0.0, delta=0.004)                 # the drift is taken out
+        lo5, hi5 = r.own_band(px, 5)
+        self.assertTrue(lo5 < lo and hi5 > hi)                            # longer stretches, wider band
+        self.assertIsNone(r.own_band(px[:100], 1))
+        self.assertIn("1", r.analyze(dates(601), px)["band"])
+
+    def test_typical_range_prefers_the_assets_own_band(self):
+        lo, hi = r.typical_range(100.0, 0.2, 1, band=[-0.01, 0.02], vol_all=0.2)
+        self.assertAlmostEqual(lo, 100 * math.exp(-0.01), places=2)
+        self.assertAlmostEqual(hi, 100 * math.exp(0.02), places=2)
+        wide = r.typical_range(100.0, 0.4, 1, band=[-0.01, 0.02], vol_all=0.2)      # swinging twice as hard as usual
+        self.assertAlmostEqual(wide[1], 100 * math.exp(0.02 * 1.8), places=2)       # stretched, but only so far
+        self.assertEqual(r.typical_range(100.0, 0.2, 7), r.typical_range(100.0, 0.2, 7, band=None))
+
     def test_analyze_reports_weekly_and_monthly_base_rates(self):
         a = r.analyze(dates(400), ramp(400))
         self.assertEqual((a["up1w"], a["up1m"], a["up1d"], a["up3m"]), (1.0, 1.0, 1.0, 1.0))

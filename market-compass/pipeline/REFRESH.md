@@ -49,7 +49,9 @@ mechanically, so that whether they are worth anything is a matter of record. The
    fills in the starting price, the due date and the naive base rate, and refuses a second forecast for the same
    asset, horizon and day.
 
-The forecaster supplies a probability, a range and a reason, and nothing else. It starts from the naive rule in
+The forecaster supplies a probability and a reason. The range is set by the script from each asset's own past
+moves, and the forecaster may only widen it. A call stays within 3 points of the naive rule for one day and 5
+points beyond that, unless it names dated evidence that is not yet in the price. It starts from the naive rule in
 the digest's "Forecast guide" (how often the asset rose over such a stretch in the last two years) and moves only
 as far as the evidence justifies. It does not read its earlier forecasts first.
 

@@ -88,6 +88,14 @@ The owner also asked for a very short test on "hot" names. Each day the pipeline
 18 coins by their last twelve months (`HOT_STOCKS`, `HOT_COINS` in `refresh.py`) and the top five of each get a
 one-day forecast, scored at the next refresh.
 
+A third research round, on forecasting itself, changed how the record is kept. The learned correction starts
+from the assumption of no skill (sixty calls' worth of doubt is mixed in) and never stretches a call beyond what
+the forecaster said. Ranges are set by the script from each asset's own past moves, so they carry the fat tails
+real prices have, and the forecaster may only widen them. The page counts how many independent calls the record
+is worth, since overlapping calls on assets that move together count for fewer, and gives a likely range for
+skill by resampling whole weeks. `forecasts.py combine` can average several independent sets of calls; the daily
+refresh does not use it yet, because it would multiply the cost of each run.
+
 Sudden company news gets its own test. Each day the forecaster looks for shocks to single companies or coins
 (a chief executive leaving, a hack, a profit warning) and may make up to three one-day calls on affected names
 from the wider list. Any call may carry a `news` line naming the item it rests on, and the page scores those

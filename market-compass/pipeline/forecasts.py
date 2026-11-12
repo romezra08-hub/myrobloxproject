@@ -8,6 +8,7 @@ The forecaster never grades itself.
 
     python3 forecasts.py resolve --snapshot snapshot.json --in old.json --out resolved.json
     python3 forecasts.py feedback --in resolved.json
+    python3 forecasts.py combine --new lead.json second.json third.json --out new.json
     python3 forecasts.py add --snapshot snapshot.json --in resolved.json --new new.json --out forecasts.json
 
 `feedback` prints the forecaster's own record in totals, for it to read before forecasting. Once
@@ -30,6 +31,7 @@ scored on the Monday.
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import sys
 
@@ -45,7 +47,8 @@ HOT_HORIZON = 1       # days, for the snapshot's hot names
 NEWS_CALLS_A_DAY = 3  # one-day calls allowed on other well-known names, each resting on a named news item
 P_MIN, P_MAX = 0.05, 0.95
 KEEP_CLOSED = 400
-LEARN_MIN = 60        # scored calls needed before the record is allowed to correct new ones
+LEARN_MIN = 40        # scored calls needed before the record is allowed to correct new ones
+PRIOR_CALLS = 60      # the record starts from "no skill": this many calls' worth of doubt is mixed in
 GRACE = dt.timedelta(hours=6)   # the refresh a week later may run a minute earlier than the one that made the call
 WHY_MAX = 320
 
@@ -157,6 +160,13 @@ def clean_new(item, snapshot):
     ok_range = all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (low, high)) and low < high
     if not ok_range or not (low <= px * 1.5 and high >= px / 1.5):
         low = high = None                       # a range that is missing or nowhere near the price is dropped, not guessed
+    own = script_range(snapshot, asset, horizon)
+    if own:
+        low = min(low, own[0]) if low is not None else own[0]
+        high = max(high, own[1]) if high is not None else own[1]
+        digits = 4 if px < 10 else 2
+        low, high = round(low, digits), round(high, digits)
+    runs = item.get("runs")
     made = snapshot["generatedAt"]
     due = (parse_time(made) + dt.timedelta(days=horizon)).strftime("%Y-%m-%dT%H:%M:%SZ")
     why = " ".join(str(item.get("why") or "").split())[:WHY_MAX]
@@ -169,6 +179,7 @@ def clean_new(item, snapshot):
         "pUp": round(min(P_MAX, max(P_MIN, float(p))), 3),     # never certain
         "low": low, "high": high, "base": base_rate(snapshot, asset, horizon), "why": why,
         "news": news or None, "onNews": bool(news),
+        "runs": runs if isinstance(runs, int) and not isinstance(runs, bool) and 1 <= runs <= 9 else 1,
         "extra": horizon == HOT_HORIZON and asset not in hot_names(snapshot),   # called only because of the news
     }, None
 
@@ -177,11 +188,14 @@ def trust(closed):
     """How far the forecaster's departures from the naive rule have deserved to be believed.
 
     Each call is the usual figure plus a departure. This finds the one multiple k of that
-    departure which would have scored best on the calls already settled: 1 means take the
-    calls as given, 0 means the departures were worth nothing and the usual figure alone
-    did better, and a value between shrinks them. It is held between 0 and 1.5 and is not
-    estimated at all on fewer than LEARN_MIN calls, when it would mostly measure luck.
-    Returns (k, how many calls it rests on).
+    departure which would have scored best on the calls already settled, then pulls it toward
+    zero as if PRIOR_CALLS further calls had shown no skill at all: a forecaster is assumed to
+    have no edge until the record says otherwise, and a short lucky run cannot earn much trust.
+    k is held between 0 and 1. It is never above 1: studies of combining forecasts find that
+    stretching calls further from the usual figure only helps a forecaster who has shown skill
+    and holds information the others lack (Baron and others 2014), and correlated runs of one
+    model with no record of skill are the opposite case.
+    Returns (k, how many calls it rests on); k is None on fewer than LEARN_MIN calls.
     """
     rows = [(f["pUp"] - f["base"], (1.0 if f["up"] else 0.0) - f["base"]) for f in closed
             if isinstance(f.get("base"), (int, float)) and isinstance(f.get("pUp"), (int, float)) and isinstance(f.get("up"), bool)]
@@ -189,7 +203,62 @@ def trust(closed):
     if len(rows) < LEARN_MIN or moved <= 1e-9:
         return None, len(rows)
     k = sum(d * e for d, e in rows) / moved
-    return round(min(1.5, max(0.0, k)), 3), len(rows)
+    k *= len(rows) / float(len(rows) + PRIOR_CALLS)
+    return round(min(1.0, max(0.0, k)), 3), len(rows)
+
+
+def script_range(snapshot, asset, horizon):
+    """An 80% range worked out from the asset's own past moves, scaled to how hard it is swinging
+    now. Language models give ranges that are too narrow, so the forecaster may widen this one
+    but never narrow it. Returns (low, high) or None."""
+    a, px = info_of(snapshot, asset), price_of(snapshot, asset)
+    if px is None:
+        return None
+    vols = [v for v in (a.get("vol20"), a.get("vol60")) if isinstance(v, (int, float)) and v > 0]
+    vol = sum(vols) / len(vols) if vols else None
+    band = (a.get("band") or {}).get(str(horizon))
+    if isinstance(band, list) and len(band) == 2 and band[0] < 0 < band[1]:
+        whole = a.get("volAll")
+        scale = min(1.8, max(0.6, vol / whole)) if vol and isinstance(whole, (int, float)) and whole > 0 else 1.0
+        return px * math.exp(band[0] * scale), px * math.exp(band[1] * scale)
+    if vol:
+        sd = vol * math.sqrt(horizon / 365.0)
+        return px * math.exp(-1.2816 * sd), px * math.exp(1.2816 * sd)
+    return None
+
+
+def combine(sets):
+    """Average several independent sets of forecasts into one.
+
+    Averaging removes the part of a forecaster's error that changes from run to run. The first
+    set is the lead: it decides which calls are made and supplies the words. Each probability
+    becomes the mean of what the sets said, leaving out the highest and lowest when there are
+    four or more; each range becomes the widest any set gave.
+    """
+    sets = [s for s in sets if isinstance(s, list)]
+    if not sets:
+        return []
+    def key(x):
+        return (x.get("asset"), x.get("horizonDays")) if isinstance(x, dict) else None
+    out = []
+    for item in sets[0]:
+        if not isinstance(item, dict):
+            continue
+        same = [x for s in sets for x in s if key(x) == key(item)]
+        ps = sorted(x["pUp"] for x in same if isinstance(x.get("pUp"), (int, float)) and not isinstance(x.get("pUp"), bool) and 0 <= x["pUp"] <= 1)
+        if not ps:
+            continue
+        if len(ps) >= 4:
+            ps = ps[1:-1]
+        merged = dict(item)
+        merged["pUp"] = round(sum(ps) / len(ps), 3)
+        lows = [x["low"] for x in same if isinstance(x.get("low"), (int, float)) and x["low"] > 0]
+        highs = [x["high"] for x in same if isinstance(x.get("high"), (int, float)) and x["high"] > 0]
+        if lows and highs:
+            merged["low"], merged["high"] = min(lows), max(highs)
+        merged["runs"] = len(same)
+        out.append(merged)
+    return out
 
 
 def add(record, new_items, snapshot):
@@ -244,6 +313,12 @@ def feedback(record):
     line("when you said LESS likely than usual", [f for f in c if f["pUp"] < f["base"] - 0.005])
     line("coins", [f for f in c if f.get("kind") == "crypto" or f["asset"].endswith("-USD")])
     line("shares and other markets", [f for f in c if not (f.get("kind") == "crypto" or f["asset"].endswith("-USD"))])
+    L.append("  What you said against what happened:")
+    for lo, hi, label in ((0.0, 0.45, "under 45%"), (0.45, 0.50, "45% to 50%"), (0.50, 0.55, "50% to 55%"), (0.55, 1.01, "55% or more")):
+        rows = [f for f in c if lo <= f["pUp"] < hi]
+        if rows:
+            L.append("    said %-11s %3d calls | on average you said %2.0f%% and it rose %2.0f%% of the time" % (
+                label, len(rows), 100 * sum(f["pUp"] for f in rows) / len(rows), 100 * sum(1 for f in rows if f["up"]) / float(len(rows))))
     ranged = [f for f in c if isinstance(f.get("inRange"), bool)]
     if len(ranged) >= 8:
         share = sum(1 for f in ranged if f["inRange"]) / float(len(ranged))
@@ -279,14 +354,27 @@ def summary(record):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Resolve and extend the Market Compass forecast record")
-    ap.add_argument("mode", choices=("resolve", "add", "feedback"))
+    ap.add_argument("mode", choices=("resolve", "add", "feedback", "combine"))
     ap.add_argument("--snapshot")
     ap.add_argument("--in", dest="src", help="the record so far (may not exist yet)")
-    ap.add_argument("--new", help="add: a JSON list of new forecasts")
+    ap.add_argument("--new", nargs="*", help="add: a JSON list of new forecasts. combine: several such files, the lead first")
     ap.add_argument("--out")
     args = ap.parse_args(argv)
     if args.mode == "feedback":
         print(feedback(load(args.src)))
+        return 0
+    if args.mode == "combine":
+        sets = []
+        for path in args.new or []:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    sets.append(json.load(f))
+            except (OSError, ValueError) as e:        # a set that failed to arrive is left out, not fatal
+                print("  skipped %s: %s" % (path, str(e)[:80]), file=sys.stderr)
+        merged = combine(sets)
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(merged, f, indent=1)
+        print("Combined %d set(s) into %d forecasts" % (len(sets), len(merged)))
         return 0
     if not args.snapshot or not args.out:
         ap.error("resolve and add need --snapshot and --out")
@@ -297,7 +385,7 @@ def main(argv=None):
     if args.mode == "resolve":
         record = resolve(record, snapshot)
     else:
-        with open(args.new, encoding="utf-8") as f:
+        with open((args.new or [None])[0], encoding="utf-8") as f:
             record, problems = add(record, json.load(f), snapshot)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(record, f, separators=(",", ":"))
