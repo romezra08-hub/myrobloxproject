@@ -52,3 +52,12 @@ Short version: the methods with the strongest evidence are **retrieval practice*
 - Hypercorrection: https://pubmed.ncbi.nlm.nih.gov/21989771/
 - Graded input / reading-while-listening: https://www2.hawaii.edu/~readfl/rfl/October2008/brown/brown.html
 - L1-specific errors: https://boldvoice.com/blog/english-pronunciation-hebrew-speakers ; https://llexi.com/l1-errors/common-english-errors-russian-speakers/ ; https://www.verbalplanet.com/learn-russian/blog/mistakes-english-speakers-make-when-learning-russian.asp
+
+## Habit-forming design (Hook model, used for good)
+Nir Eyal's Hook model has four steps: **trigger → action → variable reward → investment**. It draws on Skinner's variable reinforcement and BJ Fogg's behavior model. Habits form gradually, and how long it takes varies a lot from person to person (Lally et al.; there's no real "21 days" rule).
+- **Trigger:** a daily reminder (calendar event with an alarm) plus an "if-then plan" ("After my morning coffee I'll do one lesson"). Implementation intentions are one of the best-supported habit tools (Gollwitzer).
+- **Action:** one big "Start lesson" button, and a lesson takes about 10 minutes.
+- **Variable reward:** a **mystery bonus** at the end of each lesson (random bonus XP, a fun fact or a surprise word) and varied praise. Rewards stay tied to real learning.
+- **Investment:** levels that grow with XP, your own memory hooks for words, the family board.
+- **Ethics:** no guilt trips and no endless feed. Once the daily goal is met the app says "rest helps memory".
+Sources: https://umbrex.com/?p=242458 ; https://uxmag.com/?p=21127

@@ -204,7 +204,8 @@
           h("div.stat", h("div.stat-num", "+" + xp), h("div.stat-lbl", t("xp"))),
           h("div.stat", h("div.stat-num", acc + "%"), h("div.stat-lbl", t("accuracy"))),
           h("div.stat", h("div.stat-num", "🔥 " + streak), h("div.stat-lbl", t("streak")))),
-        opts.summaryExtra ? opts.summaryExtra({ right, wrong, xp }) : null));
+        opts.summaryExtra ? opts.summaryExtra({ right, wrong, xp }) : null,
+        root.LSHabits ? root.LSHabits.mysteryBonus(profile) : null));
       confetti();
       mainBtn.disabled = false;
       mainBtn.textContent = t(opts.back && opts.back !== "#/home" ? "back" : "backHome");
