@@ -384,7 +384,7 @@
     const T = ctx.T;
     let answered = false;
     const list = h("div.options");
-    const correctText = ex.q.includes("___") ? ex.q.replace("___", ex.options[ex.answer]) : ex.options[ex.answer];
+    const correctText = (ex.q.includes("___") ? ex.q.replace("___", ex.options[ex.answer]) : ex.options[ex.answer]).replace(/\s*\([^)]*\)/g, "");
     ex.options.forEach((o, i) => {
       const b = h("button.option", { type: "button" }, L(o, T));
       b.addEventListener("click", () => {
@@ -405,7 +405,7 @@
     const ex = step.ex;
     const T = ctx.T;
     const answers = Array.isArray(ex.answer) ? ex.answer : [ex.answer];
-    const fullAnswer = fixMode ? answers[0] : ex.q.replace("___", answers[0]);
+    const fullAnswer = fixMode ? answers[0] : ex.q.replace("___", answers[0]).replace(/\s*\([^)]*\)\s*$/, "").replace(/\s*\([^)]*\)/g, "");
     const check = () => {
       if (!ti.input.value.trim()) return;
       const r = U.checkAnswer(ti.input.value, answers, { lang: T, acceptTypos: fixMode });

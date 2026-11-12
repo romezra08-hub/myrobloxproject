@@ -294,3 +294,31 @@ LS_DATA.vocab.push(
   { id: "shopping_dollar", topic: "shopping", level: 2, en: "dollar", ru: "до́ллар", he: "דולר", g: "m", emoji: "💵", enEx: "How many dollars do you have?", ruEx: "Ско́лько у тебя́ до́лларов?", heEx: "כמה דולרים יש לך?" },
   { id: "shopping_coin", topic: "shopping", level: 3, en: "coin", ru: "моне́та", he: "מטבע", g: "f", emoji: "🪙", enEx: "I have only coins.", ruEx: "У меня́ то́лько моне́ты.", heEx: "יש לי רק מטבעות." },
 );
+
+// ---------- FEELINGS ----------
+LS_DATA.vocab.push(
+  { id: "feelings_happy", topic: "feelings", level: 1, en: "happy", ru: "счастли́вый", he: "מאושר", emoji: "😊", enEx: "Today I am very happy.", ruEx: "Сего́дня я о́чень счастли́в.", heEx: "היום אני מאושר מאוד." },
+  { id: "feelings_sad", topic: "feelings", level: 1, en: "sad", ru: "гру́стный", he: "עצוב", emoji: "😢", enEx: "Why are you sad?", ruEx: "Почему́ ты гру́стный?", heEx: "למה אתה עצוב?" },
+  { id: "feelings_tired", topic: "feelings", level: 1, en: "tired", ru: "уста́лый", he: "עייף", emoji: "😫", enEx: "I am very tired.", ruEx: "Я о́чень уста́л.", heEx: "אני עייף מאוד." },
+  { id: "feelings_hungry", topic: "feelings", level: 1, en: "hungry", ru: "голо́дный", he: "רעב", emoji: "🍽️", enEx: "I am hungry!", ruEx: "Я голо́дный!", heEx: "אני רעב!" },
+  { id: "feelings_glad", topic: "feelings", level: 1, en: "glad", ru: "рад", he: "שמח", emoji: "🙂", enEx: "I am glad to see you.", ruEx: "Я рад тебя́ ви́деть.", heEx: "אני שמח לראות אותך." },
+  { id: "feelings_angry", topic: "feelings", level: 1, en: "angry", ru: "серди́тый", he: "כועס", emoji: "😠", enEx: "Dad is angry today.", ruEx: "Па́па сего́дня серди́тый.", heEx: "אבא כועס היום." },
+  { id: "feelings_be_afraid", topic: "feelings", level: 1, en: "to be afraid", ru: "боя́ться", enPast: "was afraid", he: "לפחד", ruPres: "я бою́сь, ты бои́шься, они́ боя́тся", emoji: "😨", enEx: "The child is afraid of the dark.", ruEx: "Ребёнок бои́тся темноты́.", heEx: "הילד מפחד מהחושך." },
+  { id: "feelings_worry", topic: "feelings", level: 1, en: "to worry", ru: "волнова́ться", enPast: "worried", he: "לדאוג", ruPres: "я волну́юсь, ты волну́ешься, они́ волну́ются", emoji: "😟", enEx: "Don't worry!", ruEx: "Не волну́йся!", heEx: "אל תדאג!" },
+  { id: "feelings_love", topic: "feelings", level: 1, en: "love", ru: "любо́вь", he: "אהבה", g: "f", emoji: "❤️", enEx: "Love is the most important thing.", ruEx: "Любо́вь — э́то са́мое гла́вное.", heEx: "אהבה היא הדבר הכי חשוב." },
+  { id: "feelings_mood", topic: "feelings", level: 2, en: "mood", ru: "настрое́ние", he: "מצב רוח", g: "n", enEx: "Today I am in a good mood.", ruEx: "Сего́дня у меня́ хоро́шее настрое́ние.", heEx: "היום יש לי מצב רוח טוב." },
+  { id: "feelings_calm", topic: "feelings", level: 2, en: "calm", ru: "споко́йный", he: "רגוע", emoji: "😌", enEx: "Be calm, everything is fine.", ruEx: "Будь споко́ен, всё хорошо́.", heEx: "תהיה רגוע, הכול בסדר." },
+  { id: "feelings_bored", topic: "feelings", level: 2, en: "bored (I'm bored)", ru: "ску́чно", he: "משעמם (לי)", emoji: "🥱", enEx: "I am bored at home.", ruEx: "Мне ску́чно до́ма.", heEx: "משעמם לי בבית." },
+  { id: "feelings_cheerful", topic: "feelings", level: 2, en: "cheerful, merry", ru: "весёлый", he: "עליז", emoji: "😄", enEx: "He is a cheerful boy.", ruEx: "Он весёлый ма́льчик.", heEx: "הוא ילד עליז." },
+  { id: "feelings_smile", topic: "feelings", level: 2, en: "smile", ru: "улы́бка", he: "חיוך", g: "f", emoji: "😁", enEx: "You have a beautiful smile.", ruEx: "У тебя́ краси́вая улы́бка.", heEx: "יש לך חיוך יפה." },
+  { id: "feelings_joy", topic: "feelings", level: 2, en: "joy", ru: "ра́дость", he: "שמחה", g: "f", emoji: "🥳", enEx: "What a joy!", ruEx: "Кака́я ра́дость!", heEx: "איזו שמחה!" },
+  { id: "feelings_fear", topic: "feelings", level: 2, en: "fear", ru: "страх", he: "פחד", g: "m", emoji: "😱", enEx: "I don't feel any fear.", ruEx: "Я не чу́вствую стра́ха.", heEx: "אני לא מרגיש פחד." },
+  { id: "feelings_surprised", topic: "feelings", level: 2, en: "surprised", ru: "удивлённый", he: "מופתע", emoji: "😮", enEx: "She was very surprised.", ruEx: "Она́ была́ о́чень удивлена́.", heEx: "היא הייתה מאוד מופתעת." },
+  { id: "feelings_nervous", topic: "feelings", level: 2, en: "nervous", ru: "не́рвный", he: "עצבני, לחוץ", emoji: "😬", enEx: "He is a nervous person.", ruEx: "Он не́рвный челове́к.", heEx: "הוא אדם עצבני." },
+  { id: "feelings_feeling", topic: "feelings", level: 2, en: "feeling", ru: "чу́вство", he: "רגש, הרגשה", g: "n", enEx: "This is a strange feeling.", ruEx: "Э́то стра́нное чу́вство.", heEx: "זו הרגשה מוזרה." },
+  { id: "feelings_hope", topic: "feelings", level: 2, en: "hope", ru: "наде́жда", he: "תקווה", g: "f", emoji: "🌈", enEx: "There is always hope.", ruEx: "Наде́жда есть всегда́.", heEx: "תמיד יש תקווה." },
+  { id: "feelings_tears", topic: "feelings", level: 2, en: "tears", ru: "слёзы", he: "דמעות", g: "pl", emoji: "😭", enEx: "She has tears in her eyes.", ruEx: "У неё слёзы на глаза́х.", heEx: "יש לה דמעות בעיניים." },
+  { id: "feelings_lonely", topic: "feelings", level: 3, en: "lonely", ru: "одино́кий", he: "בודד", enEx: "Grandpa feels lonely.", ruEx: "Де́душка чу́вствует себя́ одино́ким.", heEx: "סבא מרגיש בודד." },
+  { id: "feelings_be_proud", topic: "feelings", level: 3, en: "to be proud", ru: "горди́ться", enPast: "was proud", he: "להתגאות", ruPres: "я горжу́сь, ты горди́шься, они́ гордя́тся", emoji: "🏅", enEx: "I am proud of you.", ruEx: "Я горжу́сь тобо́й.", heEx: "אני גאה בך." },
+  { id: "feelings_in_love", topic: "feelings", level: 3, en: "in love", ru: "влюблённый", he: "מאוהב", emoji: "😍", enEx: "They are in love.", ruEx: "Они́ влюблены́.", heEx: "הם מאוהבים." },
+);

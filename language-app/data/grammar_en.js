@@ -432,3 +432,60 @@ LS_DATA.grammar.push({
     { type: "fix", q: "He will comes tomorrow.", answer: ["He will come tomorrow.", "He'll come tomorrow."], tr: { he: "הוא יבוא מחר.", ru: "Он придёт за́втра." }, why: { he: "אחרי will – בלי s.", ru: "После will – без -s." } }
   ]
 });
+
+LS_DATA.grammar.push({
+  id: "en_comparatives", target: "en", level: 3, order: 16,
+  title: { he: "השוואה: bigger, more expensive, the best", ru: "Сравнение: bigger, more expensive, the best", en: "Comparatives: bigger, more expensive" },
+  explain: {
+    he: "<p>בעברית אומרים «יותר גדול מ…». באנגלית יש שתי דרכים, לפי אורך המילה:</p><ul><li><b>מילה קצרה</b> – מוסיפים <b>-er</b>: big → bigg<b>er</b>, cheap → cheap<b>er</b>, nice → nic<b>er</b>, easy → eas<b>ier</b>.</li><li><b>מילה ארוכה</b> – שמים <b>more</b> לפני: <b>more</b> expensive, <b>more</b> beautiful.</li></ul><p>«מ…» = <b>than</b>: Tel Aviv is bigger <b>than</b> Haifa. (לא from!)</p><p><b>הכי</b> = <b>the …-est</b> או <b>the most</b>: the biggest, the most expensive.</p><table><tr><td>good</td><td><b>better</b></td><td>the <b>best</b></td></tr><tr><td>bad</td><td><b>worse</b></td><td>the <b>worst</b></td></tr></table><p>טעות נפוצה: «more bigger» ✗ – או -er, או more, אף פעם לא שניהם.</p>",
+    ru: "<p>По-русски: «больше», «дороже» или «более интересный». В английском тоже два способа – по длине слова:</p><ul><li><b>Короткое слово</b> – добавляем <b>-er</b>: big → bigg<b>er</b>, cheap → cheap<b>er</b>, nice → nic<b>er</b>, easy → eas<b>ier</b>.</li><li><b>Длинное слово</b> – ставим <b>more</b> (более): <b>more</b> expensive, <b>more</b> beautiful.</li></ul><p>«Чем» = <b>than</b>: Tel Aviv is bigger <b>than</b> Haifa. По-русски можно сказать «больше Хайфы» без «чем» – в английском <b>than</b> нужен всегда.</p><p><b>Самый</b> = <b>the …-est</b> или <b>the most</b>: the biggest, the most expensive.</p><table><tr><td>good</td><td><b>better</b></td><td>the <b>best</b></td></tr><tr><td>bad</td><td><b>worse</b></td><td>the <b>worst</b></td></tr></table><p>Ошибка: «more bigger» ✗ – или -er, или more, но не вместе.</p>"
+  },
+  examples: [
+    { t: "My brother is older than me.", he: "אחי מבוגר ממני.", ru: "Мой брат ста́рше меня́." },
+    { t: "This dress is cheaper.", he: "השמלה הזאת זולה יותר.", ru: "Э́то пла́тье деше́вле." },
+    { t: "Tel Aviv is more expensive than Haifa.", he: "תל אביב יקרה יותר מחיפה.", ru: "Тель-Ави́в доро́же, чем Ха́йфа." },
+    { t: "Today is better than yesterday.", he: "היום יותר טוב מאתמול.", ru: "Сего́дня лу́чше, чем вчера́." },
+    { t: "This is the best cake in the world!", he: "זאת העוגה הכי טובה בעולם!", ru: "Э́то лу́чший торт на све́те!" }
+  ],
+  exercises: [
+    { type: "choice", q: "An elephant is ___ than a dog.", options: ["big", "bigger", "more big"], answer: 1, tr: { he: "פיל גדול יותר מכלב.", ru: "Слон бо́льше соба́ки." }, why: { he: "מילה קצרה – -er.", ru: "Короткое слово – -er." } },
+    { type: "choice", q: "This phone is ___ than that one.", options: ["expensiver", "more expensive", "most expensive"], answer: 1, tr: { he: "הטלפון הזה יקר יותר מההוא.", ru: "Э́тот телефо́н доро́же, чем тот." }, why: { he: "מילה ארוכה – more.", ru: "Длинное слово – more." } },
+    { type: "choice", q: "My cooking is ___ than my husband's.", options: ["gooder", "better", "more good"], answer: 1, tr: { he: "הבישול שלי טוב יותר משל בעלי.", ru: "Я гото́влю лу́чше, чем мой муж." }, why: { he: "good → better, חריג.", ru: "good → better, исключение." } },
+    { type: "fill", q: "Russian is harder ___ English.", answer: ["than"], tr: { he: "רוסית קשה יותר מאנגלית.", ru: "Ру́сский язы́к трудне́е англи́йского." }, why: { he: "«מ…» בהשוואה – than.", ru: "«Чем» – than." } },
+    { type: "fill", q: "Today is ___ than yesterday. (hot)", answer: ["hotter"], tr: { he: "היום חם יותר מאתמול.", ru: "Сего́дня жа́рче, чем вчера́." }, why: { he: "hot → hotter, עם tt כפול.", ru: "hot → hotter, с двойным t." } },
+    { type: "fill", q: "He is the ___ boy in the class. (tall)", answer: ["tallest"], tr: { he: "הוא הילד הכי גבוה בכיתה.", ru: "Он са́мый высо́кий ма́льчик в кла́ссе." }, why: { he: "«הכי» – the + -est.", ru: "«Самый» – the + -est." } },
+    { type: "order", answer: "My sister is younger than me.", tr: { he: "אחותי צעירה ממני.", ru: "Моя́ сестра́ мла́дше меня́." } },
+    { type: "order", answer: "This chair is more comfortable.", tr: { he: "הכיסא הזה נוח יותר.", ru: "Э́тот стул удо́бнее." } },
+    { type: "fix", q: "This bag is more cheap.", answer: ["This bag is cheaper."], tr: { he: "התיק הזה זול יותר.", ru: "Э́та су́мка деше́вле." }, why: { he: "cheap קצרה – cheaper.", ru: "cheap – короткое слово: cheaper." } },
+    { type: "fix", q: "She is taller from her mother.", answer: ["She is taller than her mother.", "She's taller than her mother."], tr: { he: "היא גבוהה יותר מאמא שלה.", ru: "Она́ вы́ше свое́й ма́мы." }, why: { he: "בהשוואה – than, לא from.", ru: "В сравнении – than, а не from." } }
+  ]
+});
+
+LS_DATA.grammar.push({
+  id: "en_some_any_much_many", target: "en", level: 3, order: 17,
+  title: { he: "some / any, much / many", ru: "some / any, much / many", en: "Some / any, much / many" },
+  explain: {
+    he: "<p>באנגלית חשוב לדעת אם <b>אפשר לספור</b> את הדבר:</p><ul><li>סופרים: apples, eggs, children (one egg, two eggs)</li><li>לא סופרים: milk, water, money, bread, time</li></ul><p><b>many</b> – הרבה, לדברים שסופרים: many people.</p><p><b>much</b> – הרבה, לדברים שלא סופרים, בעיקר בשאלה ובשלילה: I don't have much time.</p><p>במשפט חיובי רגיל אומרים <b>a lot of</b>: I have a lot of money.</p><p><b>כמה?</b> How <b>many</b> eggs? / How <b>much</b> milk? / How much is it? (מחיר)</p><p><b>some / any</b> – בעברית לפעמים «קצת», «כמה», ולפעמים כלום: «יש לך חלב?».</p><ul><li><b>some</b> – במשפט חיובי ובהצעה: I need <b>some</b> eggs. Would you like <b>some</b> tea?</li><li><b>any</b> – בשאלה ובשלילה: Do you have <b>any</b> milk? I don't have <b>any</b> money.</li></ul>",
+    ru: "<p>В английском важно, можно ли предмет <b>посчитать</b>:</p><ul><li>считаемые: apples, eggs, children (one egg, two eggs)</li><li>несчитаемые: milk, water, money, bread, time</li></ul><p><b>many</b> – много, для считаемых: many people.</p><p><b>much</b> – много, для несчитаемых, чаще в вопросе и отрицании: I don't have much time.</p><p>В обычном утвердительном предложении говорят <b>a lot of</b>: I have a lot of money.</p><p><b>Сколько?</b> How <b>many</b> eggs? / How <b>much</b> milk? / How much is it? (цена)</p><p><b>some / any</b> – в русском это «немного», «несколько», а часто ничего: «У тебя есть молоко?».</p><ul><li><b>some</b> – в утверждении и в предложении чего-то: I need <b>some</b> eggs. Would you like <b>some</b> tea?</li><li><b>any</b> – в вопросе и отрицании: Do you have <b>any</b> milk? I don't have <b>any</b> money.</li></ul>"
+  },
+  examples: [
+    { t: "I need some eggs.", he: "אני צריכה כמה ביצים.", ru: "Мне ну́жно не́сколько яи́ц." },
+    { t: "Do you have any milk?", he: "יש לך חלב?", ru: "У тебя́ есть молоко́?" },
+    { t: "We don't have any bread.", he: "אין לנו לחם בכלל.", ru: "У нас совсе́м нет хле́ба." },
+    { t: "How many children do you have?", he: "כמה ילדים יש לך?", ru: "Ско́лько у вас дете́й?" },
+    { t: "How much is the coffee?", he: "כמה עולה הקפה?", ru: "Ско́лько сто́ит ко́фе?" },
+    { t: "There isn't much time.", he: "אין הרבה זמן.", ru: "Вре́мени ма́ло." }
+  ],
+  exercises: [
+    { type: "choice", q: "How ___ water do you drink?", options: ["much", "many", "any"], answer: 0, tr: { he: "כמה מים את שותה?", ru: "Ско́лько воды́ ты пьёшь?" }, why: { he: "מים לא סופרים – much.", ru: "Воду не считают – much." } },
+    { type: "choice", q: "There are ___ people in the shop.", options: ["much", "many", "any"], answer: 1, tr: { he: "יש הרבה אנשים בחנות.", ru: "В магази́не мно́го люде́й." }, why: { he: "אנשים סופרים – many.", ru: "Людей можно посчитать – many." } },
+    { type: "choice", q: "Do you have ___ questions?", options: ["some", "any", "much"], answer: 1, tr: { he: "יש לכם שאלות?", ru: "У вас есть вопро́сы?" }, why: { he: "בשאלה – any.", ru: "В вопросе – any." } },
+    { type: "fill", q: "I would like ___ tea, please.", answer: ["some"], tr: { he: "אני רוצה קצת תה, בבקשה.", ru: "Мне, пожа́луйста, немно́го ча́ю." }, why: { he: "משפט חיובי – some.", ru: "Утверждение – some." } },
+    { type: "fill", q: "She doesn't have ___ money.", answer: ["any", "much"], tr: { he: "אין לה כסף.", ru: "У неё нет де́нег." }, why: { he: "בשלילה – any.", ru: "В отрицании – any." } },
+    { type: "fill", q: "How ___ eggs do we need?", answer: ["many"], tr: { he: "כמה ביצים אנחנו צריכים?", ru: "Ско́лько яи́ц нам ну́жно?" }, why: { he: "ביצים סופרים – many.", ru: "Яйца можно посчитать – many." } },
+    { type: "order", answer: "I don't have much time.", tr: { he: "אין לי הרבה זמן.", ru: "У меня́ ма́ло вре́мени." } },
+    { type: "order", answer: "Are there any apples left?", tr: { he: "נשארו תפוחים?", ru: "Я́блоки ещё оста́лись?" } },
+    { type: "fix", q: "I have many money.", answer: ["I have a lot of money.", "I have lots of money."], tr: { he: "יש לי הרבה כסף.", ru: "У меня́ мно́го де́нег." }, why: { he: "כסף לא סופרים; במשפט חיובי – a lot of.", ru: "Деньги не считают; в утверждении – a lot of." } },
+    { type: "fix", q: "I don't have some friends here.", answer: ["I don't have any friends here.", "I do not have any friends here."], tr: { he: "אין לי חברים כאן.", ru: "У меня́ здесь нет друзе́й." }, why: { he: "בשלילה – any.", ru: "В отрицании – any." } }
+  ]
+});
