@@ -81,6 +81,10 @@ Part keys are `us`, `intl`, `bonds`, `gold` and `crypto`. Cash has no score.
   independent developments point the same way. Stay inside ±0.8 unless something extraordinary has happened.
   The plan uses a score only when it is gloomier than the price-based reading, and then for a tenth at most.
   News can make the plan more careful and never bolder, so there is nothing to gain from a strong score.
+- **Let a shock fade.** Across more than thirty wars, attacks and crises, markets typically reached their low in
+  about three weeks and recovered in about three more. An event older than six weeks no longer counts toward a
+  `sleeveScore` unless prices have confirmed it, meaning the digest shows the trend or credit reading for that
+  part has turned negative. Keep such an event in the list if it still explains prices, but score it as zero.
 - **Stay neutral on people and politics.** Describe market consequences, not who is right. Leave personal
   details about individuals out unless the market reaction cannot be explained without them.
 - **Cover Israel.** The owner lives there. The script reads the Bank of Israel rate, the date of its next decision,

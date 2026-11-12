@@ -95,6 +95,8 @@
       debt: !!p.debt,
       unstable: !!p.unstable,
       country: p.country === 'other' ? 'other' : (p.country === 'IL' ? 'IL' : DEFAULTS.country),
+      goal: p.goal === 'home' ? 'home' : 'growth',
+      homePrice: clamp(num(p.homePrice, 0), 0, 1e9),
       holdings: {}
     };
     SLEEVES.forEach(function (k) { out.holdings[k] = clamp(num(h[k], 0), 0, 1e9); });
@@ -115,7 +117,17 @@
    * The test behind each rung: if stocks halved, as they did in 2000-02 and 2007-09,
    * the loss must be one the goal survives in the time left.
    */
-  function horizonCap(years) {
+  function horizonCap(years, goal) {
+    // A purchase with a date, such as a home, cannot wait out a bad market the way open-ended
+    // saving can, so each rung under ten years is lower. Shares have lost money over about one
+    // five-year stretch in eight.
+    if (goal === 'home' && years < 10) {
+      if (years < 2) return 0;
+      if (years < 3) return 15;
+      if (years < 5) return 30;
+      if (years < 7) return 45;
+      return 60;
+    }
     if (years < 1) return 0;
     if (years < 2) return 10;
     if (years < 3) return 20;
@@ -126,10 +138,47 @@
     return 90;
   }
 
+  /**
+   * The cash a home purchase needs, and how far away it is.
+   *   rules.ltv       the most a lender will advance, as a share of the price
+   *   rules.costs     lawyer, agent, moving and the like, as a share of the price
+   *   rules.brackets  purchase tax as [[upper limit, percent], ...], charged on the slice in each band
+   * Everything is in today's prices: nothing here guesses what homes will cost later.
+   */
+  function purchaseTax(price, brackets) {
+    var tax = 0, prev = 0;
+    (brackets || []).forEach(function (b) {
+      if (price > prev) tax += (Math.min(price, b[0]) - prev) * b[1] / 100;
+      prev = b[0];
+    });
+    return tax;
+  }
+  function homeGoal(profile, rules, have) {
+    var p = normalizeProfile(profile);
+    rules = rules || {};
+    var price = p.homePrice;
+    if (!(price > 0)) return null;
+    var ltv = isNum(rules.ltv) ? rules.ltv : 0.8;
+    var down = price * (1 - ltv);
+    var tax = purchaseTax(price, rules.brackets);
+    var costs = price * (isNum(rules.costs) ? rules.costs : 0.03);
+    var need = down + tax + costs;
+    have = Math.max(0, num(have, 0));
+    var gap = Math.max(0, need - have);
+    var months = Math.max(1, Math.round(p.horizon * 12));
+    return {
+      price: price, ltv: ltv, down: down, tax: tax, costs: costs, need: need, have: have, gap: gap,
+      loan: price * ltv,
+      monthlyNeeded: gap / months,                                    // with no growth at all, to be safe
+      yearsAtPace: gap <= 0 ? 0 : (p.monthly > 0 ? gap / (p.monthly * 12) : null),
+      onTrack: gap <= 0 || (p.monthly > 0 && p.monthly * months >= gap)
+    };
+  }
+
   /** The baseline mix: what you would hold if you ignored every headline. Sums to 100. */
   function baseAllocation(profile) {
     var p = normalizeProfile(profile);
-    var cap = horizonCap(p.horizon);
+    var cap = horizonCap(p.horizon, p.goal);
     var want = RISK_GROWTH[p.risk];
     if (p.unstable) want = Math.max(0, want - 10);   // a shaky pay cheque is already a risky asset
     var growth = Math.min(want, cap);
@@ -139,7 +188,7 @@
     var crypto = Math.min(CRYPTO_CAP[p.crypto], growth / 10);
     if (p.risk === 1) crypto = 0;
     else if (p.risk === 2) crypto = crypto / 2;
-    if (p.horizon < 4) crypto = 0;
+    if (p.horizon < 4 || (p.goal === 'home' && p.horizon < 5)) crypto = 0;
     else if (p.horizon < 6) crypto = crypto / 2;
 
     var stocks = growth - crypto;
@@ -230,7 +279,7 @@
     w.crypto = Math.min(w.crypto, CRYPTO_CAP[p.crypto]);
     // 2. never more growth assets than your horizon allows
     var growth = w.us + w.intl + w.crypto;
-    var cap = horizonCap(p.horizon);
+    var cap = horizonCap(p.horizon, p.goal);
     if (growth > cap && growth > 0) {
       var g = cap / growth;
       w.us *= g; w.intl *= g; w.crypto *= g;
@@ -517,6 +566,7 @@
     stanceFor: stanceFor, driftBand: driftBand, buyPlan: buyPlan, pacing: pacing, stressTest: stressTest,
     riskShares: riskShares, futureValue: futureValue, feeDrag: feeDrag, expectedReal: expectedReal,
     outlook: outlook, threeFund: threeFund, firstThings: firstThings, plan: plan,
+    purchaseTax: purchaseTax, homeGoal: homeGoal,
     DEBT_FIRST_RATE: DEBT_FIRST_RATE, STATUSES: STATUSES
   };
 });

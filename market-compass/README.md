@@ -27,7 +27,8 @@ rest of this repository and shares no code with it.
 ## The model in brief
 
 The first version was rebuilt after six research passes through the investing books and the studies behind
-them. Where the evidence pointed against an original choice, the choice changed. The page's Learn tab lists the
+them, and a second round added Israeli costs and tax checks, housing, the evidence on news events, and what
+goes wrong for young investors. Where the evidence pointed against an original choice, the choice changed. The page's Learn tab lists the
 lessons and the Method tab lists what changed.
 
 - **Baseline.** Your timeline caps the share in stocks and crypto (0% within a year, rising to 90% beyond
@@ -67,6 +68,33 @@ Shekel bonds get their own reading (`snapshot.israel.bonds`), built like the US 
 US bond readings and the US news brief are never applied to shekel bonds. If the Israeli feeds fail, that part
 stays at its baseline.
 
+## A home as the goal
+
+Choosing "A home" tells the engine the money has a date. The ceiling on stocks and crypto is then lower for each
+year remaining (none under two years, 15% at two to three, 30% at three to five, 45% at five to seven, 60% at
+seven to ten), and crypto is left out inside five years. Given a price, the page works out the cash the purchase
+needs: the down payment, purchase tax from the bands in `COUNTRIES`, and about 3% of costs.
+
+## Tested on history
+
+`research/` replays the model on the past. `history_fetch.py` rebuilds each month-end's readings from 1997 with
+the pipeline's own functions and only the data available that day; `backtest.js` hands them to the page's engine
+and holds each plan for the following month.
+
+```bash
+python3 market-compass/research/history_fetch.py --out market-compass/research/history.json
+```
+
+```bash
+node market-compass/research/backtest.js market-compass/research/history.json --json market-compass/research/results.json
+```
+
+`app/build.py` puts `results.json` into the page, and the Method tab shows it. Over June 1997 to October 2026 the
+default lean cut the middle saver's worst fall from 34% to 28% and added about half a point a year, almost all of
+it in 2000-02 and 2007-09, while trading three times as much and lagging in every recovery. Treat it as a sanity
+check: it is one history, in US funds, of rules written with hindsight. `--lag N` on the fetch script takes the
+readings N trading days early, and `--late FILE` on the backtest reports such a run beside the main one.
+
 ## Layout
 
 | Path | What it is |
@@ -77,7 +105,10 @@ stays at its baseline.
 | `app/src/engine.js` | Allocation engine: pure functions, shared by the page and the tests |
 | `app/src/engine.test.js` | Engine tests |
 | `app/src/app.js`, `styles.css`, `page.html` | The interface |
-| `app/build.py` | Stitches `src/` into the single published file |
+| `app/build.py` | Stitches `src/` and the test results into the single published file |
+| `research/history_fetch.py` | Replays the pipeline's readings on history |
+| `research/backtest.js`, `backtest.test.js` | Runs the engine over that history; its tests |
+| `research/history.json`, `results.json` | The replayed history and the results the page shows |
 | `app/market-compass.html` | The built page |
 
 ## Working on it
@@ -88,6 +119,10 @@ python3 market-compass/pipeline/test_refresh.py
 
 ```bash
 node --test market-compass/app/src/engine.test.js
+```
+
+```bash
+node --test market-compass/research/backtest.test.js
 ```
 
 ```bash

@@ -33,6 +33,15 @@ def main():
             sys.exit("a source file contains a closing tag that would end its block early")
         page = page.replace(token, body)
     page = page.replace("/*{{CONFIG}}*/{}", json.dumps(config))
+    # Results of the history test (research/backtest.js), shown on the Method tab.
+    research = "null"
+    res_path = os.path.join(HERE, "..", "research", "results.json")
+    if os.path.exists(res_path):
+        with open(res_path, encoding="utf-8") as f:
+            research = json.dumps(json.load(f), separators=(",", ":"))
+    if page.count("/*{{RESEARCH}}*/null") != 1:
+        sys.exit("placeholder /*{{RESEARCH}}*/null must appear exactly once")
+    page = page.replace("/*{{RESEARCH}}*/null", research)
     out = os.path.join(HERE, "market-compass.html")
     with open(out, "w", encoding="utf-8") as f:
         f.write(page)

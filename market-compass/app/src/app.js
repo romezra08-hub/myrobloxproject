@@ -5,6 +5,7 @@
   'use strict';
   var E = window.MCEngine;
   var CFG = window.MC_CONFIG || {};
+  var RESEARCH = window.MC_RESEARCH || null;   // results of the history test, put in at build time
   var VIEWS = ['plan', 'markets', 'crypto', 'events', 'ask', 'learn', 'method'];
   var MINUS = '−';
   var STALE_H = 30;            // older than this, prices are flagged as out of date
@@ -192,7 +193,7 @@
   }
 
   /* Chart observers are tracked per view so a re-render can release the old ones. */
-  var ROS = { plan: [], markets: [], crypto: [] }, roBucket = null;
+  var ROS = { plan: [], markets: [], crypto: [], method: [] }, roBucket = null;
   function dropObservers(name) { ROS[name].forEach(function (r) { r.disconnect(); }); ROS[name] = []; }
 
   /* Line chart with a crosshair readout, drawn at its real pixel width so text never scales.
@@ -410,8 +411,11 @@
       rate: 3.25, rateAsOf: 'October 2026', cpi: 1.6, cpiAsOf: 'September 2026', inflation: 2, bondSpread: 0.75,
       studyCeil: 15712, studySelfCap: 20566, studySelfDeduct: 13203, gemelCap: 83641,
       brackets: [[7010, 10], [10060, 14], [19000, 20], [25100, 31], [46690, 35], [60130, 47], [Infinity, 50]],
-      creditPoint: 242, basePoints: 2.25 },
-    other: { name: 'Elsewhere', cur: '$', small: 500, tiny: 25 }
+      creditPoint: 242, basePoints: 2.25,
+      /* A first home: Bank of Israel Directive 329 caps the loan at 75% of the price. Purchase-tax
+         bands for a single home, frozen until January 2028. Other costs are a round estimate. */
+      home: { ltv: 0.75, costs: 0.03, brackets: [[1978745, 0], [2347040, 3.5], [6055070, 5], [20183565, 8], [Infinity, 10]] } },
+    other: { name: 'Elsewhere', cur: '$', small: 500, tiny: 25, home: { ltv: 0.8, costs: 0.04 } }
   };
   function C() { return COUNTRIES[S.profile.country] || COUNTRIES.other; }
   function isIL() { return S.profile.country === 'IL'; }
@@ -452,11 +456,11 @@
   }
 
   var HOLD_IL = {
-    us: 'An S&P 500 tracking fund (keren mehaka, קרן מחקה) on the Tel Aviv exchange, from a manager such as Harel, KSM, Tachlit, MTF or IBI. Or an Irish-domiciled fund such as CSPX through a foreign broker. Avoid US-listed funds like VOO: from Israel a quarter or more of their dividends is withheld, and US assets above $60,000 can face US estate tax.',
+    us: 'An S&P 500 tracking fund (keren mehaka, קרן מחקה) on the Tel Aviv exchange, from a manager such as Harel, KSM, Tachlit, MTF or IBI. Several charge close to 0% a year, and tracking funds carry no dealing commission, which suits monthly deposits. Or the Irish iShares fund listed in Tel Aviv, at 0.07%. For money held ten years or more an unhedged fund is the simpler choice; a currency-hedged one (menutral matach) has cost 0.5 to 2% a year, and careful sources disagree on which is better. Avoid US-listed funds like VOO: from Israel a quarter or more of their dividends is withheld, and US assets above $60,000 can face US estate tax.',
     intl: 'A tracking fund on a world index outside the US. Or use one all-world fund (MSCI ACWI or FTSE All-World) for this row and the one above together. A Tel Aviv 125 fund can be part of it, but keep it modest: your job, home and pension already depend on Israel’s economy.',
-    crypto: 'An Israeli Bitcoin tracking fund, available on the Tel Aviv exchange since the end of 2024, keeps it inside your ordinary account and its tax reporting. If you buy coins directly, use a licensed Israeli provider and keep every record: gains are taxed at 25%, and banks may ask where the money came from.',
+    crypto: 'An Israeli Bitcoin tracking fund, available on the Tel Aviv exchange since the end of 2024, keeps it inside your ordinary account and its tax reporting. Fees start at about 0.25%, and funds that hold futures have trailed the coin by over 1% a year. If you buy coins directly, nobody withholds the tax, so you report each sale yourself; use a licensed Israeli provider and keep every record: gains are taxed at 25%, and banks may ask where the money came from.',
     gold: 'A gold tracking fund on the Tel Aviv exchange, or an Irish-domiciled one such as SGLN or IGLN. Think of it as insurance against disorder: over the long run it has earned about 1% a year after inflation.',
-    cash: 'A shekel money-market fund (keren kaspit, קרן כספית) or Makam, which follow the Bank of Israel rate. A current account usually pays nothing.'
+    cash: 'A shekel money-market fund (keren kaspit, קרן כספית) or Makam, which follow the Bank of Israel rate. Banks may not charge commission or custody on money-market funds, and they are taxed only on the gain above inflation. A current account usually pays nothing.'
   };
 
   /* The order your money should move in, built from what you entered. Each step is [title, text]. */
@@ -478,22 +482,145 @@
       } else if (s.status === 'self') {
         steps.push(['Open a Keren Hishtalmut for the self-employed', 'Up to ' + money(c.studySelfCap) + ' a year grows tax-free, and up to ' + money(c.studySelfDeduct) + ' of it (4.5% of income) can be deducted. The self-employed must also pay into a pension.']);
       } else if (s.status === 'service') {
-        steps.push(['Know what your discharge money can do', 'The discharge grant (ma’anak) is yours to use freely. The deposit (pikadon) is reserved for study or training, a home, a business or a wedding, and opens for any use about five years after discharge. Check your own amounts with the Fund for Discharged Soldiers.']);
+        steps.push(['Know what your discharge money can do', 'The discharge grant (ma’anak) is yours to use freely. The deposit (pikadon) is reserved for study or training, a home, a business or a wedding, and opens for any use about five years after discharge. In 2026 the grant was about \u20AA460 to \u20AA690 for each month served, depending on your role, and the deposit about \u20AA19,000 to \u20AA28,000 for three years. Check your own amounts with the Fund for Discharged Soldiers.']);
       } else {
         steps.push(['Start small and make it automatic', 'With little income the habit matters more than the amount. A standing order into one tracking fund each month builds it.']);
       }
     }
     if (f.invest > 0) steps.push(['Invest ' + money(f.invest) + ' as shown above', il
-      ? 'Two sensible homes in Israel. A trading account (at a bank or broker) holding tracking funds has the lowest fees and the most control. A Kupat Gemel LeHashkaa (קופת גמל להשקעה) takes up to ' + money(c.gemelCap) + ' a year and lets you switch tracks without tax, usually for a higher fee. Either works; compare the management fee before you choose.'
+      ? 'Two sensible homes in Israel. A trading account holding tracking funds has the lowest fees and the most control; a trading house charges no custody fee, where banks list 0.6 to 0.7% a year. A Kupat Gemel LeHashkaa (קופת גמל להשקעה) takes up to ' + money(c.gemelCap) + ' a year and lets you switch tracks without tax, for about 0.5% a year in an index track. Either works; compare the management fee before you choose.'
       : 'Use a tax-sheltered account if your country offers one, then an ordinary account holding broad index funds.']);
     else if (f.known) steps.push(['Nothing left to invest this time', 'That is the right outcome. The steps above pay more, and more surely, than anything on this page.']);
     if (il) {
+      steps.push(['Check your Savings for Every Child account (\u05D7\u05D9\u05E1\u05DB\u05D5\u05DF \u05DC\u05DB\u05DC \u05D9\u05DC\u05D3)', 'The state paid into it until you turned 18. If you are under 21, leave it: a second bonus of \u20AA582 is paid at 21 only if nothing was withdrawn, and National Insurance covers the fees until then. See which track it is in. Money you will not touch for years has done better in a share-based track, and switching is free.']);
       var t = s.income > 0 ? ilIncomeTax(s.income) : null;
       steps.push(['Know the tax before you sell', 'Israel takes 25% of your gain after inflation when you sell, and nothing while you hold. So rebalance with new money instead of selling.' +
         (t ? (t.free ? ' At ' + money(s.income) + ' a month your credit points cover your income tax, so you currently pay none.' : ' At ' + money(s.income) + ' a month your top income-tax rate is ' + t.top + '%.') : '') +
-        (t && t.free || s.status === 'service' || s.status === 'student' ? ' With little or no salary you may be able to reclaim tax withheld on gains by filing a return. Ask the Tax Authority or an adviser; this app could not confirm the rule.' : '')]);
+        (t && t.free || s.status === 'service' || s.status === 'student' ? ' With little or no salary, your ' + c.basePoints + ' basic credit points (worth ' + money(Math.round(c.creditPoint * c.basePoints * 12)) + ' a year) can be set against this tax, which covers about ' + money(Math.round(c.creditPoint * c.basePoints * 12 / 0.25 / 1000) * 1000) + ' of gain a year. The bank withholds the tax anyway, so it takes a refund request to get it back. This comes from accountants\u2019 guides and is not confirmed with the Tax Authority, so check before you count on it.' : '')]);
     }
     return steps;
+  }
+
+  // ---------------------------------------------------------------- home goal
+  /* What the person has toward a purchase: what is already invested plus what this deposit invests.
+     The cushion is left out on purpose; it is not there to be spent on a home. */
+  function homeGoalFor(pl) {
+    if (pl.profile.goal !== 'home') return null;
+    return E.homeGoal(pl.profile, C().home, pl.buy.held + pl.first.invest);
+  }
+  function homeGoalBlock(pl) {
+    var p = pl.profile, g = homeGoalFor(pl), rules = C().home, il = isIL();
+    var usual = E.horizonCap(p.horizon), cap = E.horizonCap(p.horizon, 'home');
+    var capLine = cap < usual
+      ? 'Because this money has a date, no more than ' + cap + '% of it goes in stocks and crypto, against ' + usual + '% for open-ended saving over ' + years(p.horizon) + '.'
+      : 'The purchase is far enough away that the usual long-term mix applies. The ceiling on stocks comes down each year from ten years out.';
+    if (!g) return h('div', { class: 'stack tight' }, h('span', { class: 'eyebrow' }, 'Your home goal'),
+      h('p', { class: 'sub' }, capLine + ' Add the price of the home you have in mind to see how much cash the purchase needs.'));
+    var pctDown = Math.round((1 - g.ltv) * 100);
+    var tiles = h('div', { class: 'tiles' },
+      tile('Cash the purchase needs', money(Math.round(g.need)), 'for a home of ' + money(g.price)),
+      tile('Down payment', money(Math.round(g.down)), pctDown + '% of the price'),
+      g.tax > 0 ? tile('Purchase tax', money(Math.round(g.tax)), 'for a single home') : (il ? tile('Purchase tax', money(0), 'none at this price for a single home') : null),
+      tile('Other costs', money(Math.round(g.costs)), 'about ' + Math.round((isNum(rules.costs) ? rules.costs : 0.03) * 100) + '%: lawyer, agent, moving'),
+      tile('You have toward it', money(Math.round(g.have)), 'invested, not counting your cushion'),
+      tile('Still to save', money(Math.round(g.gap)), g.gap <= 0 ? 'the cash is there' : 'in today’s prices'));
+    var pace;
+    if (g.gap <= 0) pace = 'You already have the cash this purchase needs. Keep it steady from here: its job now is to still be there on the day.';
+    else {
+      pace = 'To get there in ' + years(p.horizon) + ' you would need to add about ' + money(Math.ceil(g.monthlyNeeded / 10) * 10) + ' a month, counting on no growth at all.';
+      if (p.monthly > 0) pace += g.onTrack
+        ? ' At ' + money(p.monthly) + ' a month you are on course.'
+        : ' At ' + money(p.monthly) + ' a month it would take about ' + (Math.round(g.yearsAtPace * 10) / 10) + ' years.';
+      pace += ' Over a few years, what you add counts for far more than what it earns.';
+    }
+    return h('div', { class: 'stack tight' }, h('span', { class: 'eyebrow' }, 'Your home goal'), tiles,
+      h('p', { class: 'sub' }, pace),
+      h('p', { class: 'note' }, capLine + (il
+        ? ' The bank would lend up to ' + money(Math.round(g.loan)) + ' (75% for a first home), with repayments of at most half your net income. Prices and tax bands are today’s; this app does not guess where home prices go.'
+        : ' Lenders’ rules vary by country: the ' + pctDown + '% down payment and the costs are rough figures to replace with your own.')));
+  }
+
+  // -------------------------------------------------------- record of shocks
+  /* Base rates to read alarming news against. Figures are from published event tables and
+     press reports gathered in November 2026; see the Learn tab for sources. */
+  function shockRecord() {
+    var rows = [
+      ['Lebanon war, July 2006', 'About 4% on the first day', 'Back by the ceasefire, five weeks later'],
+      ['Gaza, summer 2014', 'Roughly flat', 'No recovery needed'],
+      ['7 October 2023', 'About 13% in three weeks', 'Back in ten weeks; 14% higher a year later'],
+      ['Iran, June 2025', 'Hardly at all', 'Shares set records during the fighting']
+    ];
+    var box = card('How shocks like this have played out', 'Something to read alarming headlines against. It is a record, not a forecast.',
+      h('div', { class: 'tiles' },
+        tile('Typical fall in a world shock', 'About 6%', 'US shares, across more than 30 wars, attacks and crises'),
+        tile('Time to the low', 'About 3 weeks', 'and about 3 more to recover'),
+        tile('The exception', '1973', 'the oil embargo: the lasting damage came from oil')),
+      isIL() ? h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['In Israel', 'Tel Aviv shares fell', 'What followed'].map(function (t) { return h('th', { scope: 'col', class: 'txt' }, t); }))),
+        h('tbody', null, rows.map(function (r) { return h('tr', null, h('th', { scope: 'row' }, r[0]), h('td', { class: 'txt' }, r[1]), h('td', { class: 'txt' }, r[2])); })))) : null,
+      h('p', { class: 'note' }, 'Selling on the first day gained nothing in any of these. The slow recoveries in history were the shocks that also broke something in the economy, which is what the credit and trend readings on the Markets tab watch for. Figures are as reported by Deutsche Bank, LPL Research and the Israeli financial press.'));
+    return box;
+  }
+
+  // --------------------------------------------------------- tested on history
+  function testedCard() {
+    var R = RESEARCH;
+    if (!R || !Array.isArray(R.cases) || !R.cases.length) return null;
+    var pc = function (x, d) { return isNum(x) ? (x * 100).toFixed(d === undefined ? 1 : d) + '%' : 'n/a'; };
+    var fall = function (x) { return isNum(x) ? MINUS + Math.abs(x * 100).toFixed(0) + '%' : 'n/a'; };
+    var yearsN = Math.round(R.months / 12);
+    var NAMES = { steady: 'Not at all', balanced: 'A little', active: 'More' };
+    var WHO = { cautious: 'Cautious', middle: 'Middle', bold: 'Bold' };
+    var epi = function (s, id) { var e = (s.episodes || []).filter(function (x) { return x.id === id; })[0]; return e ? e.fall : null; };
+    var ral = function (s, id) { var e = (s.rallies || []).filter(function (x) { return x.id === id; })[0]; return e ? e.gain : null; };
+    var tb = h('tbody');
+    R.cases.forEach(function (c) {
+      tb.appendChild(h('tr', { class: 'group' }, h('th', { colspan: '7', scope: 'colgroup' }, (WHO[c.id] || str(c.label, 30)) + ' saver, about ' + Math.round(c.styles.steady.growth * 100) + '% in stocks')));
+      ['steady', 'balanced', 'active'].forEach(function (k) {
+        var s = c.styles[k];
+        if (!s) return;
+        tb.appendChild(h('tr', null, h('th', { scope: 'row' }, 'Signals: ' + NAMES[k].toLowerCase()),
+          h('td', { class: 'num' }, pc(s.cagr)), h('td', { class: 'num' }, fall(s.maxDD)), h('td', { class: 'num' }, fall(epi(s, 'dotcom'))),
+          h('td', { class: 'num' }, fall(epi(s, 'gfc'))), h('td', { class: 'num' }, '+' + pc(ral(s, 'r2009'), 0)), h('td', { class: 'num' }, pc(s.turnover, 0))));
+      });
+    });
+    var mid = R.cases.filter(function (c) { return c.id === 'middle'; })[0] || R.cases[0];
+    var a = mid.styles.steady, b = mid.styles.balanced;
+    var chart = null;
+    if (a.curve && b.curve && a.curve.length === b.curve.length && a.curve.length > 8) {
+      var labels = a.curve.map(function (pt) { return dateShortMonth(str(pt.m, 7)); });
+      chart = h('div', { class: 'stack tight' },
+        h('div', { class: 'legend' }, h('span', null, h('i', { style: { background: COLOR.us } }), 'Signals: a little'), h('span', null, h('i', { style: { background: 'var(--muted)', height: '1.5px' } }), 'Signals: not at all')),
+        lineChart({ height: 190, label: 'Growth of 1 invested in June 1997, middle saver, with and without signals',
+          series: [{ name: 'A little', color: COLOR.us, values: b.curve.map(function (pt) { return pt.v; }) }, { name: 'Not at all', color: 'var(--muted)', values: a.curve.map(function (pt) { return pt.v; }), width: 1.5 }],
+          labels: labels, xLabels: [labels[0], labels[labels.length - 1]], tick: function (v) { return (Math.round(v * 10) / 10) + 'x'; }, fmt: function (v) { return v.toFixed(2) + 'x'; } }));
+    }
+    var yrs = R.years || [], won = yrs.filter(function (y) { return y.balanced > y.steady; }).length;
+    var per = (R.periods || []).map(function (pd) { return pd.name + ': ' + pc(pd.styles.steady.cagr) + ' a year without, ' + pc(pd.styles.balanced.cagr) + ' with'; }).join('. ');
+    var at = R.attribution || {};
+    var late = R.late && R.late.balanced;
+    var ys = R.yardsticks || {};
+    var findings = h('ul', { class: 'bullets' },
+      h('li', null, h('b', null, 'It softened the worst falls. '), 'For the middle saver the deepest fall shrank from ' + fall(a.maxDD) + ' to ' + fall(b.maxDD) + ', and the yearly return was ' + pc(b.cagr) + ' against ' + pc(a.cagr) + '. The average share in stocks was the same either way, so this came from when the plan leaned, not from holding less.'),
+      h('li', null, h('b', null, 'Nearly all of it came from two long bear markets. '), 'The gain was made in 2000 to 2002 and 2007 to 2009, when prices fell for many months. ' + per + '.'),
+      h('li', null, h('b', null, 'It gave some back in every recovery. '), 'In the year after March 2009 the leaning mix gained ' + pc(ral(b, 'r2009'), 0) + ' against ' + pc(ral(a, 'r2009'), 0) + ' without. It was ahead in ' + won + ' of ' + yrs.length + ' calendar years and behind in each of 2009 to 2012.'),
+      h('li', null, h('b', null, 'The readings for stocks did the work. '), at.us && at.bonds && at.gold ? 'Leaning on US stocks alone gave ' + pc(at.us.cagr) + ' a year with a worst fall of ' + fall(at.us.maxDD) + '. Leaning on bonds alone or gold alone changed almost nothing (' + pc(at.bonds.cagr) + ' and ' + pc(at.gold.cagr) + ', against ' + pc(a.cagr) + ' with no leaning).' : 'The bond and gold readings added almost nothing.'),
+      late ? h('li', null, h('b', null, 'Being late did not matter. '), 'Acting on readings a month old gave ' + pc(late.cagr) + ' a year and a worst fall of ' + fall(late.maxDD) + ', the same as acting the next morning. Checking once a month is enough.') : null,
+      h('li', null, h('b', null, 'It traded three times as much. '), 'About ' + pc(b.turnover, 0) + ' of the portfolio changed hands each year, against ' + pc(a.turnover, 0) + ' without. ' + (isIL()
+        ? 'In a taxed account every sale brings Israel’s 25% tax forward, which can cancel a gain this small. Lean with new deposits, or inside a Keren Hishtalmut or Kupat Gemel LeHashkaa where switching tracks is not taxed.'
+        : 'In a taxed account every sale brings the tax forward, which can cancel a gain this small. Lean with new deposits, or inside a tax-sheltered account.')));
+    return card('Tested on ' + yearsN + ' years of real prices',
+      'The engine on this page was run month by month from ' + dateShortMonth(str(R.from, 7)) + ' to ' + dateShortMonth(str(R.to, 7)) + ', seeing only what it would have seen each month. Three savers, each with the signals off, at "a little" and at "more".',
+      h('div', { class: 'table-scroll' }, h('table', null,
+        h('thead', null, h('tr', null, ['', 'Yearly return', 'Worst fall', '2000 to 2002', '2007 to 2009', 'Year after March 2009', 'Traded a year'].map(function (t) { return h('th', { scope: 'col' }, t); }))), tb)),
+      chart, h('h3', null, 'What it showed'), findings,
+      h('h3', null, 'Why not to lean on it'),
+      h('ul', { class: 'bullets' },
+        h('li', null, 'It is one stretch of history in one country’s funds, and the rules were written by people who already knew how it went. This app’s own lessons say a strategy earns far less after it is published than in its test.'),
+        h('li', null, 'Costs were set at ' + pc(R.cost, 1) + ' of each trade and tax at nothing. Both are kind.'),
+        h('li', null, 'Long-lived index mutual funds stood in for today’s funds. Market breadth and the news brief could not be rebuilt for the past and were left out.'),
+        ys.usStocks && ys.sixtyForty ? h('li', null, 'For scale: US stocks alone returned ' + pc(ys.usStocks.cagr) + ' a year with a worst fall of ' + fall(ys.usStocks.maxDD) + ', and a plain 60/40 mix ' + pc(ys.sixtyForty.cagr) + ' with ' + fall(ys.sixtyForty.maxDD) + '. Whichever setting you choose, your mix of stocks and bonds decided far more than the signals did.') : null),
+      h('p', { class: 'note' }, 'The test can be re-run from the research folder of the source. Returns are before inflation and include dividends and interest.'));
   }
 
   // --------------------------------------------------------------------- plan
@@ -558,6 +685,10 @@
         h('div', { class: 'row' }, h('label', { for: 'f-horizon', class: 'grow' }, 'When you will need it'), horizonOut),
         h('input', { id: 'f-horizon', type: 'range', min: '0', max: '40', step: '1', value: p.horizon }),
         h('span', { class: 'hint' }, 'The single biggest input. Money needed soon cannot ride out a crash.')),
+      h('fieldset', { class: 'field' }, h('legend', null, 'What the money is for'),
+        radioSet('goal', [['growth', 'Long-term saving'], ['home', 'A home']], p.goal, 'seg-ctl'),
+        h('span', { class: 'hint' }, p.goal === 'home' ? 'A purchase with a date gets a lower ceiling on stocks for each year remaining.' : 'Choose "A home" if this is for a down payment.')),
+      p.goal === 'home' ? moneyField('f-homePrice', 'Price of the home you have in mind', p.homePrice || '', (isIL() ? 'The average flat in Israel cost about \u20AA2.4 million in 2026. ' : '') + 'Leave it empty if you do not know yet.') : null,
       h('fieldset', { class: 'field' }, h('legend', { id: 'risk-legend' }, riskQuestion(p)),
         radioSet('risk', [[1, 'Sell everything'], [2, 'Sell some to feel safer'], [3, 'Hold, and lose sleep'], [4, 'Hold without much worry'], [5, 'Buy more']], p.risk, 'opt-list'),
         h('span', { class: 'hint' }, 'Answer for the worst day, not today. People tend to feel braver while prices are rising.')),
@@ -585,14 +716,14 @@
     var f = $('controls');
     if (!f) return;
     var pick = function (name) { var el = f.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : undefined; };
-    var holdings = {}, was = S.profile.country;
+    var holdings = {}, was = S.profile.country, wasGoal = S.profile.goal;
     var n = function (id) { var el = $(id); return el ? Number(el.value) || 0 : 0; };
     E.SLEEVES.forEach(function (k) { holdings[k] = n('f-h-' + k); });
     S.profile = E.normalizeProfile({
       amount: $('f-amount').value === '' ? 0 : Number($('f-amount').value), monthly: n('f-monthly'),
       horizon: Number($('f-horizon').value), risk: Number(pick('risk')), crypto: pick('crypto'), style: pick('style'),
       efund: $('f-efund').checked, debt: $('f-debt').checked, unstable: $('f-unstable').checked, holdings: holdings,
-      country: pick('country'),
+      country: pick('country'), goal: pick('goal'), homePrice: $('f-homePrice') ? n('f-homePrice') : S.profile.homePrice,
       situation: { status: $('f-s-status').value, income: n('f-s-income'), spending: n('f-s-spending'), savings: n('f-s-savings'),
         debt: n('f-s-debt'), debtRate: n('f-s-rate'), studyFund: pick('studyFund') || S.profile.situation.studyFund, pension: pick('pension') || S.profile.situation.pension }
     });
@@ -600,6 +731,11 @@
       f.replaceWith(buildControls());
       S.learnBuilt = false;
       renderData();
+    } else if (S.profile.goal !== wasGoal) {  // the price question appears only for a home
+      f.replaceWith(buildControls());
+      var again = $('f-goal-' + S.profile.goal);
+      if (again) again.focus();
+      renderPlan();
     } else {
       $('f-horizon-out').textContent = years(S.profile.horizon);
       $('risk-legend').textContent = riskQuestion(S.profile);
@@ -792,6 +928,7 @@
           ft.toSavings > 0 ? tile('To your cushion', money(Math.round(ft.toSavings)), 'aim: ' + ft.months + ' months of spending') : null,
           tile('Invested', money(Math.round(ft.invest)), ft.invest > 0 ? 'split as below' : 'next time'))));
     }
+    if (p.goal === 'home') hero.appendChild(homeGoalBlock(pl));
     var live = pl.rows.filter(function (r) { return r.target > 0; });
     hero.appendChild(h('div', { class: 'twobars' },
       h('span', { class: 'bar-cap' }, 'Your money'), splitBar(live, function (r) { return r.target; }, 'Where the money goes'),
@@ -1187,6 +1324,7 @@
         h('p', { class: 'prose' }, str(b.summary, 1500)),
         fresh ? null : h('p', { class: 'note' }, 'This brief is more than four days old, so it no longer moves the plan.')));
       root.appendChild(callout('info', 'Does any of this change your plan? Usually not', 'The plan has already weighed these stories. News can make it more careful by a small amount and can never make it bolder, because investors who trade on headlines have earned less than those who do nothing. Read this to understand what is happening, not to decide what to do today.'));
+      root.appendChild(shockRecord());
 
       var f = b.facts || {}, tiles = h('div', { class: 'tiles' });
       if (f.fed && isNum(f.fed.lo) && isNum(f.fed.hi)) tiles.appendChild(tile('Fed policy rate', f.fed.lo.toFixed(2) + '–' + f.fed.hi.toFixed(2) + '%', str(f.fed.odds, 120)));
@@ -1241,6 +1379,14 @@
     L.push('PROFILE: investing ' + money(pl.profile.amount) + ', needs the money in ' + years(pl.profile.horizon) + ', risk answer ' + pl.profile.risk + '/5 (' + pl.riskName + '), crypto ceiling ' + E.CRYPTO_CAP[pl.profile.crypto] + '%, signal strength "' + pl.profile.style + '", emergency fund: ' + (pl.profile.efund ? 'yes' : 'no') + ', high-interest debt: ' + (pl.profile.debt ? 'yes' : 'no') + '.');
     var sit = pl.profile.situation, ft = pl.first;
     L.push('COUNTRY: ' + C().name + '. All of the person\u2019s amounts are in ' + (isIL() ? 'Israeli shekels' : 'their own currency, shown with $') + '.');
+    if (pl.profile.goal === 'home') {
+      var hg = homeGoalFor(pl);
+      L.push('GOAL: saving to buy a home' + (hg ? ' priced ' + money(hg.price) + '. Cash needed ' + money(Math.round(hg.need)) + ' (down payment ' + money(Math.round(hg.down)) + ', purchase tax ' + money(Math.round(hg.tax)) + ', other costs ' + money(Math.round(hg.costs)) + '); has ' + money(Math.round(hg.have)) + ' toward it; still to save ' + money(Math.round(hg.gap)) : ', price not given') + '. Because the money has a date, stocks and crypto are capped at ' + E.horizonCap(pl.profile.horizon, 'home') + '%.');
+    }
+    if (RESEARCH && RESEARCH.cases) {
+      var rm = RESEARCH.cases.filter(function (c) { return c.id === 'middle'; })[0];
+      if (rm) L.push('HISTORY TEST of this model, ' + RESEARCH.from + ' to ' + RESEARCH.to + ', middle saver: signals off ' + (rm.styles.steady.cagr * 100).toFixed(1) + '% a year with a worst fall of ' + (rm.styles.steady.maxDD * 100).toFixed(0) + '%; signals "a little" ' + (rm.styles.balanced.cagr * 100).toFixed(1) + '% and ' + (rm.styles.balanced.maxDD * 100).toFixed(0) + '%. Nearly all of the gain came in 2000-02 and 2007-09; it lagged in recoveries and traded three times as much. One history, written with hindsight: do not present it as proof.');
+    }
     L.push('SITUATION: work status ' + sit.status + '; monthly income before tax ' + (sit.income ? money(sit.income) : 'not given') + '; monthly spending ' + (sit.spending ? money(sit.spending) : 'not given') + '; quick savings ' + money(sit.savings) + '; costliest debt ' + (sit.debt ? money(sit.debt) + ' at ' + sit.debtRate + '%' : 'none entered') + (isIL() ? '; employer study fund (Keren Hishtalmut): ' + sit.studyFund + '; pension being paid: ' + sit.pension : '') + '.');
     if (ft.known) L.push('ORDER FOR THIS DEPOSIT: ' + money(Math.round(ft.toDebt)) + ' to debt, ' + money(Math.round(ft.toSavings)) + ' to the cushion (aim ' + ft.months + ' months of spending), ' + money(Math.round(ft.invest)) + ' invested.');
     if (isIL()) {
@@ -1403,20 +1549,71 @@
       { t: 'Know what "enough" is.', d: 'A sum of about 25 times your yearly spending has historically supported that spending for 30 years.', src: 'Bengen (1994); Robin and Dominguez, Your Money or Your Life', s: 2, use: 'Set the horizon to when you want to reach it.' }
     ] }
   ];
-  var LIBRARY_IL = { theme: 'Investing from Israel', intro: 'Rules for tax year 2026, from published summaries. Check a figure with the Tax Authority or a licensed adviser before acting on it.', items: [
+  /* Second research round, November 2026: events, temptations, the young saver, housing. */
+  var LIBRARY_MORE = [
+    { theme: 'News and events', intro: 'What the evidence says about acting on headlines.', items: [
+      { t: 'Most shocks fade within weeks.', d: 'Across more than thirty wars, attacks and crises, the typical fall in US shares was about 6%, reaching its low in roughly three weeks and recovering in about three more. The 1973 oil embargo is the main exception, and it was the oil, not the war, that lasted.', src: 'Deutsche Bank and LPL Research event tables (2026); Dimson, Marsh and Staunton (2026)', s: 2, use: 'The Events tab shows this record beside the day’s headlines.' },
+      { t: 'News moves prices for days, not months.', d: 'An unusually gloomy day of newspaper coverage has been followed by a fall of about a tenth of a percent the next day, most of it reversed within a week. By the time you read a story, it is in the price.', src: 'Tetlock, Giving Content to Investor Sentiment (2007); Garcia (2013)', s: 3, use: 'News is limited to a tenth of any reading and can only make it more careful.' },
+      { t: 'What fills the headlines is usually a poor buy.', d: 'Individuals are net buyers of whatever is in the news. Shares that drew a surge of online searches rose for about two weeks and gave it back within a year.', src: 'Barber and Odean, All That Glitters (2008); Da, Engelberg and Gao (2011)', s: 3, use: 'There is no list of top movers here, and only broad funds are suggested.' },
+      { t: 'Forecasters are right about half the time.', d: 'Of 6,582 market forecasts by 68 well-known pundits, 47% were right. Economists as a group foresaw 5 of 153 recessions a year ahead.', src: 'CXO Advisory (2005 to 2012); An, Jalles and Loungani (IMF, 2018); Tetlock, Expert Political Judgment', s: 3, use: 'The daily brief reports what happened and is told never to predict a price.' },
+      { t: 'No election or calendar rule has held up.', d: 'US shares did better under one party for a century, but the gap vanishes in other countries and is explained by which party happened to take office during crises. The four-year presidential cycle rests on about two dozen observations.', src: 'Santa-Clara and Valkanov (2003); Pastor and Veronesi (2020); Research Affiliates', s: 2, use: 'Politics appears in the brief for its market consequences only. No rule is built on it.' },
+      { t: 'Frightening uncertainty has more often come before gains.', d: 'High readings of policy uncertainty, and of fear on a century of newspaper front pages, were followed by returns a little above normal, not below: frightened markets are cheaper ones. It is far too weak to trade on, but it argues against selling because the news is alarming.', src: 'Brogaard and Detzel (2015); Manela and Moreira, News Implied Volatility (2017)', s: 2, use: 'Why news is a small brake that fades, and never a reason to sell everything.' }
+    ] },
+    { theme: 'Temptations', intro: 'What a new investor will be offered, and how it has turned out for the people who took it.', items: [
+      { t: 'Day trading: almost nobody wins.', d: 'Of Brazilians who day-traded futures for at least 300 days, 97% lost money. Among every day trader in Taiwan over 15 years, fewer than 1 in 100 was reliably profitable after fees.', src: 'Chague, De-Losso and Giovannetti (2020); Barber, Lee, Liu and Odean (2014)', s: 3, use: 'The plan is checked once a month and has no trading screen.' },
+      { t: 'Options, CFDs and forex are built for the seller.', d: 'Between 74% and 89% of retail accounts trading CFDs in Europe lost money. In India, 93% of 11 million people trading derivatives lost. US retail options traders lost more than $5 billion in 2019 to 2021, most of it in costs.', src: 'ESMA (2018); SEBI (2024); Bryzgalova, Pavlova and Sikorskaya (2023)', s: 3, use: 'None of these appears anywhere in the plan.' },
+      { t: 'A 2x fund does not give twice the return.', d: 'Leveraged funds reset every day. If an index falls 30% and then rises 50%, it ends 5% up. A fund aiming at twice each move ends 20% down.', src: 'Arithmetic; regulators’ warnings on leveraged funds', s: 3, use: 'The plan uses plain index funds only.' },
+      { t: 'Popular tipsters are mostly wrong.', d: 'Of 29,000 accounts giving share tips on one social network, 28% showed skill and 56% were reliably wrong, losing about 2.3% a month. The ones who were wrong had more followers.', src: 'Kakhbod, Kazempour, Livdan and Schuerhoff, Finfluencers (2023)', s: 2, use: 'The plan names only broad index funds, and the Ask tab will not tip shares.' },
+      { t: 'Themed funds arrive after the run-up.', d: 'Funds built around a fashionable theme launch when the theme is already expensive, and trailed the market by about 30% over their first five years. Their investors earned 2.4% a year while the funds returned 7.3%, because the money arrived late.', src: 'Ben-David, Franzoni, Kim and Moussawi (2023); Morningstar (2023)', s: 3, use: 'No sector or theme fund is suggested. The sector chart is there to explain the market, not to choose from.' },
+      { t: 'Dividends are not free money.', d: 'A share price falls by the dividend it pays, so a payout moves money from one of your pockets to the other. Choosing shares for their payouts narrows what you own without raising what you earn.', src: 'Hartzmark and Solomon, The Dividend Disconnect (2019)', s: 3, use: 'Returns in this app always include dividends, and no fund is picked for its yield.' },
+      { t: 'Waiting to "buy the dip" has not beaten simply holding.', d: 'Of 196 rules for buying US shares after a fall, tested back to 1965, more than 60% did worse than holding throughout. The cash that waits for a dip misses more than it saves.', src: 'AQR, Hold the Dip (2025)', s: 2, use: 'New money goes in on schedule, to whichever part is furthest below target.' }
+    ] },
+    { theme: 'When you are young', intro: 'Starting early with small sums changes which risks matter.', items: [
+      { t: 'Your future pay is your largest asset.', d: 'Decades of salary ahead act like a large, steady bond, which is why the young can hold mostly shares. If your pay is uncertain, or rises and falls with the stock market, that argument weakens and the share should be lower.', src: 'Bodie, Merton and Samuelson (1992); Cocco, Gomes and Maenhout (2005); Benzoni, Collin-Dufresne and Goldstein (2007)', s: 2, use: 'Ticking "my income is irregular" lowers the share in stocks by ten points.' },
+      { t: 'A 90% ceiling is the mainstream answer in your twenties.', d: 'The largest retirement funds hold about 90% in shares for savers in their twenties. One prominent study argues for 100% for life. Its critics point out that it assumes nobody sells in a crash.', src: 'Vanguard and Fidelity target-date funds; Anarkulova, Cederburg and O’Doherty (2025); Asness (AQR)', s: 2, use: 'The plan never puts more than 90% in stocks and crypto together.' },
+      { t: 'An early crash costs little money and a lot of nerve.', d: 'Losing half of a first year’s savings is the same as missing a few months of later deposits. But people who lived through poor markets held fewer shares for decades afterwards. The damage of an early crash is the habit it teaches.', src: 'Malmendier and Nagel, Depression Babies (2011); arithmetic', s: 2, use: 'The risk question asks what you would do in a fall, and the one-page plan is written for that day.' },
+      { t: 'The first month of cushion matters most.', d: 'Among 70,000 lower-income US households, the chance of hardship fell steeply up to about one month of income in savings, then levelled off. Three to six months is the convention. One month is the floor.', src: 'Gallagher and Sabat (2019)', s: 2, use: 'The plan fills a cushion of three months, or six if your income is irregular, before it invests.' },
+      { t: 'Let saving rise with your pay.', d: 'Staff who agreed in advance to save part of each future rise went from saving 3.5% of pay to 13.6% in 40 months. Later work finds the long-run effect smaller once job changes are counted, but still there.', src: 'Thaler and Benartzi, Save More Tomorrow (2004); Choi and others (2024)', s: 2, use: 'The monthly deposit field. Raise it each time your pay rises.' }
+    ] },
+    { theme: 'Buying a home', intro: 'The commonest reason to save, and the one where a date matters most.', items: [
+      { t: 'Housing has returned about as much as shares, mostly as rent.', d: 'Across 16 countries since 1870, housing returned about 7% a year after inflation, close to shares and with smaller swings. But roughly five of those seven points were rent, upkeep was undercounted, and studies of actual properties find nearer 2%.', src: 'Jorda, Knoll, Kuvshinov, Schularick and Taylor, The Rate of Return on Everything (2019); Chambers, Spaenjers and Steiner (2021)', s: 2, use: 'A home is treated as somewhere to live first. It does not replace the rest of the plan.' },
+      { t: 'One home with a mortgage is a concentrated, borrowed bet.', d: 'With a quarter of the price paid in cash, a 10% fall in the price removes 40% of your stake. One home also swings more than a national index does, in the same town as your job.', src: 'Arithmetic; Shiller, Irrational Exuberance', s: 3, use: 'After buying, keep the rest of your money spread as the plan shows.' },
+      { t: 'Compare what you can never get back.', d: 'Rent is gone once paid. So are mortgage interest, upkeep of about 1% of the home’s value a year, and what your deposit would have earned elsewhere. Buying wins when those add up to less than the rent and you stay long enough to spread the 5 to 10% it costs to buy and sell.', src: 'Felix, the 5% rule (PWL Capital); Beracha and Johnson (2012)', s: 2, use: 'The home goal shows the cash a purchase needs. The rent comparison is yours to make.' },
+      { t: 'Money for a deposit should not ride the stock market.', d: 'US shares have lost money in about one year in four, one three-year stretch in seven and one five-year stretch in eight. A purchase date does not wait for a recovery.', src: 'S&P 500 returns since 1926, as summarised by fund managers', s: 3, use: 'Choosing "a home" as the goal lowers the ceiling on shares for each year remaining: none under two years, 30% at three to five, 60% at seven to ten.' }
+    ] }
+  ];
+  /* Israel: added after the second research round. */
+  var LIBRARY_IL_MORE = [
+    { t: 'With little income, some gains can come out tax-free.', d: 'Every resident has 2.25 credit points, worth ₪6,534 a year. If your salary does not use them, they can be set against the 25% tax on investment gains, which covers about ₪26,000 of gain a year. The bank withholds the tax regardless, so you have to file a refund request to get it back. The lower income-tax brackets and the extra points for discharged soldiers do not apply to gains.', src: 'Israeli accountants’ guides, as reported in 2026. Not confirmed with the Tax Authority', s: 1, use: 'Shown in your next steps when your income is low. Confirm it with an adviser before relying on it.' },
+    { t: 'Leave your Savings for Every Child account alone until 21.', d: 'The state paid ₪58 a month into it until you turned 18. From 18 you can withdraw with a parent’s consent, but a second bonus of ₪582 is paid at 21 only if nothing was taken out, and National Insurance covers the fees until then. If it sits in a low-risk track and you will not need it for years, it can be moved to a share-based track at no cost.', src: 'National Insurance Institute rules, as reported by fund managers and Bizportal (2026)', s: 2, use: 'It appears in your next steps.' },
+    { t: 'For small monthly sums, the fixed fee is what matters.', d: 'A ₪15 monthly account fee is 3% of a ₪500 deposit, and buying an exchange-traded fund with a ₪2 to ₪5 minimum commission costs 0.4 to 0.9% each time. Tracking mutual funds carry no dealing commission. Banks list custody fees of 0.6 to 0.7% a year, while trading houses charge none.', src: 'TheMarker Supermarker; Gemel-Top; Bizportal (2026 price lists)', s: 2, use: 'Tracking funds at a provider with no account or custody fee are the first suggestion.' },
+    { t: 'An index tracker should cost close to nothing.', d: 'Israeli S&P 500 tracking funds are offered at 0% management, and the Irish iShares fund listed in Tel Aviv charges 0.07%. An S&P 500 track costs about 0.5% in a Kupat Gemel LeHashkaa and 0.3 to 0.7% in a Keren Hishtalmut. Managers can raise a fee later, so look once a year.', src: 'Bizportal; Gemel-Net; TheMarker Supermarker (2026)', s: 2, use: 'The cost note under your growth range.' },
+    { t: 'Foreign shares: hedged or not is a real disagreement.', d: 'Israeli pension funds sell dollars when US shares rise, so the shekel tends to strengthen in good years for Wall Street and to weaken in Israeli crises. That cushions an unhedged holding in bad times and trims it in good ones: S&P 500 trackers earned about 3% in shekels in the year to February 2026. Hedging has cost 0.5 to 2% a year. Careful Israeli sources do not agree on which is better.', src: 'Ben Zeev and Nathan (2024); Globes; Calcalist', s: 2, use: 'The plan suggests unhedged trackers for money held ten years or more, and says the choice is open.' },
+    { t: 'A money-market fund is taxed more lightly than a deposit.', d: 'A bank deposit pays 15% tax on all of its interest. A shekel money-market fund pays 25%, but only on the part above inflation. With the Bank of Israel rate at 3.25% and inflation at 1.6%, that is about 0.4 points of tax against 0.5. Banks may not charge commission or custody on these funds.', src: 'TheMarker; Bank of Israel rules, as reported; arithmetic', s: 2, use: 'Why the cash part of the plan is a money-market fund.' },
+    { t: 'Losses can be set against gains.', d: 'A realised loss offsets gains, dividends and interest from securities in the same year, automatically within one account. Unused losses carry forward without limit against later gains, but only if you report them.', src: 'Bizportal tax guide (2026)', s: 2, use: 'A reason to keep everything in one account where you can.' },
+    { t: 'A first home needs about a quarter of the price in cash.', d: 'The Bank of Israel caps a mortgage at 75% of the price for a first home, repayments at half of net income, and the variable-rate part at two thirds of the loan. On a flat of ₪2.3 to 2.4 million, about the national average in 2026, that is ₪600,000 to ₪800,000 with tax and costs.', src: 'Bank of Israel Directive 329; price data as reported in 2026', s: 3, use: 'The home goal works this out for the price you enter.' },
+    { t: 'Rent yields less than a mortgage costs.', d: 'Israeli flats rent for about 2.5 to 3% of their price a year, while new fixed-rate mortgages cost about 4.6%. A flat bought to let pays only if prices keep rising. Prices rose about 31% in the five years to mid-2026 and slipped about 2% in the last year.', src: 'Central Bureau of Statistics; Bank of Israel mortgage data; Global Property Guide (2026)', s: 2, use: 'Context for the home goal. The app takes no view on where prices go.' },
+    { t: 'A single home pays no purchase tax up to about ₪1.98 million.', d: 'Above that the rate is 3.5% up to ₪2.35 million and 5% up to ₪6.06 million, charged on the slice in each band. An investor pays 8% from the first shekel. The bands are frozen until January 2028.', src: 'Tax Authority bands, as published by property sites in 2026', s: 2, use: 'The home goal adds this tax to the cash you need.' },
+    { t: 'Israel’s markets recovered from each recent war within weeks.', d: 'In 2006 Tel Aviv shares were back at their pre-war level by the ceasefire. After 7 October 2023 the TA-35 fell about 13% in three weeks, was back by late December, and stood 14% higher a year later. In June 2025 it set records during the fighting. Selling on the first day gained nothing in any of them.', src: 'Globes; The Times of Israel; Ynet (figures as reported)', s: 2, use: 'A record of what happened, not a promise. It is why the plan does not sell on headlines.' }
+  ];
+  var LIBRARY_IL = { theme: 'Investing from Israel', intro: 'Figures for tax year 2026, checked in November 2026 against tables published by fund managers and the financial press. The ceilings are frozen until 2027. They were not read from the Tax Authority itself, so confirm a figure there or with a licensed adviser before acting on it.', items: [
     { t: 'Take the Keren Hishtalmut before anything else.', d: 'Where an employer offers it, they typically add 7.5% of your salary to your own 2.5%, free of tax on salary up to \u20AA15,712 a month, and gains come out tax-free after six years.', src: 'Israeli tax guides for 2026; The Jerusalem Post year-end tax guide', s: 3, use: 'It leads your next steps when you say you are an employee.' },
     { t: 'Tax is 25% of the gain after inflation, and only when you sell.', d: 'Nothing is due while you hold. Dividends are taxed at 25% as well. A further surtax applies only above about \u20AA721,560 of yearly income.', src: 'PwC tax summary for Israel (2026)', s: 3, use: 'The plan rebalances with new money, so that selling is the last resort.' },
     { t: 'Avoid US-listed funds.', d: 'An Irish-domiciled fund pays 15% US tax on dividends inside the fund. A US-listed fund held from Israel has a quarter or more withheld, and US assets above $60,000 can face US estate tax of up to 40%. Israel itself has no inheritance tax, which is why this catches people out.', src: 'Globes, The US estate tax trap for Israeli investors', s: 3, use: 'The examples are Israeli tracking funds or Irish-domiciled funds, never VOO or VTI.' },
     { t: 'Tracking mutual funds usually cost nothing to buy or sell.', d: 'Israeli mutual funds, index trackers included, do not charge a separate trading commission, unlike exchange-traded funds. You still pay the yearly management fee, and a bank may charge for custody.', src: 'Meitav; Globes', s: 2, use: 'They are the first suggestion for small monthly amounts.' },
     { t: 'Keep the steady part of your money in shekels.', d: 'The dollar has ranged from about \u20AA2.80 to \u20AA3.82 in two years. Your rent and bills are in shekels, so the part of the plan meant to be stable should be too.', src: 'Bank of Israel; exchange-rate data', s: 3, use: 'Bonds and cash are shekel instruments. The bond part is read from Bank of Israel yields and Israeli inflation, never from US bonds.' },
-    { t: 'Your country is already a large bet.', d: 'Your salary, home and pension all depend on Israel\u2019s economy. A strong run at home (the Tel Aviv 125 rose about 70% in two years) tempts people to add more just when it is dearest.', src: 'Dimson, Marsh and Staunton on single-country risk', s: 2, use: 'Israeli shares are a modest part of the international slice, not the core.' },
+    { t: 'Your country is already a large bet.', d: 'Your salary, home and pension all depend on Israel\u2019s economy. A strong run at home (the Tel Aviv 125 rose about 70% in two years) tempts people to add more just when it is dearest. The index itself is narrow: about a quarter of it is five companies, and a third is banks and insurers.', src: 'Dimson, Marsh and Staunton on single-country risk', s: 2, use: 'Israeli shares are a modest part of the international slice, not the core.' },
     { t: 'A Kupat Gemel LeHashkaa trades a higher fee for flexibility.', d: 'It takes up to \u20AA83,641 a year, lets you switch investment tracks without tax, and is taxed at 25% of the gain after inflation when you withdraw.', src: 'Globes, Changes that will affect personal finances in 2026', s: 2, use: 'Offered beside a trading account as one of two sensible homes for the plan.' },
-    { t: 'Crypto is taxed like any other asset.', d: 'Gains are taxed at 25%. Frequent trading can be treated as a business and taxed at up to 50%. Keep every record; banks may ask where the money came from.', src: 'Israeli court rulings and Tax Authority guidance, as reported', s: 2, use: 'The plan suggests a Bitcoin tracking fund inside your ordinary account.' },
+    { t: 'Crypto is taxed like any other asset.', d: 'Gains are taxed at 25%. Frequent trading can be treated as a business and taxed at up to 50%. Nobody withholds this tax for you: you report each sale yourself, and swapping one coin for another counts as a sale. Keep every record; banks may ask where the money came from.', src: 'Israeli court rulings and Tax Authority guidance, as reported', s: 2, use: 'The plan suggests a Bitcoin tracking fund inside your ordinary account.' },
     { t: 'Rebalance rarely, by rule.', d: 'No schedule beats another. Checking once or twice a year and acting at a 5-point gap needed about 28 trades in 84 years.', src: 'Vanguard, Best Practices for Portfolio Rebalancing (2015); Bernstein, The Intelligent Asset Allocator', s: 3, use: 'The 5-point band in your plan.' },
     { t: 'High returns with little risk is the classic sign of fraud.', d: 'So are pressure to act now, "everyone is buying it", and sellers who are not licensed. Check that anyone offering investments is licensed by the Israel Securities Authority.', src: 'SEC, investor.gov; Israel Securities Authority', s: 3, use: 'This app names only broad index funds from large managers.' },
     { t: 'Know what "enough" is.', d: 'A sum of about 25 times your yearly spending has historically supported that spending for 30 years.', src: 'Bengen (1994); Robin and Dominguez, Your Money or Your Life', s: 2, use: 'Set the horizon to when you want to reach it.' }
   ] };
-  function libraryThemes() { return isIL() ? LIBRARY.slice(0, -1).concat([LIBRARY_IL]) : LIBRARY; }
+  // Israel's own lessons first, then the three that apply everywhere (rebalancing, fraud, "enough").
+  LIBRARY_IL.items = LIBRARY_IL.items.slice(0, 8).concat(LIBRARY_IL_MORE, LIBRARY_IL.items.slice(8));
+  function libraryThemes() {
+    return LIBRARY.slice(0, -1).concat(LIBRARY_MORE, [isIL() ? LIBRARY_IL : LIBRARY[LIBRARY.length - 1]]);
+  }
   var READING = [
     ['If You Can', 'William Bernstein', 'Sixteen free pages. The whole plan in one sitting.'],
     ['The Little Book of Common Sense Investing', 'John Bogle', 'Why owning everything cheaply beats trying to choose.'],
@@ -1461,7 +1658,9 @@
 
   // ------------------------------------------------------------------- method
   function renderMethod() {
+    dropObservers('method');
     var root = clear($('view-method'));
+    roBucket = ROS.method;
     root.appendChild(card('How the plan is built', 'Four steps, in order of how much they matter.',
       h('ol', { class: 'steps' },
         h('li', null, h('h3', null, 'First, the things that beat any investment'), h('p', null, 'Paying off high-interest debt and holding an emergency cushion come before everything else. If either is missing, the plan says so at the top.')),
@@ -1481,7 +1680,10 @@
         h('li', null, h('b', null, 'Pacing ignores the market. '), 'Suggesting slower buying when markets look stressed was a form of market timing. Stepping in is now offered only for nerves.'),
         h('li', null, h('b', null, 'The stress test uses real episodes. '), '2008, when bonds helped, and 2022, when they did not, alongside the harsh all-at-once case.'),
         h('li', null, h('b', null, 'Bonds change shape with inflation. '), 'When inflation is driving markets the plan says to hold shorter and inflation-linked bonds.'),
-        h('li', null, h('b', null, 'Added: '), 'your share of risk by part, a growth range built from today’s yields, a three-fund version, a one-page written plan, and a check-once-a-month rule.'))));
+        h('li', null, h('b', null, 'Added: '), 'your share of risk by part, a growth range built from today’s yields, a three-fund version, a one-page written plan, and a check-once-a-month rule.'),
+        h('li', null, h('b', null, 'A second round, in November 2026, added: '), 'a goal for buying a home with lower ceilings on stocks, a record of how past shocks played out on the Events tab, lessons on news, temptations, housing and starting young, and the test against history below.'))));
+    var tested = testedCard();
+    if (tested) root.appendChild(tested);
 
     if (isIL()) root.appendChild(card('What is different for Israel', 'The market readings are global. What you do with them is local.',
       h('ul', { class: 'bullets' },
@@ -1509,6 +1711,7 @@
       root.appendChild(card('Where the numbers come from', 'Last refresh: ' + dateTime(s.generatedAt) + '.',
         h('div', { class: 'table-scroll' }, h('table', null, h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Source'), h('th', { scope: 'col' }, 'Status'))), tb))));
     }
+    roBucket = null;
   }
 
   // ------------------------------------------------------------------ routing

@@ -523,6 +523,52 @@ test('a part read from another market ignores the US news brief', () => {
   assert.equal(row(off, 'bonds').unread, true);
 });
 
+test('money for a home gets a lower ceiling on shares for each year remaining', () => {
+  assert.deepEqual([1, 2.5, 4, 6, 8].map((y) => E.horizonCap(y, 'home')), [0, 15, 30, 45, 60]);
+  assert.deepEqual([10, 15, 30].map((y) => E.horizonCap(y, 'home')), [85, 90, 90]);        // far enough away: the usual rule
+  [1, 2.5, 4, 6, 8].forEach((y) => assert.ok(E.horizonCap(y, 'home') <= E.horizonCap(y), 'home cap above the usual one at ' + y));
+  const growth = (o) => { const w = E.baseAllocation(o).weights; return w.us + w.intl + w.crypto; };
+  const saver = { horizon: 4, risk: 5, crypto: 'high' };
+  near(growth(saver), 35);
+  near(growth(Object.assign({ goal: 'home' }, saver)), 30);
+  // the cap also binds after the readings lean the mix
+  const snap = { sleeves: { us: { score: 1 }, intl: { score: 1 } } };
+  const pl = E.plan(Object.assign({ goal: 'home', style: 'active' }, saver), snap, null, NOW);
+  assert.ok(pl.target.us + pl.target.intl + pl.target.crypto <= 30);
+  // no crypto for a purchase inside five years
+  assert.equal(E.baseAllocation({ goal: 'home', horizon: 4.5, risk: 5, crypto: 'high' }).weights.crypto, 0);
+  assert.ok(E.baseAllocation({ horizon: 4.5, risk: 5, crypto: 'high' }).weights.crypto > 0);
+  assert.equal(E.normalizeProfile({ goal: 'yacht' }).goal, 'growth');
+});
+
+test('purchase tax is charged on the slice in each band', () => {
+  const b = [[1978745, 0], [2347040, 3.5], [6055070, 5], [20183565, 8], [Infinity, 10]];
+  assert.equal(E.purchaseTax(1500000, b), 0);
+  near(E.purchaseTax(2000000, b), (2000000 - 1978745) * 0.035);
+  near(E.purchaseTax(2500000, b), (2347040 - 1978745) * 0.035 + (2500000 - 2347040) * 0.05);
+  assert.equal(E.purchaseTax(2500000, null), 0);
+});
+
+test('the home goal adds up the cash needed and measures the gap', () => {
+  const rules = { ltv: 0.75, costs: 0.03, brackets: [[1978745, 0], [2347040, 3.5], [Infinity, 5]] };
+  assert.equal(E.homeGoal({ goal: 'home' }, rules, 0), null);                      // no price, no goal
+  const g = E.homeGoal({ goal: 'home', homePrice: 2000000, horizon: 5, monthly: 3000 }, rules, 100000);
+  near(g.down, 500000);
+  near(g.costs, 60000);
+  near(g.tax, (2000000 - 1978745) * 0.035);
+  near(g.need, g.down + g.costs + g.tax);
+  near(g.gap, g.need - 100000);
+  near(g.loan, 1500000);
+  near(g.monthlyNeeded, g.gap / 60);
+  near(g.yearsAtPace, g.gap / 36000);
+  assert.equal(g.onTrack, false);                                                 // 3,000 a month for 5 years is 180,000
+  const done = E.homeGoal({ homePrice: 1000000, horizon: 3, monthly: 0 }, rules, 400000);
+  assert.equal(done.gap, 0);
+  assert.equal(done.onTrack, true);
+  assert.equal(done.yearsAtPace, 0);
+  assert.equal(E.homeGoal({ homePrice: 1000000, horizon: 3, monthly: 0 }, rules, 0).yearsAtPace, null);
+});
+
 test('the "too small to split" line follows the currency', () => {
   const target = { us: 60, intl: 0, crypto: 0, gold: 0, bonds: 40, cash: 0 };
   const P = (o) => E.normalizeProfile(o);
