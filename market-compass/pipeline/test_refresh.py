@@ -265,7 +265,7 @@ class BaseRates(unittest.TestCase):
 
     def test_analyze_reports_weekly_and_monthly_base_rates(self):
         a = r.analyze(dates(400), ramp(400))
-        self.assertEqual((a["up1w"], a["up1m"], a["up1d"]), (1.0, 1.0, 1.0))
+        self.assertEqual((a["up1w"], a["up1m"], a["up1d"], a["up3m"]), (1.0, 1.0, 1.0, 1.0))
 
 
 class Israel(unittest.TestCase):

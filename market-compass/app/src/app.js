@@ -1316,7 +1316,7 @@
     if (!isNum(x)) return '–';
     return f.asset === 'ILS=X' ? '₪' + nf(x, 3) : f.asset === '^TA125.TA' ? nf(x, 0) : '$' + price(x);
   }
-  function fcSpan(f) { return { 1: '1 day', 7: '1 week', 30: '1 month' }[f.horizonDays] || (f.horizonDays + ' days'); }
+  function fcSpan(f) { return { 1: '1 day', 7: '1 week', 30: '1 month', 90: '3 months' }[f.horizonDays] || (f.horizonDays + ' days'); }
   /* The blind test of 12 November 2026: anonymous cases dated after the model's training ended. */
   function blindCard() {
     var B = RESEARCH && RESEARCH.blind;
@@ -1362,7 +1362,7 @@
     var pc0 = function (x) { return isNum(x) ? Math.round(x * 100) + '%' : '–'; };
     var head = h('section', { class: 'card stack' },
       h('span', { class: 'eyebrow' }, 'Calls made from the news' + (d && d.updatedAt ? ' · updated ' + dateTime(d.updatedAt) : '')),
-      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the ten hottest shares and coins are to be higher tomorrow. Every call is scored against what happened.'),
+      h('p', { class: 'lede' }, 'Each trading day Claude reads the news and says how likely five markets are to be higher in a week, and how likely the ten hottest shares and coins are to be higher tomorrow. Monthly and three-month calls are added on Mondays. Every call is scored against what happened.'),
       h('p', { class: 'prose' }, 'You asked for predictions, so here they are, with nowhere to hide. The research on this page says calls like these are right about half the time. This record will show whether these do any better. They do not move your plan.'));
     if (sc.n > 0) {
       head.appendChild(h('div', { class: 'row' }, chip(v[0], v[1]), h('span', { class: 'sub' }, sc.n + ' scored')));
@@ -1372,6 +1372,10 @@
         tile('Naive rule', isNum(sc.baseBrier) ? sc.baseBrier.toFixed(3) : '–', 'quoting how often each asset usually rises'),
         tile('Inside the range given', isNum(sc.inRange) ? pc0(sc.inRange) : '–', 'should be about 80%')));
       head.appendChild(h('p', { class: 'note' }, v[2]));
+      var tr = d && d.trust;
+      if (tr && isNum(tr.k)) head.appendChild(callout('info', 'The record now corrects new calls',
+        'Looking back over ' + tr.n + ' scored calls, the best use of them would have been to take ' + Math.round(tr.k * 100) + '% of each departure from the usual figure. New calls show that corrected chance beside the one Claude gave.' +
+        (isNum(sc.adjBrier) ? ' On the ' + sc.adjN + ' corrected calls scored so far, the corrected chance scored ' + sc.adjBrier.toFixed(3) + ' against ' + sc.adjRawBrier.toFixed(3) + ' uncorrected.' : '')));
       var spans = Object.keys(sc.byHorizon).sort(function (a, b) { return Number(a) - Number(b); });
       if (spans.length > 1) head.appendChild(h('div', { class: 'table-scroll' }, h('table', null,
         h('thead', null, h('tr', null, ['By length of call', 'Scored', 'Right way round', 'Score', 'Naive rule'].map(function (t) { return h('th', { scope: 'col' }, t); }))),
@@ -1391,7 +1395,7 @@
       open.slice().sort(function (a, b) { return a.dueAt < b.dueAt ? -1 : a.dueAt > b.dueAt ? 1 : 0; }).forEach(function (f) {
         tb.appendChild(h('tr', null,
           h('th', { scope: 'row' }, str(f.name, 40), h('span', { class: 'sym' }, fcSpan(f))),
-          h('td', { class: 'num' }, pc0(f.pUp)),
+          h('td', { class: 'num' }, pc0(f.pUp) + (isNum(f.pAdj) && Math.round(f.pAdj * 100) !== Math.round(f.pUp * 100) ? ' \u2192 ' + pc0(f.pAdj) : '')),
           h('td', { class: 'num' }, isNum(f.base) ? pc0(f.base) : '–'),
           h('td', { class: 'num' }, fcPrice(f, f.startPx)),
           h('td', { class: 'num' }, isNum(f.low) && isNum(f.high) ? fcPrice(f, f.low) + ' to ' + fcPrice(f, f.high) : '–'),
@@ -1426,6 +1430,7 @@
       h('ul', { class: 'bullets' },
         h('li', null, h('b', null, 'A call is a probability, not a promise. '), 'Saying 60% and being wrong four times in ten is what 60% means. The score rewards being confident when right and punishes being confident when wrong.'),
         h('li', null, h('b', null, 'Claude does not mark its own work. '), 'The starting price, the due date and the result are set by a script from market prices. Claude supplies only the probability, the range and the reason, and a call cannot be changed after it is made.'),
+        h('li', null, h('b', null, 'It learns from its own record. '), 'Before each new set of calls Claude is shown how its earlier ones turned out, in totals only. After 60 scored calls a script also works out how far Claude\u2019s departures from the usual figure have deserved to be believed, and shrinks new calls by that much. If the departures prove worthless, the calls fall back to the usual figure, which is the best a forecaster without an edge can do.'),
         h('li', null, h('b', null, 'Give it months, not days. '), 'Markets rise more often than they fall, so anyone who always says "up" looks clever for a while. The fair test is against the naive rule, over at least 60 calls.'),
         h('li', null, h('b', null, 'Do not put money on a call. '), 'A week is mostly noise, and 80% ranges are wide for a reason. If the record after a few months is no better than the naive rule, that is the answer to whether news can be traded.'))));
   }

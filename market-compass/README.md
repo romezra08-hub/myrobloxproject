@@ -77,6 +77,13 @@ scores every call from prices, so the forecaster never marks its own work. The p
 coin flip and with the naive rule (each asset's own base rate), and gives no verdict on fewer than 60 calls.
 Forecasts are deliberately kept out of the plan.
 
+The record also teaches. Before each new set of calls the forecaster reads `forecasts.py feedback`, a summary of
+how its earlier calls turned out in totals only. Once 60 calls are scored, `add` works out how far the
+forecaster's departures from the naive rule have deserved to be believed (one multiple, between 0 and 1.5, that
+would have scored best so far) and stores each new call with that correction beside it. If the departures prove
+worthless the corrected calls fall back to the naive rule. Three-month calls are added on the first Monday of a
+month, because longer horizons are where the research finds what predictability there is.
+
 The owner also asked for a very short test on "hot" names. Each day the pipeline ranks 40 well-known shares and
 18 coins by their last twelve months (`HOT_STOCKS`, `HOT_COINS` in `refresh.py`) and the top five of each get a
 one-day forecast, scored at the next refresh.

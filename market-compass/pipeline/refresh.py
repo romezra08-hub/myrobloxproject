@@ -373,6 +373,7 @@ def analyze(dates, px, tr=None, ppy=252):
     # This is the naive forecast that any prediction on the Forecasts tab has to beat.
     out["up1w"], out["up1m"] = rnd(share_up(px, k1w), 3), rnd(share_up(px, k1m), 3)
     out["up1d"] = rnd(share_up(px[-(k12m + 1):], 1), 3)
+    out["up3m"] = rnd(share_up(px, k3m), 3)
     return out
 
 
@@ -1502,12 +1503,12 @@ def summary(s):
         vols = [v for v in (a.get("vol20"), a.get("vol60")) if v]
         vol = sum(vols) / len(vols) if vols else None
         ppy = 365 if k.endswith("-USD") else 252
-        r7, r30 = typical_range(a["px"], vol, 7, ppy), typical_range(a["px"], vol, 30, ppy)
-        L.append("   %-10s %-22s price %-9s rose in %s of weeks, %s of months | 1w %s 1m %s vs200d %s | typical range 1w %s, 1m %s" % (
-            k, a["name"][:22], a["px"],
-            "n/a" if a.get("up1w") is None else "%.0f%%" % (a["up1w"] * 100), "n/a" if a.get("up1m") is None else "%.0f%%" % (a["up1m"] * 100),
-            f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("vs200")),
-            "n/a" if not r7 else "%s to %s" % r7, "n/a" if not r30 else "%s to %s" % r30))
+        r7, r30, r90 = (typical_range(a["px"], vol, d, ppy) for d in (7, 30, 90))
+        share = lambda key: "n/a" if a.get(key) is None else "%.0f%%" % (a[key] * 100)
+        rng = lambda r_: "n/a" if not r_ else "%s to %s" % r_
+        L.append("   %-10s %-22s price %-9s rose in %s of weeks, %s of months, %s of quarters | 1w %s 1m %s 3m %s 12m %s vs200d %s | typical range 1w %s, 1m %s, 3m %s" % (
+            k, a["name"][:22], a["px"], share("up1w"), share("up1m"), share("up3m"),
+            f(a.get("ret1w")), f(a.get("ret1m")), f(a.get("ret3m")), f(a.get("ret12m")), f(a.get("vs200")), rng(r7), rng(r30), rng(r90)))
     hot = s.get("hot") or {}
     if hot.get("stocks") or hot.get("coins"):
         L.append("")

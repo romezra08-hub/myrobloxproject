@@ -7,7 +7,12 @@ from the prices in the snapshot: the starting price, the due date, the outcome a
 The forecaster never grades itself.
 
     python3 forecasts.py resolve --snapshot snapshot.json --in old.json --out resolved.json
+    python3 forecasts.py feedback --in resolved.json
     python3 forecasts.py add --snapshot snapshot.json --in resolved.json --new new.json --out forecasts.json
+
+`feedback` prints the forecaster's own record in totals, for it to read before forecasting. Once
+60 calls have been scored, `add` also works out how far the forecaster's departures from the
+naive rule have deserved to be believed and stores each new call with that correction applied.
 
 `--in` may name a file that does not exist yet; the record then starts empty.
 
@@ -31,10 +36,11 @@ ASSETS = {            # what may be forecast: snapshot key -> name shown on the 
     "IAU": "Gold (IAU fund)",
     "ILS=X": "US dollar in shekels",
 }
-HORIZONS = (7, 30)    # days, for the five markets above
+HORIZONS = (7, 30, 90)    # days, for the five markets above
 HOT_HORIZON = 1       # days, for the snapshot's hot names
 P_MIN, P_MAX = 0.05, 0.95
 KEEP_CLOSED = 400
+LEARN_MIN = 60        # scored calls needed before the record is allowed to correct new ones
 GRACE = dt.timedelta(hours=6)   # the refresh a week later may run a minute earlier than the one that made the call
 WHY_MAX = 320
 
@@ -44,7 +50,7 @@ def parse_time(s):
 
 
 def empty():
-    return {"v": 1, "updatedAt": None, "open": [], "closed": []}
+    return {"v": 1, "updatedAt": None, "open": [], "closed": [], "trust": None}
 
 
 def load(path):
@@ -60,6 +66,7 @@ def load(path):
     out["open"] = [x for x in d.get("open", []) if isinstance(x, dict)]
     out["closed"] = [x for x in d.get("closed", []) if isinstance(x, dict)]
     out["updatedAt"] = d.get("updatedAt")
+    out["trust"] = d.get("trust") if isinstance(d.get("trust"), dict) else None
     return out
 
 
@@ -87,7 +94,7 @@ def price_of(snapshot, asset):
 
 def base_rate(snapshot, asset, horizon):
     """How often this asset rose over a stretch this long in the recent past: the naive forecast."""
-    v = info_of(snapshot, asset).get("up1d" if horizon <= 1 else "up1w" if horizon <= 7 else "up1m")
+    v = info_of(snapshot, asset).get("up1d" if horizon <= 1 else "up1w" if horizon <= 7 else "up1m" if horizon <= 30 else "up3m")
     return round(float(v), 3) if isinstance(v, (int, float)) and 0 <= v <= 1 else None
 
 
@@ -112,9 +119,12 @@ def resolve(record, snapshot):
         })
         if f.get("base") is not None:
             g["baseBrier"] = round((f["base"] - (1.0 if up else 0.0)) ** 2, 5)
+        if f.get("pAdj") is not None:
+            g["adjBrier"] = round((f["pAdj"] - (1.0 if up else 0.0)) ** 2, 5)
         closed.append(g)
     closed.sort(key=lambda x: x.get("resolvedAt") or "")
-    return {"v": 1, "updatedAt": snapshot["generatedAt"], "open": still, "closed": closed[-KEEP_CLOSED:]}
+    return {"v": 1, "updatedAt": snapshot["generatedAt"], "open": still, "closed": closed[-KEEP_CLOSED:],
+            "trust": record.get("trust")}
 
 
 def clean_new(item, snapshot):
@@ -155,9 +165,30 @@ def clean_new(item, snapshot):
     }, None
 
 
+def trust(closed):
+    """How far the forecaster's departures from the naive rule have deserved to be believed.
+
+    Each call is the usual figure plus a departure. This finds the one multiple k of that
+    departure which would have scored best on the calls already settled: 1 means take the
+    calls as given, 0 means the departures were worth nothing and the usual figure alone
+    did better, and a value between shrinks them. It is held between 0 and 1.5 and is not
+    estimated at all on fewer than LEARN_MIN calls, when it would mostly measure luck.
+    Returns (k, how many calls it rests on).
+    """
+    rows = [(f["pUp"] - f["base"], (1.0 if f["up"] else 0.0) - f["base"]) for f in closed
+            if isinstance(f.get("base"), (int, float)) and isinstance(f.get("pUp"), (int, float)) and isinstance(f.get("up"), bool)]
+    moved = sum(d * d for d, _ in rows)
+    if len(rows) < LEARN_MIN or moved <= 1e-9:
+        return None, len(rows)
+    k = sum(d * e for d, e in rows) / moved
+    return round(min(1.5, max(0.0, k)), 3), len(rows)
+
+
 def add(record, new_items, snapshot):
-    """Append new forecasts. One per asset, horizon and day: a second one the same day is refused, not swapped in."""
+    """Append new forecasts. One per asset, horizon and day: a second one the same day is refused, not swapped in.
+    Once enough calls have been scored, each new one also carries pAdj: the call after the record's correction."""
     have = {f["id"] for f in record["open"]} | {f["id"] for f in record["closed"]}
+    k, n = trust(record["closed"])
     out, problems = list(record["open"]), []
     for item in (new_items if isinstance(new_items, list) else []):
         f, problem = clean_new(item, snapshot)
@@ -166,10 +197,49 @@ def add(record, new_items, snapshot):
         elif f["id"] in have:
             problems.append("%s: already forecast today" % f["id"])
         else:
+            if k is not None and f.get("base") is not None:
+                f["pAdj"] = round(min(P_MAX, max(P_MIN, f["base"] + k * (f["pUp"] - f["base"]))), 3)
             out.append(f)
             have.add(f["id"])
     out.sort(key=lambda x: (x["dueAt"], x["asset"]))
-    return {"v": 1, "updatedAt": snapshot["generatedAt"], "open": out, "closed": record["closed"]}, problems
+    return {"v": 1, "updatedAt": snapshot["generatedAt"], "open": out, "closed": record["closed"],
+            "trust": None if k is None else {"k": k, "n": n}}, problems
+
+
+def feedback(record):
+    """What the forecaster is told about its own record before it forecasts again: totals only,
+    never an individual call, so that it learns its habits without anchoring on yesterday."""
+    c = [f for f in record["closed"] if isinstance(f.get("base"), (int, float)) and isinstance(f.get("up"), bool)]
+    if len(c) < 20:
+        return "Your record so far: %d calls scored, too few to say anything about. Forecast as instructed." % len(c)
+    L = ["Your record so far (%d calls scored). Read it, then correct for it." % len(c)]
+    def line(label, rows):
+        if len(rows) < 8:
+            return
+        said = sum(f["pUp"] for f in rows) / len(rows)
+        usual = sum(f["base"] for f in rows) / len(rows)
+        came = sum(1 for f in rows if f["up"]) / float(len(rows))
+        mine = sum((f["pUp"] - (1.0 if f["up"] else 0.0)) ** 2 for f in rows) / len(rows)
+        naive = sum((f["base"] - (1.0 if f["up"] else 0.0)) ** 2 for f in rows) / len(rows)
+        L.append("  %-34s %3d calls | you said %2.0f%% on average, the usual figure was %2.0f%%, it rose %2.0f%% of the time | your score %.3f, naive %.3f (%s)" % (
+            label, len(rows), said * 100, usual * 100, came * 100, mine, naive, "you were better" if mine < naive - 0.002 else "you were worse" if mine > naive + 0.002 else "no difference"))
+    for h in sorted({f["horizonDays"] for f in c}):
+        line("%d-day calls" % h, [f for f in c if f["horizonDays"] == h])
+    line("when you said MORE likely than usual", [f for f in c if f["pUp"] > f["base"] + 0.005])
+    line("when you said LESS likely than usual", [f for f in c if f["pUp"] < f["base"] - 0.005])
+    line("coins", [f for f in c if f.get("kind") == "crypto" or f["asset"].endswith("-USD")])
+    line("shares and other markets", [f for f in c if not (f.get("kind") == "crypto" or f["asset"].endswith("-USD"))])
+    ranged = [f for f in c if isinstance(f.get("inRange"), bool)]
+    if len(ranged) >= 8:
+        share = sum(1 for f in ranged if f["inRange"]) / float(len(ranged))
+        L.append("  Your 80%% ranges held the price %2.0f%% of the time: %s." % (
+            share * 100, "about right" if 0.72 <= share <= 0.88 else "too narrow, widen them" if share < 0.72 else "too wide, tighten them"))
+    k, n = trust(record["closed"])
+    if k is not None:
+        L.append("  On this record, the best-scoring use of your calls would have been to take %.0f%% of each departure from the usual figure. "
+                 "The page now applies that correction. %s" % (k * 100, "Your departures have added nothing so far: make them only for news you can name." if k < 0.25
+                                                             else "Your departures have been too large: make smaller ones." if k < 0.8 else "Your departures have been about the right size."))
+    return "\n".join(L)
 
 
 def summary(record):
@@ -194,12 +264,17 @@ def summary(record):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Resolve and extend the Market Compass forecast record")
-    ap.add_argument("mode", choices=("resolve", "add"))
-    ap.add_argument("--snapshot", required=True)
+    ap.add_argument("mode", choices=("resolve", "add", "feedback"))
+    ap.add_argument("--snapshot")
     ap.add_argument("--in", dest="src", help="the record so far (may not exist yet)")
     ap.add_argument("--new", help="add: a JSON list of new forecasts")
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out")
     args = ap.parse_args(argv)
+    if args.mode == "feedback":
+        print(feedback(load(args.src)))
+        return 0
+    if not args.snapshot or not args.out:
+        ap.error("resolve and add need --snapshot and --out")
     with open(args.snapshot, encoding="utf-8") as f:
         snapshot = json.load(f)
     record = load(args.src)

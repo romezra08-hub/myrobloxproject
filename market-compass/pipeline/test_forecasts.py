@@ -102,6 +102,60 @@ class HotNames(unittest.TestCase):
         self.assertFalse(out["closed"][0]["late"])
 
 
+class Learning(unittest.TestCase):
+    def closed(self, n, p, base, ups):
+        return [{"asset": "SPY", "horizonDays": 7, "pUp": p, "base": base, "up": (i % 10) < ups, "inRange": True} for i in range(n)]
+
+    def test_no_correction_on_a_short_record(self):
+        self.assertEqual(fc.trust(self.closed(59, 0.7, 0.5, 7)), (None, 59))
+        self.assertEqual(fc.trust([]), (None, 0))
+
+    def test_departures_that_were_right_are_kept_and_noise_is_shrunk_away(self):
+        k, n = fc.trust(self.closed(100, 0.7, 0.5, 7))          # said 70%, usual 50%, rose 70% of the time
+        self.assertEqual((k, n), (1.0, 100))
+        k, _ = fc.trust(self.closed(100, 0.7, 0.5, 5))          # said 70%, it rose only the usual 50%
+        self.assertEqual(k, 0.0)
+        k, _ = fc.trust(self.closed(100, 0.7, 0.5, 6))          # half as right as claimed
+        self.assertAlmostEqual(k, 0.5)
+        k, _ = fc.trust(self.closed(100, 0.7, 0.5, 3))          # worse than useless is treated as useless
+        self.assertEqual(k, 0.0)
+        self.assertEqual(fc.trust(self.closed(100, 0.5, 0.5, 5))[0], None)   # never departed: nothing to learn from
+
+    def test_new_calls_carry_the_correction_once_there_is_a_record(self):
+        s = snap("2026-11-12T21:10:00Z", SPY=750.0)
+        rec = fc.empty()
+        rec["closed"] = self.closed(100, 0.7, 0.5, 6)
+        for i, f in enumerate(rec["closed"]):
+            f["id"] = "old%d" % i
+        out, _ = fc.add(rec, [{"asset": "SPY", "horizonDays": 7, "pUp": 0.65}], s)
+        f = out["open"][0]
+        self.assertEqual(out["trust"], {"k": 0.5, "n": 100})
+        self.assertEqual((f["pUp"], f["base"], f["pAdj"]), (0.65, 0.55, 0.6))     # half of the 10-point departure
+        fresh, _ = fc.add(fc.empty(), [{"asset": "SPY", "horizonDays": 7, "pUp": 0.65}], s)
+        self.assertNotIn("pAdj", fresh["open"][0])
+        self.assertIsNone(fresh["trust"])
+        done = fc.resolve(out, snap("2026-11-19T21:10:00Z", SPY=760.0))
+        self.assertAlmostEqual([x for x in done["closed"] if x.get("pAdj")][0]["adjBrier"], 0.16)
+        self.assertEqual(done["trust"], {"k": 0.5, "n": 100})
+
+    def test_feedback_gives_totals_and_no_single_call(self):
+        self.assertIn("too few", fc.feedback(fc.empty()))
+        rec = fc.empty()
+        rec["closed"] = self.closed(100, 0.7, 0.5, 5)
+        text = fc.feedback(rec)
+        self.assertIn("you said 70% on average, the usual figure was 50%, it rose 50% of the time", text)
+        self.assertIn("you were worse", text)
+        self.assertIn("added nothing", text)
+        self.assertNotIn("why", text)
+
+    def test_three_month_calls_are_allowed_for_the_five_markets(self):
+        s = snap("2026-11-12T21:10:00Z", SPY=750.0)
+        s["assets"]["SPY"]["up3m"] = 0.7
+        rec, problems = fc.add(fc.empty(), [{"asset": "SPY", "horizonDays": 90, "pUp": 0.66}], s)
+        self.assertEqual(problems, [])
+        self.assertEqual((rec["open"][0]["base"], rec["open"][0]["dueAt"]), (0.7, "2027-02-10T21:10:00Z"))
+
+
 class Loading(unittest.TestCase):
     def test_a_missing_or_wrapped_record_loads(self):
         import json, os, tempfile

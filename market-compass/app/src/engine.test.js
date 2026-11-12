@@ -594,6 +594,12 @@ test('forecasts are scored against a coin and against the naive rule', () => {
   // broken rows are ignored rather than counted
   assert.equal(E.scoreForecasts([{ pUp: 'high', up: true }, { pUp: 0.6 }, null, f(0.6, true, null, null)]).n, 1);
   assert.equal(E.scoreForecasts([f(0.6, true, null, null)]).skill, null);
+  // calls corrected by the record are scored beside the raw ones, on the same calls
+  const adj = E.scoreForecasts([Object.assign(f(0.8, false, 0.5, true), { pAdj: 0.6 }), f(0.7, true, 0.5, true)]);
+  assert.equal(adj.adjN, 1);
+  near(adj.adjBrier, 0.36);
+  near(adj.adjRawBrier, 0.64);
+  assert.equal(E.scoreForecasts([f(0.7, true, 0.5, true)]).adjBrier, null);
   assert.equal(Object.keys(E.scoreForecasts([f(0.6, true, 0.5, true), Object.assign(f(0.6, true, 0.5, true), { horizonDays: 30 })]).byHorizon).length, 2);
 });
 
