@@ -74,8 +74,7 @@
       "UID:lt-" + Date.now() + "@learn-together", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
       `DTSTART:${ymd}T${hh}${mm}00`, "DURATION:PT10M", "RRULE:FREQ=DAILY", "SUMMARY:" + title,
       "BEGIN:VALARM", "TRIGGER:PT0M", "ACTION:DISPLAY", "DESCRIPTION:" + title, "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
-    const a = h("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "learn-together-reminder.ics" });
-    document.body.appendChild(a); a.click(); a.remove();
+    root.LSUI.saveFile("learn-together-reminder.ics", ics, "text/calendar");
   }
 
   function settingsCard(app) {

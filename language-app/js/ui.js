@@ -131,5 +131,19 @@
     setTimeout(() => wrap.remove(), 2600);
   }
 
-  root.LSUI = { h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
+  // Save a file: platform downloads capability inside an artifact, plain link elsewhere.
+  async function saveFile(filename, data, type) {
+    if (root.claude && root.claude.use) {
+      try {
+        const dl = await root.claude.use("downloads");
+        if (dl) { await dl.save({ filename, data: new Blob([data], { type }) }); return true; }
+      } catch (e) { return false; }
+      return false;
+    }
+    const a = h("a", { href: URL.createObjectURL(new Blob([data], { type })), download: filename });
+    document.body.appendChild(a); a.click(); a.remove();
+    return true;
+  }
+
+  root.LSUI = { saveFile, h, L, toast, confirmBox, speakerBtn, keyboard, confetti };
 })(window);

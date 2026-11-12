@@ -65,14 +65,38 @@
   function stop() { try { synth && synth.cancel(); } catch (e) {} }
 
   const Rec = root.SpeechRecognition || root.webkitSpeechRecognition;
-  function canListen() { return !!Rec; }
+  // Inside a claude.ai artifact the browser mic is blocked; the platform's "dictation" capability replaces it.
+  const inArtifact = !!(root.claude && root.claude.use);
+  let dict = null;
+  if (inArtifact) { try { root.claude.use("dictation").then((d) => { dict = d; }).catch(() => {}); } catch (e) {} }
+  function canListen() { return !!dict || (!inArtifact && !!Rec); }
+
+  function listenDictation(lang, opts) {
+    return new Promise((resolve) => {
+      let finals = "", partial = "", settled = false;
+      const offs = [];
+      const finish = (res) => { if (settled) return; settled = true; offs.forEach((f) => { try { f(); } catch (e) {} }); current = null; resolve(res); };
+      offs.push(dict.onFinal(({ text }) => { finals += " " + text; }));
+      offs.push(dict.onPartial(({ text }) => { partial = text; }));
+      offs.push(dict.onState(({ state, reason }) => {
+        if (state !== "idle") return;
+        const text = (finals || partial).trim();
+        if (text) finish({ ok: true, alternatives: [text] });
+        else finish({ ok: false, alternatives: [], error: reason === "not_granted" ? "not-allowed" : "no-speech" });
+      }));
+      current = { abort: () => { try { dict.stop(); } catch (e) {} } };
+      dict.start({ language: (LOCALES[lang] || lang).slice(0, 2) }).catch((e) => finish({ ok: false, alternatives: [], error: e && e.code === "not_granted" ? "not-allowed" : (e && e.code) || "error" }));
+      setTimeout(() => { try { dict.stop(); } catch (e) {} }, opts.timeout || 6000);
+    });
+  }
 
   // Listen once. Resolves { ok, alternatives: [string], error }
   let current = null;
   function listen(lang, opts) {
     opts = opts || {};
     return new Promise((resolve) => {
-      if (!Rec) return resolve({ ok: false, alternatives: [], error: "unsupported" });
+      if (dict) return listenDictation(lang, opts).then(resolve);
+      if (!Rec || inArtifact) return resolve({ ok: false, alternatives: [], error: "unsupported" });
       stop();
       try { if (current) current.abort(); } catch (e) {}
       const r = new Rec();

@@ -273,9 +273,7 @@
       try { ST.importAll(await f.text()); app.refreshProfile(); toast(t("imported")); app.go("#/home"); } catch (e) { toast(t("importFailed")); }
     });
     const exportData = () => {
-      const blob = new Blob([ST.exportAll()], { type: "application/json" });
-      const a = h("a", { href: URL.createObjectURL(blob), download: `learn-together-backup-${U.dayKey()}.json` });
-      document.body.appendChild(a); a.click(); a.remove();
+      root.LSUI.saveFile(`learn-together-backup-${U.dayKey()}.json`, ST.exportAll(), "application/json");
     };
     const voiceInfo = () => {
       const has = (l) => !!SP.voiceFor(l);
