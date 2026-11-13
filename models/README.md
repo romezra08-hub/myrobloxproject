@@ -7,6 +7,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 |---|---|
 | `kit.py` | Shapes, colour helpers, texture baking and the FBX export |
 | `review.py` | A fixed set of lights and cameras, so each round is judged from the same views |
+| `lineup.py` | Renders all the pets side by side at the same scale (`preview/lineup.png`) |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
@@ -33,18 +34,19 @@ python models/pets/fox.py --review out/fox.png --export models/export/fox.fbx
 3. What arrives:
    - **Fox**: two parts, `Fox_Body` (textured) and `Fox_Eye`. Set `Fox_Eye` to a glossy material
      such as SmoothPlastic or Glass.
-   - **Puppy**: five flat-coloured parts (tan, cream, brown, collar, and the glossy eyes and nose).
-     Fabric suits the fur parts.
-   - **Unicorn**: six flat-coloured parts. Set `GLOW_Horn` to Neon.
+   - **Puppy**: two parts, `Puppy_Body` (textured) and `Puppy_Gloss` (eyes and nose; make it glossy).
+   - **Unicorn**: two parts, `Unicorn_Body` (textured) and `Unicorn_GLOW_Horn`. Set the horn to Neon.
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 ## The pets so far
 
 | Pet | Style | Triangles | Rounds |
 |---|---|---|---|
-| Fox | Sitting storybook animal, soft shading baked into a texture | 11,144 | 13 |
-| Puppy | Plush toy with stitches and patches | 8,710 | 5 |
-| Unicorn | Low-poly, flat faces | 1,448 | 5 |
+| Fox | Sitting storybook animal with a soft, friendly face | 11,144 | 13 |
+| Puppy | Plush toy with stitches and patches | 8,710 | 6 |
+| Unicorn | Low-poly, flat faces | 1,448 | 6 |
+
+Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
 None of them has been checked inside Roblox Studio yet; the renders are from Blender.
 

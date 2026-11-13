@@ -325,14 +325,26 @@ def build():
     return pup
 
 
+def bake(pup, texture):
+    """Round 6: fur, cream, brown and collar become one textured mesh with soft shading baked in,
+    so the toy stops looking like flat-coloured clay. The glossy eyes and nose stay a mesh of
+    their own. Roblox gets two MeshParts instead of five."""
+    gloss = [ob for ob in pup.objects if ob.name.endswith("_Gloss")]
+    body = kit.bake_texture([ob for ob in pup.objects if ob not in gloss], texture, name="Puppy_Body", shade=0.5, soften=3, rough=0.9)
+    pup.objects = [body] + gloss
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review", help="write a review contact sheet to this PNG")
     ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
     ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "puppy_colour.png"))
     a = ap.parse_args()
     kit.fresh()
     pup = build()
+    os.makedirs(os.path.dirname(os.path.abspath(a.texture)), exist_ok=True)
+    bake(pup, os.path.abspath(a.texture))
     tris = pup.triangles()
     lo, hi = pup.bounds()
     print("triangles:", tris, "total", sum(tris.values()))

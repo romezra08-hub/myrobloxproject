@@ -332,14 +332,25 @@ def build():
     return uni
 
 
+def bake(uni, texture):
+    """Round 6: everything but the glowing horn becomes one textured mesh with soft shading
+    baked in. The faces stay flat. Roblox gets two MeshParts instead of six."""
+    glow = [ob for ob in uni.objects if "GLOW" in ob.name]
+    body = kit.bake_texture([ob for ob in uni.objects if ob not in glow], texture, name="Unicorn_Body", shade=0.45, soften=2, rough=0.6)
+    uni.objects = [body] + glow
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review", help="write a review contact sheet to this PNG")
     ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
     ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "unicorn_colour.png"))
     a = ap.parse_args()
     kit.fresh()
     uni = build()
+    os.makedirs(os.path.dirname(os.path.abspath(a.texture)), exist_ok=True)
+    bake(uni, os.path.abspath(a.texture))
     tris = uni.triangles()
     lo, hi = uni.bounds()
     print("triangles:", tris, "total", sum(tris.values()))
