@@ -8,6 +8,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `kit.py` | Shapes, colour helpers, texture baking and the FBX export |
 | `review.py` | A fixed set of lights and cameras, so each round is judged from the same views |
 | `lineup.py` | Renders all the pets side by side at the same scale (`preview/lineup.png`) |
+| `build_all.py` | Rebuilds every pet (Roblox file, texture, review sheet) and the line-up in one go |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
@@ -23,6 +24,10 @@ pip install bpy pillow
 
 ```bash
 python models/pets/fox.py --review out/fox.png --export models/export/fox.fbx
+```
+
+```bash
+python models/build_all.py
 ```
 
 `--quick` renders four views instead of eight.
@@ -42,9 +47,9 @@ python models/pets/fox.py --review out/fox.png --export models/export/fox.fbx
 
 | Pet | Style | Triangles | Rounds |
 |---|---|---|---|
-| Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,116 | 19 |
-| Puppy | Plush toy with stitches, patches and a fleecy nap | 8,710 | 7 |
-| Unicorn | Low-poly, flat faces | 1,448 | 6 |
+| Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
+| Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
+| Unicorn | Low-poly, flat faces with a painted-card grain | 1,448 | 7 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 

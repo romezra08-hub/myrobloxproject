@@ -201,6 +201,10 @@ def build():
     gold = kit.material("Gold", "#EDB740", rough=0.38, metal=0.25)
     eye = kit.material("Eye", "#2A2244", rough=0.25)
     glow = kit.material("GLOW_Horn", "#FFC850", rough=0.4, emit=0.6)
+    # Round 7: the owner said smooth flat colours look like cheap plastic. The faces now carry a soft
+    # painted-card grain and a matte finish, so it reads as folded paper and not as moulded plastic.
+    for mat in (body, pink, blue):
+        kit.furry(mat, strength=0.16, mottle=0.07, fine=16.0, length=1.3, shade_down=0.1)
     uni = Prop("Unicorn")
 
     # ---- trunk: deep chest, a dip behind the withers, belly tucked up towards the flank -------------
@@ -336,7 +340,7 @@ def bake(uni, texture):
     """Round 6: everything but the glowing horn becomes one textured mesh with soft shading
     baked in. The faces stay flat. Roblox gets two MeshParts instead of six."""
     glow = [ob for ob in uni.objects if "GLOW" in ob.name]
-    body = kit.bake_texture([ob for ob in uni.objects if ob not in glow], texture, name="Unicorn_Body", shade=0.45, soften=2, rough=0.6)
+    body = kit.bake_texture([ob for ob in uni.objects if ob not in glow], texture, name="Unicorn_Body", shade=0.45, soften=2, rough=0.9)
     uni.objects = [body] + glow
 
 
@@ -345,6 +349,7 @@ def main():
     ap.add_argument("--review", help="write a review contact sheet to this PNG")
     ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
     ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--quick", action="store_true", help="four views instead of eight")
     ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "unicorn_colour.png"))
     a = ap.parse_args()
     kit.fresh()
@@ -366,7 +371,8 @@ def main():
         import review
         os.makedirs(os.path.dirname(os.path.abspath(a.review)), exist_ok=True)
         rig = review.Rig(uni, focus=(-0.1 * SCALE, -1.0 * SCALE, 2.95 * SCALE))
-        rig.sheet(os.path.abspath(a.review), review.STANDARD, px=a.px, title="Unicorn pet review (low-poly)")
+        quick = [("front 3/4", "full"), ("close-up", "full"), ("side", "full"), ("game distance", "full")]
+        rig.sheet(os.path.abspath(a.review), quick if a.quick else review.STANDARD, px=a.px, title="Unicorn pet review (low-poly)")
         print("review sheet", a.review)
 
 

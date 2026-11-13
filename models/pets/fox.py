@@ -1,4 +1,4 @@
-"""Fox pet, a sitting storybook fox (round 19 of practice). Built from scratch by script.
+"""Fox pet, a sitting storybook fox (round 20 of practice). Built from scratch by script.
 
     python models/pets/fox.py --review out/fox.png
     python models/pets/fox.py --export models/export/fox.fbx
@@ -145,6 +145,9 @@ def build():
         pts = [hit(on_muzzle, x * sx, mc + z, 0.012)[0] for x, z in ((0.0, -0.05), (0.07, -0.12), (0.15, -0.13), (0.22, -0.07))]
         fox.add(tube(pts, [0.02, 0.023, 0.023, 0.01], segs=6, rings=9), dark, H)
     fox.add(tube([hit(on_muzzle, 0, mc + 0.06, 0.012)[0], hit(on_muzzle, 0, mc - 0.05, 0.012)[0]], [0.018, 0.02], segs=6, rings=2), dark, H)
+    for sx in (-1, 1):                                     # round 20: whisker dots, three a side
+        for x, z in ((0.17, 0.06), (0.24, 0.01), (0.18, -0.035)):
+            fox.add(ball((0.045, 0.03, 0.045), cuts=1), dark, H @ M(hit(on_muzzle, x * sx, mc + z)[0]))
     fox.add(muzzle, cream, H)
     tip, _ = hit(on_muzzle, 0, mc + 0.13)
     fox.add(ball((0.25, 0.18, 0.18), cuts=3), eye, H @ M((tip.x, tip.y + 0.02, tip.z)))                    # glossy nose
@@ -174,6 +177,8 @@ def build():
         fox.add(low, orange, E)
         inner = shear(taper(rounded_box((0.43, 0.14, 0.64), n=2.6, cuts=3), axis=2, lo=1.0, hi=0.26), axis=2, along=0, amount=0.04 * sx)
         fox.add(inner, cream, E @ M((0, -0.12, -0.12)))
+        for dx, length in ((-0.09, 0.3), (0.07, 0.24)):      # round 20: tufts of pale fur at the foot of each ear
+            fox.add(lock(Vector((dx, -0.15, -0.42)), Vector((0, 0, 1)), Vector((0, -1, 0)), length, 0.085, 14), cream, E)
 
     fox.build(SCALE)
     return fox

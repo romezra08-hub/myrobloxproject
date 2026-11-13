@@ -2,8 +2,9 @@
 
     python models/lineup.py --out models/preview/lineup.png
 
-Each pet is built and baked on its own, well away from the others, so that one pet's shading
-is not darkened by its neighbours, and then they are stood in a row.
+Every pet with a current script in pets/ is included. Each is built and baked on its own, well
+away from the others, so that one pet's shading is not darkened by its neighbours, and then they
+are stood in a row with a gap between them.
 """
 import argparse
 import math
@@ -18,7 +19,11 @@ import kit  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
-ROW = [("fox", -3.5, -20), ("puppy", 0.0, -12), ("unicorn", 3.8, 55)]      # script, place along the row, turn in degrees
+from build_all import pets  # noqa: E402
+
+ORDER = ["fox", "puppy", "cat", "bunny", "unicorn", "dragon"]     # left to right; any other pet follows these
+TURN = {"fox": -20, "unicorn": 55, "dragon": 38}                  # degrees; long pets are turned to show their side
+GAP = 1.1
 
 
 class Group:
@@ -36,36 +41,48 @@ class Group:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(HERE, "preview", "lineup.png"))
-    ap.add_argument("--width", type=int, default=1600)
+    ap.add_argument("--width", type=int, default=1800)
     a = ap.parse_args()
+    have = pets()
+    row = [n for n in ORDER if n in have] + [n for n in have if n not in ORDER]
     kit.fresh()
     tmp = tempfile.mkdtemp()
     props = []
-    for i, (name, x, turn) in enumerate(ROW):
+    for i, name in enumerate(row):
         mod = __import__(name)
         prop = mod.build()
-        mod.bake(prop, os.path.join(tmp, name + ".png"))
+        mod.bake(prop, os.path.join(tmp, name + "_colour.png"))
         for ob in prop.objects:
-            ob.location.x = 200 + 40 * i                 # out of the way while the next one is baked
+            ob.location.x = 300 + 60 * i                 # out of the way while the next one is baked
         props.append(prop)
-    for prop, (name, x, turn) in zip(props, ROW):
+    edge = 0.0
+    for prop, name in zip(props, row):                   # stand them in a row, each just clear of the last
         for ob in prop.objects:
-            ob.location.x, ob.rotation_euler.z = x, math.radians(turn)
+            ob.location.x, ob.rotation_euler.z = 0.0, math.radians(TURN.get(name, -12))
+        bpy.context.view_layer.update()
+        lo, hi = prop.bounds()
+        for ob in prop.objects:
+            ob.location.x = edge - lo.x
+            ob.location.y = -(lo.y + hi.y) / 2
+        edge += (hi.x - lo.x) + GAP
     bpy.context.view_layer.update()
 
     import review
     group = Group(props)
     rig = review.Rig(group)
     lo, hi = group.bounds()
-    c = (lo + hi) / 2
-    target = Vector((c.x + 0.6, c.y, lo.z + (hi.z - lo.z) * 0.42))
-    cam = review._camera("C_lineup", target + Vector((-0.3, -1.0, 0.26)).normalized() * 25.0, target, 30)
+    wide, tall = hi.x - lo.x + 3.2, hi.z - lo.z          # room for the 5-stud block on the right
+    target = Vector(((lo.x + hi.x) / 2 + 0.9, 0, lo.z + tall * 0.4))
+    half = math.radians(15)
+    aspect = min(0.6, max(0.34, (tall * 1.35 + 0.8) / wide))
+    away = (wide / 2 + 0.6) / math.tan(half)
+    cam = review._camera("C_lineup", target + Vector((-0.28, -1.0, 0.24)).normalized() * away, target, 30)
     sc = bpy.context.scene
     sc.camera = cam
-    sc.render.resolution_x, sc.render.resolution_y = a.width, int(a.width * 0.5)
+    sc.render.resolution_x, sc.render.resolution_y = a.width, int(a.width * aspect)
     sc.render.filepath = os.path.abspath(a.out)
     bpy.ops.render.render(write_still=True)
-    print("lineup", a.out)
+    print("lineup", a.out, row)
 
 
 if __name__ == "__main__":

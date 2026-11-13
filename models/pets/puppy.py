@@ -308,7 +308,7 @@ def build():
     for sx in (-1, 1):                                                                                # whisker dots
         for x, z in ((0.2, -0.15), (0.28, -0.2), (0.21, -0.245)):
             d = front_of(muzzle, x * sx, z)
-            pup.add(ball((0.042, 0.03, 0.042), cuts=0), brown, H @ M((d.x, d.y, d.z)))
+            pup.add(ball((0.05, 0.032, 0.05), cuts=1), brown, H @ M((d.x, d.y, d.z)))               # round 8: round dots, not little cubes
     pup.add(muzzle, cream, H)
     pup.add(ball((0.26, 0.18, 0.19), cuts=3), gloss, H @ M((0, -1.0, -0.06)))                           # nose
 
@@ -343,6 +343,7 @@ def main():
     ap.add_argument("--review", help="write a review contact sheet to this PNG")
     ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
     ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--quick", action="store_true", help="four views instead of eight")
     ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "puppy_colour.png"))
     a = ap.parse_args()
     kit.fresh()
@@ -361,7 +362,8 @@ def main():
         import review
         os.makedirs(os.path.dirname(os.path.abspath(a.review)), exist_ok=True)
         rig = review.Rig(pup, focus=(0, -0.95 * SCALE, 2.5 * SCALE))
-        rig.sheet(os.path.abspath(a.review), review.STANDARD, px=a.px, title="Puppy (plush) review")
+        quick = [("front 3/4", "full"), ("close-up", "full"), ("side", "full"), ("game distance", "full")]
+        rig.sheet(os.path.abspath(a.review), quick if a.quick else review.STANDARD, px=a.px, title="Puppy (plush) review")
         print("review sheet", a.review)
 
 
