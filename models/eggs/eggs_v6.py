@@ -1449,6 +1449,9 @@ def sheet(props, labels, out, samples=32, scale=1.0, extra=False, title="", keep
             label_at(0, y, label)
         y += h
     img.save(out)
+    if not keep_views:
+        import shutil
+        shutil.rmtree(folder, ignore_errors=True)
     return out
 
 
