@@ -9,7 +9,8 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `review.py` | A fixed set of lights and cameras, so each round is judged from the same views |
 | `lineup.py` | Renders all the pets side by side at the same scale (`preview/lineup.png`) |
 | `build_all.py` | Rebuilds every pet (Roblox file, texture, review sheet) and the line-up in one go |
-| `SetupPets.lua` | Paste into Studio's Command Bar after importing a pet, to set it up in one go |
+| `SetupPets.lua` | Paste into Studio's Command Bar after importing a pet or an egg, to set it up in one go |
+| `SetupTools.lua` | The same for a pickaxe: turns it into a Tool a player can hold |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
@@ -40,11 +41,22 @@ python models/build_all.py
 3. Select what was imported in the Explorer, open `SetupPets.lua` here, copy all of it, paste it into
    the **Command Bar** (View > Command Bar) and press Enter. It makes the eyes glossy and any `GLOW`
    part Neon, switches off collisions, welds the parts to the body, puts the pivot under the feet and
-   moves the pet to **ReplicatedStorage > Pets**. Ctrl+Z undoes it. It parses as valid Luau but has not been run in Studio yet.
+   moves the pet to **ReplicatedStorage > Pets** (an egg goes to **ReplicatedStorage > Eggs**). Ctrl+Z undoes it. It parses as valid Luau but has not been run in Studio yet.
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
 part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`).
+
+## Put a pickaxe into Roblox Studio
+
+1. Import `export/<name>_pickaxe.fbx` the same way, but leave **Anchored** off.
+2. Select it, then paste all of `SetupTools.lua` into the Command Bar and press Enter. The textured
+   part becomes the tool's `Handle`, any `GLOW` part turns Neon and is welded on, and the grip is set
+   so the hand holds the shaft near the bottom with the head up and the pick forward. The tool goes to
+   **ReplicatedStorage > Tools**; put a copy in **StarterPack** and press Play to try it.
+3. If it sits wrong in the hand, change the tool's **Grip** settings in Properties
+   (`GripPos` moves it, `GripForward`/`GripUp` turn it). Like the pet script, this has only been
+   checked as valid Luau, not yet run in Studio.
 
 ## The pets so far
 

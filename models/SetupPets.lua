@@ -6,7 +6,8 @@
 --
 -- For each pet it tidies the part names, makes the eyes glossy and any GLOW part Neon with a small
 -- light, switches off collisions, welds the parts to the body, puts the pivot under the feet and
--- moves the pet into ReplicatedStorage > Pets. Running it again on the same pet is safe.
+-- moves the pet into ReplicatedStorage > Pets (eggs go into ReplicatedStorage > Eggs). Running it
+-- again on the same pet is safe. Pickaxes are tools: set those up with SetupTools.lua.
 -- Ctrl+Z undoes it.
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
@@ -40,14 +41,15 @@ local function selectedParts(): { MeshPart }
 	return found
 end
 
--- The folder the finished pets go into.
-local function petsFolder(): Instance
-	local existing = ReplicatedStorage:FindFirstChild("Pets")
+-- The folder the finished pets go into; eggs ("MeadowEgg", "EmberEgg", ...) go into their own.
+local function folderFor(name: string): Instance
+	local folderName = if name:match("Egg$") then "Eggs" else "Pets"
+	local existing = ReplicatedStorage:FindFirstChild(folderName)
 	if existing then
 		return existing
 	end
 	local created = Instance.new("Folder")
-	created.Name = "Pets"
+	created.Name = folderName
 	created.Parent = ReplicatedStorage
 	return created
 end
@@ -57,7 +59,9 @@ local pets: { [string]: { MeshPart } } = {}
 for _, part in selectedParts() do
 	part.Name = (part.Name:gsub("%.%d+$", "")) -- "Fox_Body.001" -> "Fox_Body"
 	local petName = part.Name:match("^([^_]+)_")
-	if petName then
+	if petName and petName:match("Pickaxe$") then
+		log("skipped " .. part.Name .. " (pickaxes are tools: use SetupTools.lua for them)")
+	elseif petName then
 		local list = pets[petName]
 		if not list then
 			list = {}
@@ -69,10 +73,10 @@ for _, part in selectedParts() do
 	end
 end
 
-local folder = petsFolder()
 local finished: { Instance } = {}
 
 for petName, parts in pets do
+	local folder = folderFor(petName)
 	-- The body is the part called Pet_Body, or failing that the biggest part.
 	table.sort(parts, function(a: MeshPart, b: MeshPart): boolean
 		return a.Size.Magnitude > b.Size.Magnitude
@@ -171,7 +175,7 @@ for petName, parts in pets do
 	model.Parent = folder
 
 	table.insert(finished, model)
-	log(petName .. " is ready in ReplicatedStorage > Pets (" .. #parts .. " parts, pivot under its feet)")
+	log(petName .. " is ready in ReplicatedStorage > " .. folder.Name .. " (" .. #parts .. " parts, pivot under its feet)")
 end
 
 if #finished == 0 then
