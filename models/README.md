@@ -13,6 +13,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `SetupTools.lua` | The same for a pickaxe: turns it into a Tool a player can hold |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
+| `eggs/eggs.py` | All six hatching eggs (`--only storm` builds one); `eggs_v1.py`... are its rounds |
 | `tools/pickaxes.py` | All five pickaxes (`--only gold` builds one); `pickaxes_v1.py`... are its rounds |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
 | `preview/<name>.png` | The review sheet of the current version |
@@ -97,6 +98,28 @@ Weak points: the metal, gold and gem shine is painted into the texture, so the h
 as the tool turns; the shafts of the top three are long and plain, so the heads do all the work; the
 flint on the wooden one is the flattest material; the ember head is busy up close. None of it has been
 held in Studio yet.
+
+## The eggs
+
+Six hatching eggs, one for each pet family, about 4.5 studs tall and 3.2–3.5 wide. Import and set up
+an egg like a pet: `SetupPets.lua` sends anything named `...Egg` to **ReplicatedStorage > Eggs**.
+Review sheet: `preview/eggs.png`.
+
+| Egg | Look | Triangles |
+|---|---|---|
+| Meadow | Cream shell with pastel speckles and a hairline crack (the starter egg, no glow) | 2,838 |
+| Ember | Overlapping obsidian scales with ember-red edges, glowing where the points meet, horn nubs on top | 3,192 |
+| Phoenix | Crimson-to-gold flame feathers swirling up to glowing tips | 3,600 |
+| Storm | White veined porcelain wrapped in navy wing blades with silver rims and glowing lightning cracks | 3,354 |
+| Crystal | Hewn slate slabs like the golem's, broken open front and back on crystals lit from inside | 3,109 |
+| Shadow | Smoky indigo with silver claw grooves, a band of violet runes and a crest of violet shards on the back | 2,966 |
+
+Weak points: Shadow is the plainest of the five glowing eggs, a smooth shell from the front with the
+shard crest only visible from behind. Phoenix's feather tips spike out of the outline so it can read
+like a pinecone, and its painted feather lines blur. Meadow's smooth shell can still look a little
+like plastic up close, and Ember's obsidian reads charcoal more than black glass. Ember's glow part
+is a whole inner shell seen through the gaps between the scales; how its Neon looks in Studio is
+untested.
 
 ## Why they do not look like plastic
 
