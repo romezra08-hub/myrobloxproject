@@ -13,6 +13,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `SetupTools.lua` | The same for a pickaxe: turns it into a Tool a player can hold |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
+| `tools/pickaxes.py` | All five pickaxes (`--only gold` builds one); `pickaxes_v1.py`... are its rounds |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
 | `preview/<name>.png` | The review sheet of the current version |
 
@@ -76,6 +77,25 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Wolf | Shadow wolf: shaggy charcoal-indigo coat of fur shards, silver ruff, dark crystals with violet glow down the spine, violet eyes, 6.7 studs tall | 15,334 | 9 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
+
+## The pickaxes
+
+Five tiers, each modelled standing up with the pick pointing forward and the bottom of the shaft at
+the origin, so `SetupTools.lua` can set the grip from the size alone. Review sheet: `preview/pickaxes.png`.
+Textures are 512 px: next to 1024 px bakes at close-up size the difference could not be seen.
+
+| Tier | Look | Triangles | Length (studs) |
+|---|---|---|---|
+| Wooden | Worn branch handle, knapped flint head, rope lashing | 1,484 | 4.5 |
+| Iron | Dark hammered forged head with bright worn edges, leather grip, riveted straps | 1,136 | 4.7 |
+| Gold | Engraved crescent head with a ruby, black lacquer shaft, red silk grip | 1,712 | 5.0 |
+| Emerald | Winged faceted emerald blades with glowing veins and core, slate socket | 1,318 | 5.1 |
+| Ember | Black obsidian head with glowing cracks held by a dragon claw, horn crown, scaled shaft, ember pommel | 2,094 | 5.2 |
+
+Weak points: the metal, gold and gem shine is painted into the texture, so the highlights do not move
+as the tool turns; the shafts of the top three are long and plain, so the heads do all the work; the
+flint on the wooden one is the flattest material; the ember head is busy up close. None of it has been
+held in Studio yet.
 
 ## Why they do not look like plastic
 
