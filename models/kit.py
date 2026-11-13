@@ -353,7 +353,8 @@ def export_fbx(objects, path):
                              embed_textures=True, mesh_smooth_type='FACE')
 
 
-def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3, sheen=0.0):
+def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3, sheen=0.0,
+                 uv_angle=66.0, uv_margin=0.012):
     """Join `objects` into one mesh and bake their flat colours, darkened in the creases, into one
     image. This is what stops a flat-coloured model looking like plastic, and it turns several
     MeshParts into one.
@@ -364,6 +365,10 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     soft shadow and not a thin dark line (on a face those lines read as cracks).
     `sheen` adds the soft pale rim that fuzzy cloth and fur have (it shows in renders here; in
     Roblox the matte look comes from the part's material or a roughness map).
+    `uv_angle` and `uv_margin` steer the automatic unwrap. A model made of many small shapes wastes
+    most of the image on the gaps between its pieces (the dragon used 15% of it); a smaller margin
+    and a wider angle give it far more pixels (39% at 85 degrees and 0.004), at the price of a
+    little colour bleeding between neighbouring pieces when seen from far away.
     """
     import numpy as np
     if os.environ.get("PETS_FAST"):                  # a quick, coarser bake for pictures of several pets at once
@@ -382,7 +387,7 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
         ob.name = ob.data.name = name
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.012)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(uv_angle), island_margin=uv_margin)
     bpy.ops.object.mode_set(mode='OBJECT')
 
     def bake(kind, **kw):

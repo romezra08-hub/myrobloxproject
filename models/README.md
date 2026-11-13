@@ -53,7 +53,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`
 | Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
 | Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
 | Unicorn | Low-poly, flat faces with a painted-card grain | 1,828 | 8 |
-| Dragon | Big, chunky cartoon dragon with scaled skin, 7.3 studs tall | 12,766 | 4 |
+| Dragon | Big, chunky cartoon dragon with scaled skin, 7.3 studs tall | 12,766 | 5 |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
 
@@ -76,8 +76,10 @@ None of them has been checked inside Roblox Studio yet; the renders are from Ble
 
 Known weak points, from the last review of each:
 
-- Dragon: its texture is spread over hundreds of small pieces, so the scales are soft close up. It
-  reads as a sturdy young dragon more than a huge one, and its legs and wing arms are plain.
+- Dragon: its texture is spread over hundreds of small pieces. Round 5 unwrapped it more tightly,
+  which gave it 2.6 times the pixels, but at about 40 pixels to a stud it is still softer than the
+  puppy's 90. It reads as a sturdy young dragon more than a huge one, and its legs and wing arms
+  are plain.
 - Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
 - Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
 - Fox: about 11,600 triangles, heavy for a pet if many are on screen.

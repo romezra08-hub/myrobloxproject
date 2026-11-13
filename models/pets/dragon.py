@@ -649,7 +649,7 @@ def bake(dragon, texture):
     shading in the creases are baked into its colour image. Roblox gets two MeshParts."""
     eyes = [ob for ob in dragon.objects if ob.name.endswith("_Eye")]
     body = kit.bake_texture([ob for ob in dragon.objects if ob not in eyes], texture, name="Dragon_Body",
-                            shade=0.5, soften=3, rough=0.85, sheen=0.2)
+                            shade=0.5, soften=2, rough=0.85, sheen=0.2, uv_angle=85.0, uv_margin=0.004)   # round 5: a sharper texture
     for ob in eyes:
         ob.name = ob.data.name = "Dragon_Eyes"
     dragon.objects = [body] + eyes
