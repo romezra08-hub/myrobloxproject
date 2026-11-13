@@ -15,6 +15,10 @@ sharp, closed blade with a raised shaft, laid in overlapping rows. Must-haves, c
   5. Not plastic: streaked feather texture and soft shading in the creases baked into one image.
      Only the eyes, the crest tips, the longest wing and tail tips and the chest ember glow.
 
+Round 4: the train ends in one true scroll in the middle and lower flame flicks to the sides (no
+more coiled-spring look); a darker amber beak with a dark hook, a dark mask through the glowing eyes
+and a harder brow; flatter blades and four hackle rings (fewer, larger texture islands).
+
 Round 3: a rounder head with a slimmer, higher beak; the crest sweeps back in S-curved flames with
 thin glowing tips (not crystals); strong legs (thick scaled shanks, longer feathered trousers,
 bigger talons); a fuller train of nine feathers; a wider span.
@@ -220,12 +224,12 @@ def loft(points, n, profile, up=None, side=None, ref=None, g=(0.0, 0.0), gpow=1.
     return bm
 
 
-def blade(widths, W, h, cup=0.22, thin=0.35):
+def blade(widths, W, h, cup=0.14, thin=0.35):
     """The cross-section of a feather: two sharp edges, a raised shaft on top and a keel under it,
     `W` to each side at its widest and `h` through, arched by `cup`, thinning towards the tip."""
     def prof(t):
         w = max(W * _table(widths, t), 0.004)
-        hh = min(h * (1 - (1 - thin) * t), w * 0.35)                   # no thicker than its width allows, so the ends stay flat
+        hh = min(h * 0.8 * (1 - (1 - thin) * t), w * 0.25)             # no thicker than its width allows, so the ends stay flat
         c = cup * w
         return [(-w, -c), (0.0, hh), (w, -c), (0.0, -c - hh * 0.5)]
     return prof
@@ -422,8 +426,8 @@ class HeadSkin(Skin):
 
         def near(a):
             return min(abs(th - a), abs(th - (180.0 - a)))
-        ridge = _table([(-0.44, 0.0), (-0.36, 0.035), (-0.24, 0.06), (-0.04, 0.055), (0.14, 0.025), (0.3, 0.0)], y)
-        socket = _table([(-0.32, 0.0), (-0.2, 0.035), (-0.08, 0.03), (0.04, 0.0)], y)
+        ridge = _table([(-0.44, 0.0), (-0.36, 0.05), (-0.24, 0.085), (-0.04, 0.075), (0.14, 0.03), (0.3, 0.0)], y)
+        socket = _table([(-0.32, 0.0), (-0.2, 0.045), (-0.08, 0.04), (0.04, 0.0)], y)
         bump = ridge * math.exp(-(near(BROW_TH) / 11.0) ** 2) - socket * math.exp(-(near(EYE_TH - 4.0) / 13.0) ** 2)
         return p + (p - c).normalized() * bump
 
@@ -503,7 +507,7 @@ def build():
                                                (0.78, "#FF9420"), (1.0, "#FFD35A")], 0.8,
                                    dict(strength=0.14, mottle=0.10, fine=34.0, length=5.0))
     vane(plum, plum_hsv)
-    beak_m, _ = ramp_material("Beak", [(0.0, "#FFD866"), (0.55, "#F2A626"), (0.82, "#9A4E16"), (1.0, "#2E1408")], 0.5,
+    beak_m, _ = ramp_material("Beak", [(0.0, "#F4BC48"), (0.45, "#DC8E22"), (0.75, "#84400F"), (1.0, "#200E08")], 0.5,
                               dict(strength=0.08, mottle=0.06, fine=70.0, length=3.0))
     talon, _ = ramp_material("Talon", [(0.0, "#FFD060"), (0.45, "#E8A030"), (0.8, "#5A2A10"), (1.0, "#1C0C08")], 0.6,
                              dict(strength=0.12, mottle=0.08, fine=40.0, length=2.0))
@@ -545,9 +549,9 @@ def build():
         s -= 0.27
         k += 1
     # neck hackles: longer, narrower feathers that flare out like a mane of flame
-    for i, idx in enumerate((6.6, 6.0, 5.35, 4.7, 4.05)):
+    for i, idx in enumerate((6.55, 5.75, 4.95, 4.15)):
         s = skin.s_of(idx)
-        L = 0.62 + 0.09 * i
+        L = 0.7 + 0.11 * i
         add("hackles", row(ring_of(s, 10, lambda th, L=L: L, 0.5 * (i % 2)), 10, closed=True, rows=3, depth=0.78,
                            lift=0.11 + 0.03 * i, sink=0.05, ridge=0.04, thick=0.035, g=(0.16, 0.66), gpow=1.3, L=L, point=0.8), plum)
     # the ember at the heart of the breast
@@ -658,29 +662,29 @@ def build():
 
     # ---- the train: long flame feathers that sweep to the ground and curl up at the ends ---------------
     root = Vector((0.0, 1.15, 2.12))
-    base = [(0, 0, 0), (0, 1.0, -0.8), (0, 2.3, -1.85), (0, 3.5, -2.12), (0, 4.6, -2.1), (0, 5.6, -1.75),
-            (0, 6.25, -1.0), (0, 6.35, -0.2), (0, 5.95, 0.2), (0, 5.6, -0.05)]
-    for i in (-4, 4, -3, 3, -2, 2, -1, 1, 0):                          # outer ones first, the middle on top
+    sweep = [(0, 0, 0), (0, 1.0, -0.8), (0, 2.3, -1.85), (0, 3.5, -2.12), (0, 4.6, -2.1)]
+    ends = [[(0, 5.6, -1.75), (0, 6.25, -1.0), (0, 6.35, -0.2), (0, 5.95, 0.2), (0, 5.6, -0.05)],   # the middle: a full scroll
+            [(0, 5.5, -1.85), (0, 6.15, -1.3), (0, 6.45, -0.6), (0, 6.35, -0.15)],                 # rising flames
+            [(0, 5.35, -2.0), (0, 6.0, -1.72), (0, 6.38, -1.22)],
+            [(0, 5.1, -2.08), (0, 5.7, -1.96), (0, 6.12, -1.7)]]                                   # low flicks at the sides
+    for i in (-3, 3, -2, 2, -1, 1, 0):                                  # outer ones first, the middle on top
         a = abs(i)
-        yaw = 9.0 * i
-        shrink = 1.0 - 0.055 * a
-        lift = 0.025 * (4 - a)
-        curl = 1.0 - 0.12 * a
+        yaw = 12.5 * i
+        shrink = 1.0 - 0.06 * a
+        lift = 0.035 * (3 - a)
         pts = []
-        for k, (x, y, z) in enumerate(base):
+        for k, (x, y, z) in enumerate(sweep + ends[a]):
             p = Vector((x, y * shrink, z))
             if k >= 3:
                 p.z += lift
-                p.x += 0.1 * i * (k - 2)                                   # the ends curl outwards a little
-            if k >= 6:                                                     # outer curls lower, so the ends cascade
-                p.z = -2.12 + lift + (p.z + 2.12) * curl
+                p.x += 0.13 * i * (k - 2) ** 0.8                           # the ends flare outwards
             p = Matrix.Rotation(math.radians(yaw), 3, 'Z') @ p
             pts.append(root + Vector((0.07 * i, 0, 0)) + p)
         sidev = Matrix.Rotation(math.radians(yaw), 3, 'Z') @ Vector((1, 0, 0))
-        W = 0.40 - 0.02 * a
-        add("train", grounded(loft(pts, 24, blade(FLAME, W, 0.06, cup=0.12), side=sidev, ref=(0, 0, 1),
+        W = 0.42 - 0.025 * a
+        add("train", grounded(loft(pts, 24 - 2 * a, blade(FLAME, W, 0.06, cup=0.12), side=sidev, ref=(0, 0, 1),
                                    g=(0.16, 0.98), gpow=0.8, sharp=(0, 2))), plum)
-        add("glow", grounded(flame_tip(pts, W * 0.78, 0.04, start=0.82, reach=0.2, side=sidev, ref=(0, 0, 1))), glow)
+        add("glow", grounded(flame_tip(pts, W * 0.78, 0.04, start=0.8, reach=0.2, side=sidev, ref=(0, 0, 1))), glow)
     for i in (-2, 2, -1, 1):                                            # shorter feathers over the root of the train
         yaw = 15.0 * i
         pts = [root + Matrix.Rotation(math.radians(yaw), 3, 'Z') @ Vector(p) for p in
@@ -699,8 +703,17 @@ def build():
     # ---- head: placed in its own space, then turned as one ---------------------------------------------
     H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SIZE)
     hs = HeadSkin(HEAD, samples=16)
-    add("head", paint(hs.mesh(segs=32, k=0.3, lo=0.045, hi=0.09), 0.30), plum, H)
     hs_at = hs.s_at
+
+    def mask(v):
+        """Colour position on the head: crimson, with a dark mask through the eyes that sweeps back."""
+        x, y, z = v.co
+        th = math.degrees(math.atan2(z - hs.at(hs_at(y))[0].z, abs(x)))
+        centre = EYE_TH - 2.0 - 40.0 * max(y + 0.17, 0.0)
+        half = 17.0 * (max(0.0, 1 - (y + 0.17) / 0.62) ** 1.1 if y > -0.17 else max(0.0, 1 - (-0.17 - y) / 0.24))
+        m = min(max((half + 4.0 - abs(th - centre)) / 6.0, 0.0), 1.0) if x * 0 == 0 else 0.0
+        return 0.30 - 0.27 * m
+    add("head", paint(hs.mesh(segs=32, k=0.3, lo=0.045, hi=0.09), mask), plum, H)
 
     def side(th, sx):
         """The angle th (measured on the +X side) mirrored onto the side sx."""
@@ -714,7 +727,7 @@ def build():
                 (-0.75 * w, -hh * 0.4), (-w, -hh * 0.02), (-0.45 * w, hh * 0.42)]
 
     upper = [(0, -0.34, 0.03), (0, -0.50, 0.03), (0, -0.62, -0.015), (0, -0.69, -0.10), (0, -0.695, -0.19), (0, -0.65, -0.265)]
-    add("beak", loft(upper, 14, bill, side=(1, 0, 0), ref=(0, 0, 1), g=(0.0, 1.0), gpow=2.6, feather=False, root=False,
+    add("beak", loft(upper, 14, bill, side=(1, 0, 0), ref=(0, 0, 1), g=(0.0, 1.0), gpow=1.8, feather=False, root=False,
                      sharp=(0, 3, 5)), beak_m, H)
 
     def jaw(t):
@@ -749,7 +762,7 @@ def build():
             th = side(-34.0 + 11.0 * u, sx)
             s = hs_at(-0.06) - (0.50 - 0.08 * abs(u - 2)) * v
             return hs.bare(s, th), hs.normal(s, th)
-        add("cheeks", row(cheek, 4, rows=2, depth=0.55, lift=0.035, sink=0.02, ridge=0.02, thick=0.02, g=(0.22, 0.56), L=0.5), plum, H)
+        add("cheeks", row(cheek, 4, rows=2, depth=0.55, lift=0.035, sink=0.02, ridge=0.02, thick=0.02, g=(0.02, 0.2), L=0.5), plum, H)
 
     def forehead(u, v):                                                 # a cap of small feathers swept back from the beak
         th = 90.0 - 34.0 + 17.0 * u

@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`).
 
 ## The pets so far
 
@@ -58,6 +58,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
 | Penguin | Carved, hand-painted wooden toy with a bobble hat | 5,506 | 3 |
 | Turtle | Storybook turtle with a plated shell and a sprout on top | 6,562 | 2 |
+| Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -89,6 +90,10 @@ Known weak points, from the last review of each:
   and on the navy the grain can read as brushed felt.
 - Turtle: only two rounds. The shell plates are smooth and pillow-like, the skin is a bright lime
   green, and from straight in front at a distance the head merges with the shell.
+- Phoenix: the texture fills only 23% of the image (the hundreds of curved feathers pack poorly),
+  so the drawn feather shafts blur away. Up close the head is a rounded, slightly boxy shape, the
+  backs of the wings are plain with the wing arm reading as a dark rod, and the rows of chest
+  feathers are an even spiky pattern.
 
 ## How the practice rounds work
 
