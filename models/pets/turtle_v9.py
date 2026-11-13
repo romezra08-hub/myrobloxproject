@@ -1,0 +1,1131 @@
+"""Turtle pet: an old forest tortoise, painted like a naturalist's storybook illustration.
+Built from scratch by script.
+
+    python models/pets/turtle.py --review out/turtle.png      # render the review sheet
+    python models/pets/turtle.py --export models/export/turtle.fbx
+
+Must-haves, checked in every review:
+  1. Reads as an old tortoise in outline: a high domed shell with a flared, serrated rim, four
+     sturdy elephant legs mid-step, a long neck lifting the head clear of the shell, a short tail.
+  2. Real scutes: five down the spine, four down each side and a ring of marginals, each a raised
+     plate with stepped growth rings and deep grooves between them; dark umber edges fading to
+     amber-ochre centres, weathered.
+  3. A gentle, wise old face: a slightly hooked horn beak, a calm closed mouth line, kind dark
+     glossy eyes under heavy, slightly drooping lids. No grin, nothing cartoon.
+  4. Leathery olive-brown to dusty sage skin with scales, bigger plates on the forelegs and the
+     head, wrinkles at the neck and the leg joints. Matte; the texture carries the detail.
+  5. A story on its back: a patch of moss with tiny mushrooms and a fern sprig.
+"""
+import argparse
+import math
+import os
+import random
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import kit  # noqa: E402  (first: it brings in bpy, which puts bmesh and mathutils on the path)
+from kit import M, Prop, rounded_box, tube  # noqa: E402
+
+import bmesh  # noqa: E402
+from mathutils import Matrix, Vector, noise  # noqa: E402
+from mathutils.bvhtree import BVHTree  # noqa: E402
+
+SCALE = 1.0
+SHELL_C = Vector((0.0, 0.10, 0.92))   # the middle of the dome's base
+SA, SB, SH = 1.16, 1.40, 1.30         # half width, half length and height of the dome
+SP = 2.15                             # above 2 the dome's sides are steeper and its top broader
+GW = 0.016                            # half the width of a groove between scutes, in map units
+HEAD_AT = Vector((-0.14, -2.12, 1.70))
+HEAD_SCALE = 1.08
+HEAD_ROT = (-5, 4, -20)               # nose a touch up, a small tilt, turned towards -X (where the cameras are)
+
+
+# ---- small helpers ----------------------------------------------------------------------------------
+
+def layer(bm, name="grad"):
+    return bm.verts.layers.float.get(name) or bm.verts.layers.float.new(name)
+
+
+def bump(x, c, w):
+    return math.exp(-((x - c) / w) ** 2)
+
+
+def smooth01(x):
+    x = max(0.0, min(1.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def grounded(bm, at=None):
+    """Move a shape into place and flatten whatever would go below the floor."""
+    if at is not None:
+        bm.transform(at)
+    for v in bm.verts:
+        if v.co.z < 0.0:
+            v.co.z = 0.0
+    return bm
+
+
+def fix_normals(bm, outward):
+    bm.normal_update()
+    if sum((f.normal for f in bm.faces), Vector()).dot(outward) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    return bm
+
+
+def seat(p, normal, up=(0, 0, 1)):
+    """A transform that seats a shape at p: its front (-Y) looks out along `normal` and its top is
+    as near `up` as it can be."""
+    y = -Vector(normal).normalized()
+    z = Vector(up)
+    z = (z - y * z.dot(y)).normalized()
+    m = Matrix((y.cross(z), y, z)).transposed().to_4x4()
+    m.translation = Vector(p)
+    return m
+
+
+def frame_from(origin, y, z):
+    """A transform with its Y along `y` and its Z as near `z` as it can be."""
+    y = Vector(y).normalized()
+    z = Vector(z)
+    z = (z - y * z.dot(y)).normalized()
+    m = Matrix((y.cross(z), y, z)).transposed().to_4x4()
+    m.translation = Vector(origin)
+    return m
+
+
+def lathe(profile, segs=8):
+    """A closed surface of revolution round Z through (radius, z) pairs, top to bottom; a radius of
+    0 at either end closes it to a point."""
+    bm = bmesh.new()
+    rings = []
+    for r, z in profile:
+        if r < 1e-6:
+            rings.append([bm.verts.new((0, 0, z))])
+        else:
+            rings.append([bm.verts.new((r * math.cos(2 * math.pi * j / segs), r * math.sin(2 * math.pi * j / segs), z))
+                          for j in range(segs)])
+    for a, b in zip(rings, rings[1:]):
+        for j in range(segs):
+            if len(a) == 1:
+                bm.faces.new((a[0], b[(j + 1) % segs], b[j]))
+            elif len(b) == 1:
+                bm.faces.new((a[j], a[(j + 1) % segs], b[0]))
+            else:
+                bm.faces.new((a[j], a[(j + 1) % segs], b[(j + 1) % segs], b[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def limb(points, radii, segs=10, rings=None, folds=None, seed=0.0, flat=1.0):
+    """Like kit.tube, but its skin can fold: `folds(t, angle)` returns how much to swell the radius
+    at that point (t from 0 to 1 along the limb), for wrinkles at the joints."""
+    pts = [Vector(p) for p in points]
+    rings = rings or (len(pts) - 1) * 4
+    path = [kit._spline(pts, i / rings * (len(pts) - 1)) for i in range(rings + 1)]
+    rad = [max(1e-3, kit._spline(list(radii), i / rings * (len(pts) - 1))) for i in range(rings + 1)]
+    bm = bmesh.new()
+    layer(bm)
+    tangent = (path[1] - path[0]).normalized()
+    normal = Vector((0, 0, 1))
+    normal = (normal - tangent * normal.dot(tangent))
+    normal = normal.normalized() if normal.length > 1e-4 else tangent.orthogonal().normalized()
+    loops = []
+    for i, p in enumerate(path):
+        new = (path[min(i + 1, rings)] - path[max(i - 1, 0)]).normalized()
+        axis = tangent.cross(new)
+        if axis.length > 1e-6:
+            normal = Matrix.Rotation(tangent.angle(new), 3, axis.normalized()) @ normal
+        tangent = new
+        side = tangent.cross(normal).normalized()
+        t = i / rings
+        ring = []
+        for j in range(segs):
+            a = 2 * math.pi * j / segs
+            r = rad[i] * (1.0 + (folds(t, a, i) if folds else 0.0))
+            r *= 1.0 + 0.035 * noise.noise(p * 3.0 + Vector((seed, a, 0)))
+            ring.append(bm.verts.new(p + (normal * math.cos(a) + side * math.sin(a) * flat) * r))
+        loops.append(ring)
+    for a, b in zip(loops, loops[1:]):
+        for j in range(segs):
+            bm.faces.new((a[j], a[(j + 1) % segs], b[(j + 1) % segs], b[j]))
+    for ring in (loops[0], loops[-1]):
+        c = bm.verts.new(sum((v.co for v in ring), Vector()) / segs)
+        for j in range(segs):
+            bm.faces.new((ring[j], ring[(j + 1) % segs], c))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def wrinkles(zones):
+    """Folds for limb(): in each zone (t0, t1, amount, side) every other ring of the limb swells, the
+    next one is pulled in a little, strongest on the side `side` (an angle round the limb; 0 is the
+    top) or all round for None."""
+    def f(t, a, i):
+        out = 0.0
+        for t0, t1, amount, side in zones:
+            if t0 <= t <= t1:
+                k = math.sin(math.pi * (t - t0) / (t1 - t0))
+                w = 1.0 if side is None else 0.4 + 0.6 * (0.5 + 0.5 * math.cos(a - side))
+                out += amount * k * w * (1.0 if i % 2 else -0.35)
+        return out
+    return f
+
+
+def plate_on(bvh, centre, normal, along, w, l, h=0.03, nu=4, nv=4, shingle=False, sink=0.012):
+    """A raised scale plate lying on a surface (found with `bvh`), `w` wide and `l` long, its long
+    side along `along`. A shingle has its free edge (towards `along`) raised with a lip, so that it
+    overlaps the next plate like a roof tile; otherwise every edge is tucked into the surface."""
+    n = Vector(normal).normalized()
+    y = Vector(along)
+    y = (y - n * y.dot(n)).normalized()
+    x = y.cross(n)
+    bm = bmesh.new()
+    g = layer(bm)
+    us = [-1 + 2 * i / (nu - 1) for i in range(nu)]
+    vs = [-1 + 2 * i / (nv - 1) for i in range(nv)]
+    rows = []
+
+    def put(u, v, lift):
+        uu = u * (1 - 0.3 * max(0.0, v) ** 2) if shingle else u * (1 - 0.18 * abs(v) ** 3)
+        vv = v * (1 - 0.18 * abs(u) ** 3)
+        q = Vector(centre) + x * uu * w / 2 + y * vv * l / 2
+        hit, hn, _, _ = bvh.ray_cast(q + n * 0.35, -n)
+        if hit is None:
+            hit, hn = q, n
+        vert = bm.verts.new(hit + hn * lift)
+        vert[g] = 1.0 - max(abs(u), abs(v))
+        return vert
+
+    for v in vs:
+        row = []
+        for u in us:
+            edge = max(abs(u), abs(v))
+            if shingle:
+                lift = -sink if (abs(u) > 0.999 or v < -0.999) else h * (1 - 0.55 * u * u) * (0.35 + 0.65 * (v + 1) / 2)
+            else:
+                lift = -sink if edge > 0.999 else h * (1 - edge ** 4)
+            row.append(put(u, v, lift))
+        rows.append(row)
+    if shingle:
+        rows.append([put(u, 1.0, -sink) for u in us])
+    for r0, r1 in zip(rows, rows[1:]):
+        for j in range(nu - 1):
+            bm.faces.new((r0[j], r0[j + 1], r1[j + 1], r1[j]))
+    return fix_normals(bm, n)
+
+
+# ---- the dome and its scutes ----------------------------------------------------------------------
+# The shell is laid out on a flat round map: (0, 0) is the top of the dome, radius 1 its base. A
+# map point's angle (0 in front, 90 at +X) and distance from the middle give a point on the dome.
+
+def dome_pt(mu, mv):
+    rho = math.hypot(mu, mv)
+    s = math.sin(min(rho, 1.0) * math.pi / 2)
+    cx, cy = (mu / rho, mv / rho) if rho > 1e-9 else (0.0, 0.0)
+    z = SH * max(0.0, 1.0 - s ** SP) ** (1.0 / SP)
+    w = SA * (1.0 + 0.05 * cy)                                   # a little broader behind
+    return SHELL_C + Vector((w * s * cx, SB * s * cy + 0.10 * (1.0 - s), z))
+
+
+def dome_nrm(mu, mv, e=1e-3):
+    du = dome_pt(mu + e, mv) - dome_pt(mu - e, mv)
+    dv = dome_pt(mu, mv + e) - dome_pt(mu, mv - e)
+    n = du.cross(dv)
+    if n.length < 1e-12:
+        return Vector((0, 0, 1))
+    n.normalize()
+    if n.dot(dome_pt(mu, mv) - SHELL_C) < 0:
+        n = -n
+    return n
+
+
+def on_dome(m, lift=0.0):
+    return dome_pt(m.x, m.y) + dome_nrm(m.x, m.y) * lift
+
+
+def phi_of(m):
+    return math.degrees(math.atan2(m.x, -m.y))
+
+
+def map_at(rho, phi):
+    p = math.radians(phi)
+    return Vector((rho * math.sin(p), -rho * math.cos(p)))
+
+
+def rim_rho(phi):
+    """Where the dome ends: higher over the neck (an arch for it to come out under) and a little
+    over the tail."""
+    a = abs(phi)
+    return 1.0 - 0.15 * bump(a, 0, 36) - 0.035 * bump(a, 180, 26)
+
+
+def inner_rho(phi):
+    """The seam between the big scutes and the ring of marginals round the edge."""
+    return rim_rho(phi) - 0.135
+
+
+def clip_half(poly, mid, n):
+    out = []
+    for k in range(len(poly)):
+        a, b = poly[k], poly[(k + 1) % len(poly)]
+        da, db = (a - mid).dot(n), (b - mid).dot(n)
+        if da <= 0:
+            out.append(a)
+        if (da <= 0) != (db <= 0):
+            out.append(a + (b - a) * (da / (da - db)))
+    return out
+
+
+# a scute's profile from its middle (q=0) to its edge (q=1): stepped growth rings, a groove at the edge
+RINGS = [(0.24, 0.165), (0.29, 0.124), (0.47, 0.117), (0.52, 0.080), (0.70, 0.074), (0.75, 0.040), (1.0, -0.035)]
+TOP = 0.172
+
+
+def scute(i, sites, segs=14, areola=(0.0, 0.0), seed=0.0):
+    """One big scute: the cell of the map nearer to sites[i] than to any other site, shrunk by the
+    groove, raised in steps from its edge to its middle."""
+    ci = sites[i]
+    c0 = ci + Vector(areola)
+    halves = []
+    for j, cj in enumerate(sites):
+        if j != i:
+            n = (cj - ci).normalized()
+            halves.append(((ci + cj) / 2 - n * GW, n))
+    poly = [Vector((-3, -3)), Vector((3, -3)), Vector((3, 3)), Vector((-3, 3))]
+    for mid, n in halves:
+        poly = clip_half(poly, mid, n)
+
+    def reach(d):
+        best = 9.0
+        for mid, n in halves:
+            dn = d.dot(n)
+            if dn > 1e-9:
+                best = min(best, (mid - c0).dot(n) / dn)
+        s, step = 0.0, 0.01
+        while s < best:
+            p = c0 + d * (s + step)
+            if p.length > inner_rho(phi_of(p)) - GW:
+                lo, hi = s, s + step
+                for _ in range(20):
+                    md = (lo + hi) / 2
+                    q = c0 + d * md
+                    if q.length > inner_rho(phi_of(q)) - GW:
+                        hi = md
+                    else:
+                        lo = md
+                return min(best, lo)
+            s += step
+        return best
+
+    angs = [2 * math.pi * k / segs + 0.3 for k in range(segs)]
+    used = set()
+    for cn in poly:                                             # put a vertex on every corner
+        if cn.length >= inner_rho(phi_of(cn)) - GW:
+            continue
+        a = math.atan2((cn - c0).y, (cn - c0).x)
+        k = min((k for k in range(segs) if k not in used),
+                key=lambda k: abs((angs[k] - a + math.pi) % (2 * math.pi) - math.pi))
+        used.add(k)
+        angs[k] = a
+    angs = sorted(a % (2 * math.pi) for a in angs)             # one turn, in order: mixed ranges fold the rings
+    dirs = [Vector((math.cos(a), math.sin(a))) for a in angs]
+    reaches = [reach(d) for d in dirs]
+
+    bm = bmesh.new()
+    g = layer(bm)
+    centre = bm.verts.new(on_dome(c0, TOP))
+    centre[g] = 1.0
+    loops = []
+    for q, h in RINGS:
+        ring = []
+        for d, s in zip(dirs, reaches):
+            qq = q if q >= 1.0 else q * (1.0 + 0.06 * noise.noise(Vector((d.x * 2, d.y * 2, seed + q * 3))))
+            m = c0 + d * s * qq
+            wob = 0.0 if q >= 1.0 else 0.005 * noise.noise(Vector((m.x * 9, m.y * 9, seed)))
+            v = bm.verts.new(on_dome(m, h + wob))
+            v[g] = 1.0 - q
+            ring.append(v)
+        loops.append(ring)
+    for j in range(segs):
+        bm.faces.new((centre, loops[0][j], loops[0][(j + 1) % segs]))
+    for a, b in zip(loops, loops[1:]):
+        for j in range(segs):
+            bm.faces.new((a[j], b[j], b[(j + 1) % segs], a[(j + 1) % segs]))
+    return fix_normals(bm, dome_nrm(c0.x, c0.y))
+
+
+def flare(phi):
+    """How far the rim's edge reaches out beyond the dome, and how far it rises (or drops)."""
+    a = abs(phi)
+    out = 0.14 + 0.12 * bump(a, 52, 26) + 0.15 * bump(a, 135, 30) + 0.06 * bump(a, 180, 22) + 0.04 * bump(a, 0, 20)
+    up = -0.06 + 0.08 * bump(a, 52, 26) + 0.09 * bump(a, 135, 30) + 0.06 * bump(a, 0, 25)
+    return out, up
+
+
+def marginal(k, n=24, gap=0.55):
+    """One plate of the rim: from the seam with the big scutes down to the dome's edge, then out
+    over the legs with a pointed tip, so that the rim is gently serrated."""
+    phc = 360.0 * k / n
+    half = 180.0 / n
+    cols = [phc - half + gap, phc, phc + half - gap]
+    bm = bmesh.new()
+    g = layer(bm)
+    grid = []
+    for ci, ph in enumerate(cols):
+        ph = (ph + 180.0) % 360.0 - 180.0
+        tip = 1.0 if ci == 1 else 0.0
+        ri, rr = inner_rho(ph) + GW, rim_rho(ph) - 0.01
+        n_rim = dome_nrm(*map_at(rr, ph))
+        out = Vector((n_rim.x, n_rim.y, 0)).normalized()
+        up = Vector((0, 0, 1))
+        p2 = on_dome(map_at(rr, ph), 0.06)
+        fo, fu = flare(ph)
+        p3 = p2 + out * (fo + 0.035 * tip) + up * (fu - 0.01 * tip)
+        col = [(on_dome(map_at(ri, ph), -0.03), 0.0),
+               (on_dome(map_at(ri + 0.03, ph), 0.045), 0.12 + 0.1 * tip),
+               (p2, 0.3 + 0.25 * tip),
+               (p3, 0.45 + 0.4 * tip),
+               (p3 - up * 0.045 - out * 0.01, 0.3 + 0.2 * tip),
+               (on_dome(map_at(rr, ph), -0.07) - up * 0.06, 0.0)]
+        verts = []
+        for p, gv in col:
+            v = bm.verts.new(p)
+            v[g] = gv
+            verts.append(v)
+        grid.append(verts)
+    for c in range(2):
+        for r in range(5):
+            bm.faces.new((grid[c][r], grid[c + 1][r], grid[c + 1][r + 1], grid[c][r + 1]))
+    bm.faces.new(list(reversed(grid[0])))
+    bm.faces.new(grid[2])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    m = map_at(0.95, phc)
+    return fix_normals(bm, dome_nrm(m.x, m.y))
+
+
+def base_dome(az=24, rings=6):
+    """The dark shell under the scutes, seen in the grooves between them."""
+    bm = bmesh.new()
+    layer(bm)
+    top = bm.verts.new(on_dome(Vector((0, 0)), -0.01))
+    loops = []
+    for j in range(1, rings + 1):
+        ring = []
+        for k in range(az):
+            ph = 360.0 * k / az - 180.0
+            rho = rim_rho(ph) * (j / rings) ** 0.9 - (0.006 if j == rings else 0.0)
+            ring.append(bm.verts.new(on_dome(map_at(rho, ph), -0.01)))
+        loops.append(ring)
+    for k in range(az):
+        bm.faces.new((top, loops[0][k], loops[0][(k + 1) % az]))
+    for a, b in zip(loops, loops[1:]):
+        for k in range(az):
+            bm.faces.new((a[k], b[k], b[(k + 1) % az], a[(k + 1) % az]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def leaflet(length, width, fold=0.012, thick=0.006):
+    """A small pointed leaf, stalk at the origin, tip at +Y, folded along its middle; closed, so it
+    shows from both sides even where back faces are hidden."""
+    bm = bmesh.new()
+    layer(bm)
+    b = bm.verts.new((0, 0, 0))
+    t = bm.verts.new((0, length, -0.01))
+    lft = bm.verts.new((-width / 2, length * 0.42, -fold))
+    rgt = bm.verts.new((width / 2, length * 0.42, -fold))
+    up = bm.verts.new((0, length * 0.42, thick))
+    dn = bm.verts.new((0, length * 0.42, -thick))
+    for a, c in ((b, lft), (lft, t), (t, rgt), (rgt, b)):
+        bm.faces.new((a, c, up))
+        bm.faces.new((c, a, dn))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+# ---- materials ----------------------------------------------------------------------------------------
+
+class Nodes:
+    def __init__(self, mat):
+        self.tree = mat.node_tree
+        self.new, self.link = self.tree.nodes.new, self.tree.links.new
+        self._co = None
+
+    @property
+    def co(self):
+        if self._co is None:
+            self._co = self.new("ShaderNodeTexCoord").outputs["Object"]
+        return self._co
+
+    def attr(self, name="grad"):
+        a = self.new("ShaderNodeAttribute")
+        a.attribute_type, a.attribute_name = 'GEOMETRY', name
+        return a.outputs["Fac"]
+
+    def noise(self, vec, scale, detail=2.0, rough=0.5):
+        n = self.new("ShaderNodeTexNoise")
+        n.inputs["Scale"].default_value, n.inputs["Detail"].default_value = scale, detail
+        n.inputs["Roughness"].default_value = rough
+        self.link(vec, n.inputs["Vector"])
+        return n.outputs["Fac"]
+
+    def ramp(self, src, a, b, c=0.0, d=1.0):
+        r = self.new("ShaderNodeMapRange")
+        r.interpolation_type = 'SMOOTHSTEP'
+        r.inputs["From Min"].default_value, r.inputs["From Max"].default_value = a, b
+        r.inputs["To Min"].default_value, r.inputs["To Max"].default_value = c, d
+        self.link(src, r.inputs["Value"])
+        return r.outputs["Result"]
+
+    def math(self, op, a, b=None, c=None):
+        m = self.new("ShaderNodeMath")
+        m.operation = op
+        for i, x in enumerate((a, b, c)):
+            if x is None:
+                continue
+            if isinstance(x, (int, float)):
+                m.inputs[i].default_value = x
+            else:
+                self.link(x, m.inputs[i])
+        return m.outputs[0]
+
+    def mix(self, fac, a, b):
+        m = self.new("ShaderNodeMix")
+        m.data_type = 'RGBA'
+        for sock, x in ((m.inputs[0], fac), (m.inputs[6], a), (m.inputs[7], b)):
+            if isinstance(x, (int, float)):
+                sock.default_value = x
+            elif isinstance(x, str):
+                sock.default_value = (*kit.srgb(x), 1.0)
+            elif isinstance(x, tuple):
+                sock.default_value = x
+            else:
+                self.link(x, sock)
+        return m.outputs[2]
+
+    def value(self, colour, v):
+        h = self.new("ShaderNodeHueSaturation")
+        if isinstance(colour, str):
+            h.inputs["Color"].default_value = (*kit.srgb(colour), 1.0)
+        else:
+            self.link(colour, h.inputs["Color"])
+        if isinstance(v, (int, float)):
+            h.inputs["Value"].default_value = v
+        else:
+            self.link(v, h.inputs["Value"])
+        return h.outputs["Color"]
+
+    def gradient(self, src, stops):
+        r = self.new("ShaderNodeValToRGB")
+        els = r.color_ramp.elements
+        els[0].position, els[0].color = stops[0][0], (*kit.srgb(stops[0][1]), 1.0)
+        els[1].position, els[1].color = stops[-1][0], (*kit.srgb(stops[-1][1]), 1.0)
+        for pos, hexcode in stops[1:-1]:
+            els.new(pos).color = (*kit.srgb(hexcode), 1.0)
+        self.link(src, r.inputs["Fac"])
+        return r.outputs["Color"]
+
+    def up(self, lo, hi):
+        geo = self.new("ShaderNodeNewGeometry")
+        sep = self.new("ShaderNodeSeparateXYZ")
+        self.link(geo.outputs["Normal"], sep.inputs[0])
+        return self.ramp(sep.outputs[2], lo, hi)
+
+    def edge(self, radius=0.02, lo=0.997, hi=0.93):
+        bev = self.new("ShaderNodeBevel")
+        bev.samples = 6
+        bev.inputs["Radius"].default_value = radius
+        geo = self.new("ShaderNodeNewGeometry")
+        dot = self.new("ShaderNodeVectorMath")
+        dot.operation = 'DOT_PRODUCT'
+        self.link(bev.outputs["Normal"], dot.inputs[0])
+        self.link(geo.outputs["Normal"], dot.inputs[1])
+        return self.ramp(dot.outputs["Value"], lo, hi)
+
+    def cavity(self, distance=0.15, lo=0.95, hi=0.45):
+        ao = self.new("ShaderNodeAmbientOcclusion")
+        ao.only_local = True
+        ao.samples = 8
+        ao.inputs["Distance"].default_value = distance
+        return self.ramp(ao.outputs["AO"], lo, hi)
+
+    def island(self):
+        return self.new("ShaderNodeNewGeometry").outputs["Random Per Island"]
+
+    def near(self, points, r0, r1):
+        out = None
+        for p in points:
+            d = self.new("ShaderNodeVectorMath")
+            d.operation = 'DISTANCE'
+            self.link(self.co, d.inputs[0])
+            d.inputs[1].default_value = tuple(p)
+            f = self.ramp(d.outputs["Value"], r0, r1, 1.0, 0.0)
+            out = f if out is None else self.math('MAXIMUM', out, f)
+        return out
+
+    def out(self, mat, col):
+        self.link(col, kit.principled(mat).inputs["Base Color"])
+
+
+def base_colour_socket(mat):
+    b = kit.principled(mat)
+    return b.inputs["Base Color"].links[0].from_socket
+
+
+def tones(mat, up=None, down=None, up_mix=0.5, down_mix=0.4):
+    """Where the surface faces up the colour turns towards `up`, where it faces down towards `down`."""
+    N = Nodes(mat)
+    hsv = next(n for n in mat.node_tree.nodes if n.type == 'HUE_SAT')
+    base = tuple(hsv.inputs["Color"].default_value)
+    geo = N.new("ShaderNodeNewGeometry")
+    sep = N.new("ShaderNodeSeparateXYZ")
+    N.link(geo.outputs["Normal"], sep.inputs[0])
+    colour = None
+    for hexcode, amount, lo, hi in ((up, up_mix, 0.15, 0.95), (down, down_mix, -0.10, -0.90)):
+        if not hexcode:
+            continue
+        fac = N.ramp(sep.outputs[2], lo, hi, 0.0, amount)
+        colour = N.mix(fac, base if colour is None else colour, hexcode)
+    if colour is not None:
+        N.link(colour, hsv.inputs["Color"])
+    return mat
+
+
+def skin_material(name, hexcode, up, down, size=0.07, nostrils=(), joins=0.24, folds=()):
+    """Leathery skin: kit.scaly's small scales, darker on top and paler below, mottled warm and
+    cool, darker in every fold and crease. `folds` paints fine wrinkle lines in bands: each is
+    (axis, lo, hi, mask_axis, mask_lo, mask_hi), lines across `axis` where `mask_axis` is in range."""
+    m = kit.scaly(kit.material(name, hexcode), size=size, joins=joins, vary=0.13, shade_down=0.08, rough=0.88)
+    tones(m, up=up, down=down, up_mix=0.55, down_mix=0.55)
+    N = Nodes(m)
+    col = base_colour_socket(m)
+    blot = N.ramp(N.noise(N.co, 3.2, 3.0, 0.6), 0.42, 0.72, 0.0, 0.45)
+    col = N.mix(blot, col, "#4A3F2A")
+    col = N.mix(N.ramp(N.noise(N.co, 2.1, 2.0, 0.5), 0.5, 0.7, 0.0, 0.35), col, "#8E9478")
+    sep = N.new("ShaderNodeSeparateXYZ")
+    N.link(N.co, sep.inputs[0])
+    for axis, lo, hi, mk, mlo, mhi in folds:
+        sc = [3.0, 3.0, 3.0]
+        sc["xyz".index(axis)] = 34.0
+        mp = N.new("ShaderNodeMapping")
+        mp.inputs["Scale"].default_value = sc
+        N.link(N.co, mp.inputs["Vector"])
+        line = N.ramp(N.noise(mp.outputs["Vector"], 1.0, 2.0, 0.5), 0.56, 0.68)
+        band = N.math('MULTIPLY', N.ramp(sep.outputs["XYZ".index(axis.upper())], lo, lo + 0.08), N.ramp(sep.outputs["XYZ".index(axis.upper())], hi - 0.08, hi, 1.0, 0.0))
+        if mk:
+            band = N.math('MULTIPLY', band, N.math('MULTIPLY', N.ramp(sep.outputs["XYZ".index(mk.upper())], mlo, mlo + 0.05),
+                                                   N.ramp(sep.outputs["XYZ".index(mk.upper())], mhi - 0.05, mhi, 1.0, 0.0)))
+        col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', line, band), 0.75), col, "#2C2619")
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.12, 0.97, 0.55), 0.85), col, "#231D13")
+    if nostrils:
+        col = N.mix(N.near(nostrils, 0.005, 0.012), col, "#1A140D")
+    N.out(m, col)
+    return m
+
+
+def plate_material():
+    """The big scales on the legs and head: horny, paler and warmer in the middle, darker where they
+    meet the skin."""
+    m = skin_material("ScalePlate", "#7D7656", up="#635D40", down="#A3A388", size=0.3)
+    N = Nodes(m)
+    g = N.attr()
+    col = N.mix(N.ramp(g, 0.15, 0.7, 0.0, 0.45), base_colour_socket(m), "#A39572")
+    col = N.mix(N.ramp(g, 0.0, 0.25, 0.5, 0.0), col, "#3A3424")
+    N.out(m, col)
+    return m
+
+
+def scute_material(name):
+    """Horn plates: dark umber at the edges warming to amber-ochre in the middle, fine wavy growth
+    lines, sun-bleached and scuffed on top, grime in the grooves."""
+    m = kit.material(name, "#A8702F", rough=0.85)
+    N = Nodes(m)
+    g = N.attr()
+    wav = N.math('MULTIPLY_ADD', N.math('SUBTRACT', N.noise(N.co, 4.0, 2.0), 0.5), 0.18, g)
+    base = N.gradient(wav, [(0.0, "#20150E"), (0.2, "#372517"), (0.48, "#5C3F27"), (0.78, "#8A6A3E"), (1.0, "#AE8C55")])
+    mott = N.ramp(N.noise(N.co, 5.5, 4.0, 0.6), 0.35, 0.68, 0.82, 1.08)
+    base = N.value(base, mott)
+    lines = N.ramp(N.math('SINE', N.math('MULTIPLY', wav, 2 * math.pi * 8.0)), 0.5, 0.95, 0.0, 0.3)
+    col = N.value(base, N.math('MULTIPLY', N.math('SUBTRACT', 1.0, lines), N.math('MULTIPLY_ADD', N.island(), 0.22, 0.88)))
+    streak = N.ramp(N.noise(N.co, 7.0, 4.0, 0.65), 0.35, 0.7, 0.75, 1.1)
+    col = N.value(col, streak)
+    bleach = N.math('MULTIPLY', N.up(0.2, 0.95), N.ramp(N.noise(N.co, 2.6, 4.0, 0.6), 0.4, 0.66, 0.0, 0.6))
+    col = N.mix(bleach, col, "#9A8F7A")
+    col = N.mix(N.ramp(N.noise(N.co, 11.0, 3.0, 0.6), 0.62, 0.72, 0.0, 0.35), col, "#2A1C12")
+    col = N.mix(N.math('MULTIPLY', N.edge(0.02, 0.998, 0.94), 0.25), col, "#C9AE7E")
+    lichen = N.math('MULTIPLY', N.ramp(N.noise(N.co, 14.0, 2.0, 0.5), 0.66, 0.7), N.ramp(N.noise(N.co, 1.8, 2.0), 0.5, 0.62))
+    col = N.mix(N.math('MULTIPLY', lichen, 0.75), col, "#B7B79A")
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.1, 0.97, 0.5), 0.8), col, "#160E08")
+    N.out(m, col)
+    return m
+
+
+def build_materials():
+    nostrils = nostril_points()
+    mats = {
+        "skin": skin_material("Skin", "#706B4B", up="#545036", down="#9A9D84", joins=0.3,
+                              folds=[("z", 0.14, 0.34, None, 0, 0), ("z", 0.44, 0.7, None, 0, 0)]),
+        "headskin": skin_material("HeadSkin", "#706B4B", up="#545036", down="#9A9D84", size=0.042, joins=0.2, nostrils=nostrils,
+                                  folds=[("y", -1.9, -0.9, "z", 0.85, 2.0)]),
+        "plate": plate_material(),
+        "scute": scute_material("Scute"),
+    }
+    groove = kit.material("Groove", "#1E130B", rough=0.9)
+    N = Nodes(groove)
+    N.out(groove, N.value("#24170E", N.ramp(N.noise(N.co, 6.0, 3.0), 0.3, 0.7, 0.7, 1.15)))
+    mats["groove"] = groove
+    pl = kit.scaly(kit.material("Plastron", "#8C7A52"), size=0.4, joins=0.45, vary=0.12, rough=0.88)
+    N = Nodes(pl)
+    col = N.mix(N.ramp(N.noise(N.co, 3.0, 4.0), 0.4, 0.7, 0.0, 0.5), base_colour_socket(pl), "#4A3F2C")
+    N.out(pl, N.mix(N.math('MULTIPLY', N.cavity(0.12, 0.97, 0.5), 0.8), col, "#1C150D"))
+    mats["plastron"] = pl
+    horn = kit.material("Horn", "#4D4535", rough=0.75)
+    N = Nodes(horn)
+    g = N.attr()
+    col = N.gradient(g, [(0.0, "#4A4330"), (0.55, "#6A6148"), (1.0, "#8E8466")])
+    col = N.value(col, N.ramp(N.noise(N.co, 18.0, 3.0), 0.3, 0.7, 0.85, 1.12))
+    col = N.mix(N.math('MULTIPLY', N.edge(0.015, 0.998, 0.94), 0.5), col, "#9C9070")
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.06, 0.97, 0.6), 0.7), col, "#17130D")
+    N.out(horn, col)
+    mats["horn"] = horn
+    moss = kit.furry(kit.material("Moss", "#4A5E26"), strength=0.4, mottle=0.3, fine=90.0, length=1.2)
+    N = Nodes(moss)
+    col = base_colour_socket(moss)
+    col = N.mix(N.ramp(N.noise(N.co, 7.0, 3.0), 0.5, 0.72, 0.0, 0.7), col, "#7E8A3A")
+    col = N.mix(N.ramp(N.noise(N.co, 4.0, 3.0), 0.58, 0.7, 0.0, 0.5), col, "#6B5A30")
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.06, 0.97, 0.6), 0.7), col, "#1F2810")
+    N.out(moss, col)
+    mats["moss"] = moss
+    cap = kit.material("MushroomCap", "#9A5A33", rough=0.8)
+    N = Nodes(cap)
+    g = N.attr()
+    N.out(cap, N.gradient(g, [(0.0, "#E6D6B2"), (0.3, "#D2B07C"), (0.65, "#A4643A"), (1.0, "#6E3B20")]))
+    mats["cap"] = cap
+    mats["stem"] = kit.furry(kit.material("MushroomStem", "#E4D8BC"), strength=0.12, mottle=0.05, fine=40.0, length=4.0)
+    fern = kit.material("Fern", "#5E8A34", rough=0.8)
+    N = Nodes(fern)
+    g = N.attr()
+    col = N.gradient(g, [(0.0, "#3A5420"), (0.6, "#557A2E"), (1.0, "#7E9E44")])
+    col = N.value(col, N.math('MULTIPLY_ADD', N.island(), 0.25, 0.85))
+    N.out(fern, col)
+    mats["fern"] = fern
+    mats["eye"] = kit.material("Eye", "#140D0A", rough=0.12, coat=1.0)
+    return mats
+
+
+def mouth_z(y):
+    """Height of the mouth line along the head (head space): low at the beak's tip, rising a little
+    to its corner below the eye, so the closed mouth reads calm and content, never a frown."""
+    return -0.135 - 0.032 * smooth01((-y - 0.02) / 0.38)
+
+
+def cranium():
+    """The head's main shape, in head space (front -Y): a blunt wedge whose top slopes to the snout;
+    its underside is pressed nearly flat up to a crisp edge, the mouth line, with a small hook at
+    the front of the upper beak and brow ridges over the eyes."""
+    cran = rounded_box((0.64, 0.80, 0.54), n=2.5, cuts=5)
+    for v in cran.verts:
+        x, y, z = v.co
+        f = smooth01(-y / 0.40)                                     # 0 behind the middle, 1 at the snout
+        v.co.x *= 1.0 - 0.26 * f
+        if z > 0:
+            v.co.z *= 1.0 - 0.24 * f                                # the top slopes down to the snout
+        zb = mouth_z(y)
+        w = 1.0 - smooth01((y - 0.05) / 0.2)                        # only in front of the ears
+        if v.co.z < zb:
+            v.co.z = zb + (v.co.z - zb) * (1.0 - 0.8 * w)
+        hook = smooth01((-y - 0.28) / 0.1) * smooth01((zb + 0.02 - v.co.z) / 0.04) * max(0.0, 1 - abs(x) / 0.1) ** 2
+        v.co.z -= 0.035 * hook                                      # the upper beak dips to a small hook
+        v.co.y -= 0.01 * hook
+        for sx in (-1, 1):                                          # brow ridges over the eyes
+            d = (Vector((v.co.x, v.co.y, v.co.z)) - Vector((0.2 * sx, -0.12, 0.17))).length
+            v.co.z += 0.012 * bump(d, 0, 0.1)
+    return cran
+
+
+def nostril_points():
+    bvh = BVHTree.FromBMesh(cranium())
+    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE)
+    out = []
+    for sx in (-1, 1):
+        hit, _, _, _ = bvh.ray_cast(Vector((0.034 * sx, 0.0, 0.015)), Vector((0, -1, 0)))
+        out.append(H @ hit)
+    return out
+
+
+# ---- the tortoise -----------------------------------------------------------------------------------
+
+def build():
+    rnd = random.Random(7)
+    mats = build_materials()
+    t = Prop("Turtle")
+    t.tally = {}
+
+    def add(part, bm, mat, at=None):
+        layer(bm)
+        if at is not None:
+            bm.transform(at)
+        t.tally[part] = t.tally.get(part, 0) + sum(len(f.verts) - 2 for f in bm.faces)
+        t.add(bm, mats[mat] if isinstance(mat, str) else mat)
+
+    # ---- shell: dark base dome, 13 stepped scutes, 24 marginals, plastron underneath ---------------------
+    sites = [(0.0, -0.52), (0.0, -0.245), (0.0, 0.03), (0.0, 0.30), (0.0, 0.565)]
+    sites += [(sx * 0.47, v) for sx in (-1, 1) for v in (-0.37, -0.09, 0.19, 0.46)]
+    sites = [Vector((x + rnd.uniform(-0.012, 0.012), y + rnd.uniform(-0.012, 0.012))) for x, y in sites]
+    shell_bm = bmesh.new()
+    add("shell base", base_dome(), "groove")
+    for i, s in enumerate(sites):
+        areola = (0.0, 0.03) if abs(s.x) < 0.1 else (-0.06 * math.copysign(1, s.x), 0.02)
+        bm = scute(i, sites, segs=14, areola=areola, seed=i * 1.7)
+        tmp = bpy_mesh_copy(bm)
+        shell_bm.from_mesh(tmp)
+        free_mesh(tmp)
+        add("scutes", bm, "scute")
+    for k in range(24):
+        add("marginals", marginal(k), "scute")
+    pl = rounded_box((2 * SA - 0.26, 2 * SB - 0.2, 0.5), n=2.8, cuts=3)
+    for v in pl.verts:
+        v.co.x *= 1.0 - 0.12 * smooth01(abs(v.co.y) / (SB - 0.1)) ** 2
+    add("plastron", pl, "plastron", M((0, SHELL_C.y + 0.02, 0.70)))
+    add("body", kit.ball((1.9, 2.3, 0.75), cuts=3), "skin", M((0, SHELL_C.y, 0.95)))
+    shell = BVHTree.FromBMesh(shell_bm)
+
+    # ---- legs: sturdy columns mid-step, big scales down the front of the forelegs ---------------------------
+    def foreleg(sx, step):
+        y0 = -0.78
+        pts = [(0.58 * sx, y0, 1.02), (0.90 * sx, y0 - 0.25 + step * 0.3, 0.80), (1.03 * sx, y0 - 0.45 + step * 0.6, 0.56),
+               (1.00 * sx, y0 - 0.60 + step, 0.26), (0.99 * sx, y0 - 0.64 + step, 0.12)]
+        rad = [0.27, 0.28, 0.29, 0.26, 0.27]
+        bm = limb(pts, rad, segs=10, rings=12, seed=sx * 3 + step,
+                  folds=wrinkles([(0.38, 0.62, 0.07, None)]))
+        grounded(bm)
+        bvh = BVHTree.FromBMesh(bm)
+        V = [Vector(p) for p in pts]
+        for r, tt in enumerate((2.08, 2.30, 2.52, 2.74)):
+            p = kit._spline(V, tt)
+            tan = (kit._spline(V, tt + 0.02) - kit._spline(V, tt - 0.02)).normalized()
+            face = Vector((0.45 * sx, -1.0, 0.0))
+            face = (face - tan * face.dot(tan)).normalized()
+            for c in (-1, 0, 1):
+                ang = math.radians(44 * c + (22 if r % 2 else 0) - 11 + rnd.uniform(-9, 9))
+                d = (Matrix.Rotation(ang, 3, tan) @ face).normalized()
+                k = rnd.uniform(0.82, 1.18)
+                tilt = Matrix.Rotation(math.radians(rnd.uniform(-14, 14)), 3, d) @ tan
+                q = p + tan * rnd.uniform(-0.03, 0.03)
+                add("leg scales", plate_on(bvh, q + d * 0.27, d, tilt, 0.22 * k, 0.24 * k, h=0.035 * k, nu=3, nv=3, shingle=True), "plate")
+        add("legs", bm, "skin")
+        foot(Vector((0.99 * sx, y0 - 0.70 + step, 0.0)), 8 * sx, (0.54, 0.54, 0.26), 4)
+
+    def hindleg(sx, step):
+        pts = [(0.62 * sx, 0.95 + step * 0.3, 0.98), (0.90 * sx, 1.06 + step * 0.6, 0.58), (0.92 * sx, 1.02 + step, 0.22),
+               (0.92 * sx, 1.0 + step, 0.10)]
+        rad = [0.31, 0.31, 0.30, 0.31]
+        bm = limb(pts, rad, segs=10, rings=8, seed=sx * 5 + step, folds=wrinkles([(0.3, 0.55, 0.06, None)]))
+        grounded(bm)
+        bvh = BVHTree.FromBMesh(bm)
+        V = [Vector(p) for p in pts]
+        for tt, ang, k in ((1.25, 150, 1.0), (1.5, 110, 0.9), (1.7, 175, 1.1), (1.95, 135, 0.95)):
+            p = kit._spline(V, tt)
+            tan = (kit._spline(V, tt + 0.02) - kit._spline(V, tt - 0.02)).normalized()
+            back = Vector((0.35 * sx, 1.0, 0.0))
+            back = (back - tan * back.dot(tan)).normalized()
+            d = (Matrix.Rotation(math.radians((ang - 140) * sx), 3, tan) @ back).normalized()
+            add("leg scales", plate_on(bvh, p + d * 0.31, d, tan, 0.2 * k, 0.2 * k, h=0.04, nu=3, nv=3, shingle=True), "plate")
+        add("legs", bm, "skin")
+        foot(Vector((0.92 * sx, 0.98 + step, 0.0)), 14 * sx, (0.60, 0.60, 0.26), 4)
+
+    def foot(at, yaw, size, claws):
+        F = M(at, rot=(0, 0, yaw))
+        fb = rounded_box(size, n=2.6, cuts=2)
+        for v in fb.verts:
+            v.co.x *= 1.0 + 0.12 * (0.5 - v.co.z / size[2])        # a little wider at the sole
+        add("feet", grounded(fb, F @ M((0, -0.04, size[2] / 2 - 0.03))), "skin")
+        for c in range(claws):
+            a = (c - (claws - 1) / 2) * 0.40
+            base = Vector((math.sin(a) * size[0] * 0.40, -math.cos(a) * size[1] * 0.42 - 0.04, 0.07))
+            cl = tube([(0, 0, 0), (0, -0.05, -0.012), (0, -0.08, -0.05)], [0.05, 0.042, 0.026], segs=4, rings=2)
+            gl = layer(cl)
+            for v in cl.verts:
+                v[gl] = min(1.0, max(0.0, -v.co.y / 0.08))
+            add("claws", grounded(cl, F @ M(base, rot=(0, 0, math.degrees(a)))), "horn")
+
+    foreleg(-1, -0.22)             # the near foreleg steps forward
+    foreleg(1, 0.12)
+    hindleg(-1, 0.14)
+    hindleg(1, -0.16)              # the far hind leg steps forward with it
+
+    # ---- tail: short, pointed, tucked under the back of the rim ------------------------------------------------
+    add("tail", limb([(0.0, 1.25, 0.76), (0.04, 1.48, 0.58), (0.08, 1.56, 0.44)], [0.15, 0.105, 0.05], segs=7, rings=4), "skin")
+
+    # ---- neck: long and wrinkled, lifting the head clear of the shell --------------------------------------------
+    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE)
+    joint = H @ Vector((0, 0.22, -0.10))
+    neck = limb([(0.0, -0.75, 1.02), (-0.02, -1.25, 1.12), (-0.07, -1.70, 1.36), joint], [0.27, 0.25, 0.225, 0.20],
+                segs=12, rings=16, folds=wrinkles([(0.1, 0.85, 0.09, math.pi), (0.14, 0.34, 0.08, None)]))
+    add("neck", neck, "headskin")
+
+    # ---- head: one wedge-shaped cranium whose front is the horn beak, a lower jaw under it, eyes ----------------
+    # seated against its sides under heavy lids, big plates on top
+    cran = cranium()
+    face = BVHTree.FromBMesh(cran)
+    plates = [((0.0, -0.05, 0.3), 0.23, 0.21), ((-0.075, -0.25, 0.3), 0.12, 0.12), ((0.075, -0.25, 0.3), 0.12, 0.12),
+              ((-0.10, 0.17, 0.3), 0.17, 0.17), ((0.10, 0.17, 0.3), 0.17, 0.17)]
+    for (x, y, z), w, l in plates:
+        hit, nrm, _, _ = face.ray_cast(Vector((x, y, z + 0.4)), Vector((0, 0, -1)))
+        add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.018), "plate", H)
+    eyes = []
+    for sx in (-1, 1):
+        gaze = Vector((0.66 * sx, -0.74, 0.08)).normalized()
+        start = Vector((0.08 * sx, -0.12, 0.06))
+        hit, _, _, _ = face.ray_cast(start, gaze)
+        eyes.append((hit - gaze * 0.03, gaze))
+    BEAK_CO, BEAK_NO = Vector((0, -0.25, -0.105)), Vector((0, 0.10, 0.99)).normalized()
+    kit.cut(cran, BEAK_CO, BEAK_NO)
+    kit.cut(cran, (0, -0.08, 0), (0, 1, 0))
+    up_beak, cran = kit.split(cran, lambda f: kit.centre(f).y < -0.08 and (kit.centre(f) - BEAK_CO).dot(BEAK_NO) < 0)
+    gb = layer(up_beak)
+    for v in up_beak.verts:
+        v[gb] = 0.55 - 0.4 * smooth01((-(v.co - BEAK_CO).dot(BEAK_NO)) / 0.07)   # darker towards the mouth: a closed line, no grin
+    add("beak", up_beak, "horn", H)
+    add("head", cran, "headskin", H)
+    jaw = rounded_box((0.54, 0.54, 0.17), n=2.5, cuts=3)
+    for v in jaw.verts:
+        f = smooth01(-v.co.y / 0.27)
+        if v.co.z < 0:
+            v.co.z *= 1.0 - 0.6 * f                                 # the chin slopes up to a wedge at the beak
+        v.co.z += 0.02 * f
+        hit = face.ray_cast(Vector((1.0, v.co.y - 0.03, -0.16)), Vector((-1, 0, 0)))[0]
+        wc = hit.x if hit is not None else 0.03
+        v.co.x = v.co.x / 0.27 * max(0.03, wc - 0.022)              # just inside the upper beak all along
+    lo_beak, jaw = kit.split(jaw, lambda f: kit.centre(f).y < -0.19)
+    gb = layer(lo_beak)
+    for v in lo_beak.verts:
+        v[gb] = 0.08
+    J = H @ M((0, -0.03, -0.198))
+    add("jaw", jaw, "headskin", J)
+    add("beak", lo_beak, "horn", J)
+
+    for c, gaze in eyes:
+        E = seat(c, gaze)
+        re = 0.082
+        add("eyes", kit.ball((2 * re, 2 * re, 2 * re), cuts=2), "eye", H @ E)
+        outer = 1.0 if (E.to_3x3() @ Vector((1, 0, 0))).y > 0 else -1.0
+        add("lids", eyelid(re, outer, upper=True), "headskin", H @ E)
+        add("lids", eyelid(re, outer, upper=False), "headskin", H @ E)
+
+    # ---- moss on top, with mushrooms and a fern --------------------------------------------------------------
+    mc = Vector((-0.06, 0.13))
+    mbm = bmesh.new()
+    cushions = [(0.0, 0.0, 0.17), (-0.10, -0.06, 0.12), (0.09, 0.05, 0.13), (-0.04, 0.11, 0.11), (0.12, -0.07, 0.09),
+                (-0.15, 0.04, 0.085), (0.03, -0.12, 0.09), (0.21, -0.16, 0.05), (0.22, 0.12, 0.045)]
+    for k, (dx, dy, r) in enumerate(cushions):
+        cm = mc + Vector((dx, dy))
+        add("moss", moss_cushion(shell, cm, r, seed=k * 2.3, cuts=2 if r > 0.15 else 1), "moss", None)
+    for k, (dx, dy, r) in enumerate(cushions):
+        tmp = bpy_mesh_copy(moss_cushion(shell, mc + Vector((dx, dy)), r, seed=k * 2.3, cuts=1))
+        mbm.from_mesh(tmp)
+        free_mesh(tmp)
+    mossy = BVHTree.FromBMesh(mbm)
+
+    def on_moss(m, sink=0.02):
+        p, n = dome_pt(m.x, m.y), dome_nrm(m.x, m.y)
+        hit, hn, _, _ = mossy.ray_cast(p + n * 0.8, -n)
+        if hit is None:
+            hit, hn, _, _ = shell.ray_cast(p + n * 0.8, -n)
+        return (hit if hit is not None else p) - n * sink, n
+
+    for m, h, r, lean in ((mc + Vector((-0.12, -0.07)), 0.17, 0.075, (-8, -10)), (mc + Vector((-0.17, 0.0)), 0.11, 0.05, (6, -14)),
+                          (mc + Vector((-0.06, -0.14)), 0.075, 0.034, (-12, 4))):
+        p, n = on_moss(m)
+        R = frame_from(p, Vector((0, 1, 0)), n) @ M(rot=(lean[0], lean[1], 0))
+        add("mushrooms", lathe([(0, h + 0.005), (r * 0.18, h), (r * 0.18, h * 0.45), (r * 0.24, 0.0), (0, -0.02)], segs=6), "stem", R)
+        cp = lathe([(0, r * 0.75), (r * 0.6, r * 0.66), (r * 0.92, r * 0.36), (r, r * 0.08), (r * 0.8, 0.0), (r * 0.2, r * 0.06), (0, r * 0.06)], segs=8)
+        gc = layer(cp)
+        for v in cp.verts:
+            v[gc] = smooth01(v.co.z / (r * 0.75)) if math.hypot(v.co.x, v.co.y) > r * 0.25 or v.co.z > r * 0.2 else 0.0
+        add("mushrooms", cp, "cap", R @ M((0, 0, h * 0.94)))
+
+    root, rn = on_moss(mc + Vector((0.05, 0.06)), sink=0.03)
+    fern(add, root, rn, height=0.58, lean=Vector((-0.55, -0.6, 0)), pairs=10, size=0.12, seed=1)
+    fern(add, root + Vector((0.03, 0.03, 0)), rn, height=0.42, lean=Vector((0.75, 0.3, 0)), pairs=8, size=0.10, seed=2)
+    t.build(SCALE)
+    return t
+
+
+def bpy_mesh_copy(bm):
+    import bpy
+    me = bpy.data.meshes.new("tmp_copy")
+    bm.to_mesh(me)
+    return me
+
+
+def free_mesh(me):
+    import bpy
+    bpy.data.meshes.remove(me)
+
+
+def eyelid(re, outer, upper=True):
+    """A heavy lid round an eyeball of radius `re` that looks along -Y: it hugs the eye, arches over
+    it and droops a little at the outer corner; its edge is thick and rolls in to touch the eye, and
+    its far side sinks into the head."""
+    us = [-68, -45, -22, 0, 22, 45, 68]
+    bm = bmesh.new()
+    layer(bm)
+
+    def edge(u):
+        k = u / 68.0
+        if upper:
+            return 16.5 - 8.0 * k * k - 5.0 * max(0.0, outer * k)
+        return -50.0 + 18.0 * (1 - k * k) + 6.0 * max(0.0, outer * k)
+
+    sgn = 1.0 if upper else -1.0
+    rows = []
+    prof = ((0.985, -4.0), (1.055, 0.0), (1.065, 18.0), (1.0, 40.0), (0.8, 66.0)) if upper else \
+        ((0.985, -4.0), (1.035, 0.0), (1.035, 18.0), (0.95, 40.0), (0.8, 60.0))
+    for r_fac, dv in prof:
+        row = []
+        for u in us:
+            v = max(-88.0, min(88.0, edge(u) + sgn * dv))
+            ur, vr = math.radians(u), math.radians(v)
+            d = Vector((math.sin(ur) * math.cos(vr), -math.cos(ur) * math.cos(vr), math.sin(vr)))
+            row.append(bm.verts.new(d * re * r_fac))
+        rows.append(row)
+    for a, b in zip(rows, rows[1:]):
+        for j in range(len(us) - 1):
+            bm.faces.new((a[j], a[j + 1], b[j + 1], b[j]))
+    return fix_normals(bm, Vector((0, -1, 0.6 * sgn)))
+
+
+def moss_cushion(bvh, m, r, seed=0.0, cuts=1):
+    """One soft cushion of moss, `r` studs across its middle, squashed flat and sunk into the shell
+    at map point m (the scutes found with `bvh`), so that a few of them overlap into a clump."""
+    p, n = dome_pt(m.x, m.y), dome_nrm(m.x, m.y)
+    hit, _, _, _ = bvh.ray_cast(p + n * 0.6, -n)
+    h = max((hit - p).dot(n) if hit is not None else 0.1, 0.1)
+    bm = rounded_box((2 * r, 2 * r, 1.0 * r), n=2.2, cuts=cuts)
+    kit.lumpy(bm, amount=0.18 * r, freq=9.0, seed=seed)
+    layer(bm)
+    bm.transform(frame_from(p + n * (h + 0.1 * r), Vector((0.3, 1, 0)), n))
+    return bm
+
+
+def fern(add, root, n, height, lean, pairs, size, seed):
+    """A fern frond: a stalk rising from `root` and arching over towards `lean`, with pairs of
+    leaflets that shrink towards the tip."""
+    n = Vector(n)
+    lean = Vector(lean)
+    pts = [root, root + n * height * 0.35, root + n * height * 0.75 + lean * height * 0.25,
+           root + n * height * 0.95 + lean * height * 0.6, root + n * height * 0.85 + lean * height * 0.95]
+    st = tube(pts, [0.016, 0.014, 0.011, 0.008, 0.004], segs=4, rings=9)
+    gl = layer(st)
+    for v in st.verts:
+        v[gl] = 0.2
+    add("fern", st, "fern")
+    rnd = random.Random(seed)
+    for k in range(pairs):
+        tt = 1.15 + 2.75 * k / max(1, pairs - 1)
+        p = kit._spline(pts, tt)
+        tan = (kit._spline(pts, min(3.999, tt + 0.03)) - kit._spline(pts, tt - 0.03)).normalized()
+        up = n - tan * n.dot(tan)
+        up = up.normalized() if up.length > 1e-4 else Vector((0, 0, 1))
+        side = tan.cross(up).normalized()
+        s = size * (1.0 - 0.6 * k / max(1, pairs - 1)) * (0.8 if k == 0 else 1.0)
+        for sgn in (-1, 1):
+            d = (side * sgn + tan * 0.32).normalized()
+            d = (d - up * (0.18 + rnd.uniform(-0.06, 0.06))).normalized()
+            lf = leaflet(s, s * 0.3)
+            gl = layer(lf)
+            for v in lf.verts:
+                v[gl] = 0.4 + 0.6 * v.co.y / s
+            add("fern", lf, "fern", frame_from(p, d, up))
+    tip = leaflet(size * 0.5, size * 0.2)
+    gl = layer(tip)
+    for v in tip.verts:
+        v[gl] = 0.8
+    add("fern", tip, "fern", frame_from(pts[-1], (pts[-1] - pts[-2]).normalized(), n))
+
+
+def bake(turtle, texture, samples=48):
+    """Everything but the glossy eyes becomes one textured mesh: the patterns, the tones and soft
+    shading in the creases are baked into its colour image. Roblox gets two MeshParts."""
+    eyes = [ob for ob in turtle.objects if ob.name.endswith("_Eye")]
+    body = kit.bake_texture([ob for ob in turtle.objects if ob not in eyes], texture, name="Turtle_Body",
+                            shade=0.55, soften=2, rough=0.85, samples=samples, uv_angle=70.0, uv_margin=0.004,
+                            pack_margin=0.003)
+    for ob in eyes:
+        ob.name = ob.data.name = "Turtle_Eyes"
+    turtle.objects = [body] + eyes
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--review", help="write a review contact sheet to this PNG")
+    ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
+    ap.add_argument("--face", help="also write a tight picture of the face to this PNG")
+    ap.add_argument("--peek", help="quick look while building: write --views, unbaked, to this PNG")
+    ap.add_argument("--views", default="front 3/4,front,face,side",
+                    help="views for --quick and --peek, each 'view' or 'view:look'")
+    ap.add_argument("--look", default="clay")
+    ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--samples", type=int, default=40)
+    ap.add_argument("--bake-samples", type=int, default=48)
+    ap.add_argument("--quick", action="store_true", help="with --review: only --views instead of all eight")
+    ap.add_argument("--title", default="Turtle review")
+    ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "turtle_colour.png"))
+    a = ap.parse_args()
+    kit.fresh()
+    turtle = build()
+    print("triangles by part:", dict(sorted(turtle.tally.items(), key=lambda kv: -kv[1])))
+    print("triangles before baking:", sum(turtle.tally.values()))
+    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE)
+    head = H @ Vector((0, -0.1, 0.0))
+
+    def shots(default_look):
+        out = []
+        for v in a.views.split(","):
+            view, _, look = v.strip().partition(":")
+            out.append((view.strip(), look.strip() or default_look))
+        return out
+
+    def rig_for(samples):
+        import review
+        rig = review.Rig(turtle, samples=samples, focus=(head.x, head.y + 0.4, head.z - 0.35))
+        rig.cams["face"] = review._camera("C_face", head + Vector((-0.48, -1.0, 0.16)).normalized() * 3.6, head + Vector((0.05, 0.12, -0.08)), 30)
+        return rig, review
+
+    if a.peek:
+        rig, _ = rig_for(min(a.samples, 16))
+        rig.sheet(os.path.abspath(a.peek), shots(a.look), px=a.px, title="peek")
+        print("peek", a.peek)
+        return
+    os.makedirs(os.path.dirname(os.path.abspath(a.texture)), exist_ok=True)
+    bake(turtle, os.path.abspath(a.texture), a.bake_samples)
+    tris = turtle.triangles()
+    lo, hi = turtle.bounds()
+    print("triangles:", tris, "total", sum(tris.values()))
+    print("size in studs: %.2f wide, %.2f long, %.2f tall; lowest point z=%.4f" % (hi.x - lo.x, hi.y - lo.y, hi.z - lo.z, lo.z))
+    me = turtle.objects[0].data
+    uv = me.uv_layers.active.data
+    a3 = sum(pl.area for pl in me.polygons)
+    a2 = 0.0
+    for pl in me.polygons:
+        pts = [uv[i].uv for i in pl.loop_indices]
+        a2 += abs(sum(pts[i].x * pts[(i + 1) % len(pts)].y - pts[(i + 1) % len(pts)].x * pts[i].y for i in range(len(pts)))) / 2
+    print("texture: %.0f%% of the image used, about %.0f pixels to a stud" % (a2 * 100, (a2 * 1024 * 1024 / a3) ** 0.5))
+    if a.export:
+        os.makedirs(os.path.dirname(os.path.abspath(a.export)), exist_ok=True)
+        kit.export_fbx(turtle.objects, os.path.abspath(a.export))
+        print("exported", a.export)
+    if a.review or a.face:
+        rig, review = rig_for(a.samples)
+        if a.review:
+            os.makedirs(os.path.dirname(os.path.abspath(a.review)), exist_ok=True)
+            rig.sheet(os.path.abspath(a.review), shots("full") if a.quick else review.STANDARD, px=a.px, title=a.title)
+            print("review sheet", a.review)
+        if a.face:
+            rig.render(os.path.abspath(a.face), "face", "full", a.px)
+            print("face", a.face)
+
+
+if __name__ == "__main__":
+    main()

@@ -33,9 +33,10 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 from mathutils.bvhtree import BVHTree  # noqa: E402
 
-HEAD_AT = Vector((-0.04, -3.02, 5.78))   # the middle of the skull, between the ears
+HEAD_AT = Vector((-0.04, -3.12, 5.92))   # the middle of the skull, between the ears
 HEAD_ROT = (-5, 0, -9)                   # muzzle a touch up (head held high), turned a little towards -X (the cameras)
 HEAD_SIZE = 1.06
+EYE_SLANT = 9.0                          # degrees the outer corner of the eye rises
 
 # The trunk is one skin over these sections, from the rump to the point of the chest:
 # centre x, y, z, then half width, height above the centre line (the back), depth below it, squareness.
@@ -54,9 +55,9 @@ BODY = [
 NECK = [
     (0.00, -1.60, 4.00, 0.78, 0.76, 0.86, 2.0),   # inside the shoulders
     (0.00, -2.20, 4.55, 0.74, 0.70, 0.80, 2.0),   # base of the neck, out of the chest
-    (0.00, -2.55, 5.08, 0.60, 0.56, 0.60, 2.0),   # neck
+    (0.00, -2.6, 5.14, 0.62, 0.58, 0.62, 2.0),    # neck
 ]
-NECK_TOP = [(0, 0.42, -0.22), (0.42, 0.40, 0.40, 2.0), (0, 0.18, -0.04), (0.30, 0.30, 0.26, 2.0)]   # in head space
+NECK_TOP = [(0, 0.42, -0.24), (0.44, 0.42, 0.42, 2.0), (0, 0.18, -0.04), (0.30, 0.30, 0.26, 2.0)]   # in head space
 
 # The head, one shell lofted along -Y, in its own space (muzzle towards -Y). For each section:
 #   y, crown z, top half width, top edge z, side half width, side z, lip half width, lip z,
@@ -77,18 +78,18 @@ HEAD = [
 
 # Cross-sections, (side, up), going round.
 P_LEG = [(0, 1.0), (0.62, 0.68), (0.9, 0.05), (0.75, -0.6), (0.3, -0.92), (-0.3, -0.92), (-0.75, -0.6), (-0.9, 0.05), (-0.62, 0.68)]
-P_CLAW = [(0, 1.0), (0.62, 0.25), (0.5, -0.55), (0, -0.8), (-0.5, -0.55), (-0.62, 0.25)]
+P_CLAW = [(0, 1.0), (0.7, -0.2), (0, -0.8), (-0.7, -0.2)]
 P_BROW = [(0, 1.0), (0.95, -0.2), (0.55, -0.7), (-0.55, -0.7), (-0.95, -0.2)]
 # A sculpted lock of fur, rounded on top and a little lopsided, with a flat underside.
-P_LOCK = [(-1.0, 0.0), (-0.55, 0.7), (0.1, 0.92), (0.65, 0.6), (1.0, 0.0), (0.0, -0.45)]
+P_LOCK = [(-1.0, 0.0), (-0.45, 0.82), (0.42, 0.74), (1.0, 0.0), (0.0, -0.45)]
 P_LOCK1 = [(-1.0, -0.1), (-0.5, 0.8), (0.5, 0.8), (1.0, -0.1), (0.0, -0.6)]
 # Width of a lock along its length (0 root, 1 tip): full at the buried root, tapering to a point.
 LOCKW = [(0, 1.0), (0.3, 0.9), (0.58, 0.62), (0.82, 0.3), (1, 0.0)]
 
 # The coat, read from each vertex's colour position g: charcoal-indigo, saddle, slate blue-grey,
 # light slate, silver, silver-white.
-COAT = [(0.0, "#1C1F30"), (0.14, "#2A2F46"), (0.26, "#394062"), (0.42, "#56617F"), (0.55, "#6C7896"),
-        (0.7, "#97A1B8"), (0.84, "#C6CCD8"), (1.0, "#E6E9EF")]
+COAT = [(0.0, "#1C1F2E"), (0.14, "#292E42"), (0.26, "#383F5A"), (0.42, "#535E78"), (0.55, "#67738C"),
+        (0.7, "#939CB0"), (0.84, "#C4CAD5"), (1.0, "#E4E7EC")]
 
 
 # ---- small helpers ----------------------------------------------------------------------------------
@@ -276,7 +277,7 @@ def round_shape(k=10):
     return [(math.cos(2 * math.pi * j / k), math.sin(2 * math.pi * j / k)) for j in range(k)]
 
 
-def lock(root, D, N, L, W, rise=0.1, curl=0.0, flick=0.06, sink=0.07, thick=0.5, parted=True, n=5, g=(0.5, 0.56),
+def lock(root, D, N, L, W, rise=0.1, curl=0.0, flick=0.06, sink=0.07, thick=0.62, parted=True, n=5, g=(0.5, 0.56),
          widths=LOCKW):
     """One big sculpted lock of fur growing from `root` on a surface with normal N, flowing along D
     for L studs, W wide at its root. Its root is buried `sink` deep, so it grows out of the surface
@@ -638,10 +639,10 @@ def head_shell():
     for y, pts in rings:
         mz = smooth(y, -0.36, -0.62)                     # 1 on the muzzle
         tipdark = smooth(y, -0.8, -1.22)
-        top = lerp(0.42, lerp(0.34, 0.14, tipdark), mz)
+        top = lerp(0.34, lerp(0.3, 0.12, tipdark), mz)
         mouth = smooth(y, -0.3, -0.42)                   # the lip line runs from the nose to under the eye
         # outline index: 0 crown, 1 top, 2 brow/bridge edge, 3 side, 4 lip, 5 groove, 6 lower lip, 7 jaw, 8 under, 9 chin
-        gs = [top, top, lerp(0.46, top + 0.04, mz), lerp(0.5, 0.74, mz), lerp(0.8, 0.88, mz),
+        gs = [top, top, lerp(0.4, top + 0.04, mz), lerp(0.5, 0.72, mz), lerp(0.8, 0.88, mz),
               lerp(0.8, 0.07, mouth), lerp(0.82, 0.66, mz), 0.86, 0.9, 0.9]
         half = len(pts) // 2
         loop = []
@@ -666,8 +667,10 @@ def head_shell():
     for v in bm.verts:
         x, y, z = v.co
         below = smooth(z, -0.11, -0.16)
-        v.co.y += 0.13 * below * smooth(y, -0.92, -1.25)
-        v.co.z += 0.03 * below * smooth(y, -0.92, -1.25)
+        fr = smooth(y, -0.85, -1.25)
+        v.co.y += 0.17 * below * fr
+        v.co.z += 0.035 * below * fr
+        v.co.x *= 1.0 - 0.25 * below * fr
     # pale marks over the eyes, as on a real wolf: they lift the face and make the brow read
     for v in bm.verts:
         x, y, z = v.co
@@ -762,7 +765,7 @@ def build():
         # foreleg: shoulder, the elbow back at the brisket, a straight forearm, the wrist, a sloped pastern
         fore = [(0.6 * sx, -1.38, 3.55), (0.66 * sx, -1.2, 2.62), (0.69 * sx, -1.3, 2.2), (0.71 * sx, -1.38, 1.6),
                 (0.74 * sx, -1.45, 0.8), (0.76 * sx, -1.53, 0.5), (0.78 * sx, -1.66, 0.22)]
-        add("legs", gpaint(limb(fore, [(0.46, 0.62), (0.34, 0.46), (0.3, 0.38), (0.245, 0.29), (0.215, 0.25), (0.19, 0.21), (0.22, 0.24)],
+        add("legs", gpaint(limb(fore, [(0.48, 0.64), (0.37, 0.5), (0.33, 0.42), (0.27, 0.32), (0.24, 0.27), (0.215, 0.235), (0.24, 0.26)],
                                 P_LEG, 20, up=(0, -1, 0)), leg_g(sx)), coat)
         add("legs", gpaint(_ball_at((0.2, 0.24, 0.3), (0.66 * sx, -1.0, 2.62), cuts=1), leg_g(sx)), coat)        # point of the elbow
         add("legs", gpaint(_ball_at((0.17, 0.16, 0.2), (0.74 * sx, -1.3, 0.84), cuts=1), leg_g(sx)), coat)       # wrist pad
@@ -770,9 +773,20 @@ def build():
         # hind leg: haunch, the stifle forward, the hock high and back, a near-upright rear pastern
         hind = [(0.58 * sx, 1.55, 3.75), (0.72 * sx, 1.25, 3.05), (0.78 * sx, 0.98, 2.4), (0.8 * sx, 1.35, 1.85),
                 (0.82 * sx, 1.82, 1.25), (0.82 * sx, 1.74, 0.55), (0.82 * sx, 1.66, 0.22)]
-        add("legs", gpaint(limb(hind, [(0.54, 0.92), (0.5, 0.8), (0.33, 0.45), (0.28, 0.39), (0.19, 0.27), (0.17, 0.19), (0.21, 0.23)],
+        add("legs", gpaint(limb(hind, [(0.56, 0.94), (0.52, 0.84), (0.36, 0.48), (0.31, 0.43), (0.22, 0.3), (0.19, 0.21), (0.23, 0.25)],
                                 P_LEG, 22, up=(0, -1, 0)), leg_g(sx)), coat)
-        add("legs", gpaint(_ball_at((0.16, 0.2, 0.26), (0.82 * sx, 2.0, 1.33), cuts=1), leg_g(sx)), coat)        # point of the hock
+        add("legs", gpaint(_ball_at((0.18, 0.22, 0.28), (0.82 * sx, 2.02, 1.33), cuts=1), leg_g(sx)), coat)        # point of the hock
+        FC, HC = Curve(fore), Curve(hind)
+        for t, L, W, ang in ((0.3, 0.55, 0.22, 0), (0.38, 0.5, 0.2, 35), (0.5, 0.42, 0.17, -30)):
+            c = FC.at(t)
+            rad = Vector((math.sin(math.radians(ang)) * sx, 1.0, 0.0)).normalized()
+            add("leg fur", lock(c + rad * 0.2, Vector((0, 0.5, -1.0)), rad, L, W, rise=0.12, flick=0.1, g=(0.5, 0.54), n=4,
+                                parted=False), coat)
+        for t, L, W, ang in ((0.1, 0.75, 0.28, 60), (0.17, 0.7, 0.26, 10), (0.28, 0.6, 0.24, 40), (0.36, 0.5, 0.2, -10)):
+            c = HC.at(t)
+            rad = Vector((math.cos(math.radians(ang)) * sx, math.sin(math.radians(ang)), 0.0)).normalized()
+            add("leg fur", lock(c + rad * 0.3, Vector((0, 0.6, -1.0)), rad, L, W, rise=0.1, flick=0.08,
+                                g=(0.5 + 0.2 * smooth(ang, 30, -10), 0.56), n=4), coat)
         paw(Vector((0.82 * sx, 1.6, 0.0)), sx, 1.05)
 
     # ---- tail: a big full brush, held low and out, curving at the end ------------------------------------
@@ -793,8 +807,8 @@ def build():
         return lock(c + rad * r * 0.8, T + rad * out, rad, L, W, rise=0.12, flick=0.03, curl=0.12 * math.sin(3 * ang),
                     g=(gg, gg + 0.04), n=5)
 
-    for k, t in enumerate((0.06, 0.24, 0.42, 0.6, 0.76)):
-        cnt = 7 if k < 4 else 6
+    for k, t in enumerate((0.06, 0.25, 0.44, 0.63, 0.78)):
+        cnt = 6
         for j in range(cnt):
             ang = 2 * math.pi * (j + 0.5 * (k % 2)) / cnt + 0.3
             L = (0.8 + 0.18 * math.sin(j * 2.3 + k)) * (1.0 if k < 4 else 0.85)
@@ -805,29 +819,29 @@ def build():
 
     # ---- the mane: four rings of big locks round the neck, silver-white in front, slate behind ---------------
     for k, idx in enumerate((2.75, 2.3, 1.85, 1.4)):
-        cnt = 10
+        cnt = 12
         for j in range(cnt):
             th = 90.0 + 360.0 * (j + 0.5 * (k % 2)) / cnt
             side = abs(math.cos(math.radians(th)))
             front = smooth(math.sin(math.radians(th)), 0.35, -0.6)
-            gm = lerp(0.4, 0.86, front)
-            L = (1.0 + 0.12 * k) * (1 + 0.14 * math.sin(j * 1.9 + 2.0 * k))
-            add("mane", on_skin(idx, th, L, 0.36 + 0.02 * k, back=1.0, down=0.5 * side, out=0.55 * side, g=gm, on=neck,
-                                rise=0.08 + 0.14 * side, flick=0.1, curl=0.22 * math.sin(j * 2.7 + k), n=5), coat)
+            gm = lerp(0.4, 0.84, front)
+            L = (0.95 + 0.1 * k) * (1 + 0.16 * math.sin(j * 1.9 + 2.0 * k)) * lerp(1.0, 0.72, front) * (1 + 0.12 * side)
+            add("mane", on_skin(idx, th, L, 0.29 + 0.015 * k, back=1.0, down=0.5 * side, out=0.6 * side, g=gm, on=neck,
+                                rise=0.06 + 0.16 * side, flick=0.1, curl=0.25 * math.sin(j * 2.7 + k), n=5), coat)
     # the chest: a silver-white bib of locks flowing down
-    for k, idx in enumerate((7.9, 7.45, 7.0)):
-        for j in range(4):
-            th = -90.0 + (j - 1.5 + 0.5 * (k % 2)) * 22.0
-            add("bib", on_skin(idx, th, 0.8 - 0.08 * k, 0.3, back=0.4, down=1.0, g=0.86 + 0.02 * (j % 2), rise=0.08,
+    for k, idx in enumerate((7.9, 7.4, 6.9)):
+        for j in range(3):
+            th = -90.0 + (j - 1.0 + 0.5 * (k % 2)) * 26.0
+            add("bib", on_skin(idx, th, 0.62 - 0.06 * k, 0.26, back=0.4, down=1.0, g=0.84 + 0.02 * (j % 2), rise=0.05,
                                curl=0.2 * math.sin(j * 1.7 + k), n=5), coat)
     # shoulders, back line, haunches and belly: locks flowing back, varied in size
     for sx in (-1, 1):
         for idx, th, L, W in ((6.4, 40, 0.8, 0.28), (6.0, 18, 0.75, 0.26), (5.7, 45, 0.7, 0.25), (5.5, 0, 0.65, 0.24)):
             thh = th if sx > 0 else 180 - th
-            add("shoulders", on_skin(idx, thh, L, W, back=1.0, down=0.5, rise=0.14, curl=0.1 * sx), coat)
+            add("shoulders", on_skin(idx, thh, L, W, back=1.0, down=0.6, rise=0.06, flick=0.05, curl=0.14 * sx), coat)
         for idx, L in ((6.0, 0.7), (5.25, 0.68), (4.5, 0.64), (3.75, 0.6), (3.0, 0.62), (2.3, 0.66)):
             th = 90 - 24 * sx
-            add("back", on_skin(idx, th, L, 0.24, back=1.0, down=0.15, out=0.1, rise=0.12, curl=0.08 * sx), coat)
+            add("back", on_skin(idx, th, L, 0.26, back=1.0, down=0.35, out=0.1, rise=0.03, flick=0.03, curl=0.12 * sx), coat)
         for idx, th, L, W in ((2.0, 30, 0.75, 0.27), (1.55, 10, 0.8, 0.28), (1.2, 40, 0.65, 0.24)):
             thh = th if sx > 0 else 180 - th
             add("haunches", on_skin(idx, thh, L, W, back=1.0, down=0.6, rise=0.13), coat)
@@ -841,7 +855,7 @@ def build():
         add("crystals", paint(sheath(h, r), lambda v, h=h: 0.2 + 0.8 * max(v.co.z, 0.0) / h), crystm, F, crease=25)
         add("glow", crystal(h, r * 0.7, rot=30.0, base=h * 0.3, shoulder=0.7, lean=0.15), glow, F)
 
-    for k, (idx, h, r) in enumerate(((6.25, 0.9, 0.14), (5.55, 0.74, 0.125), (4.85, 0.6, 0.11), (4.15, 0.47, 0.095), (3.45, 0.36, 0.08))):
+    for k, (idx, h, r) in enumerate(((6.1, 1.15, 0.17), (5.4, 0.95, 0.15), (4.7, 0.76, 0.13), (4.0, 0.58, 0.11), (3.3, 0.44, 0.09))):
         s = skin.s_of(idx)
         p, n, t = skin.bare(s, 90.0), skin.normal(s, 90.0), skin.at(s)[1]
         grow(p - n * 0.02, (n * 0.9 - t * 0.45).normalized(), h, r, -t)
@@ -853,12 +867,25 @@ def build():
         s = skin.s_of(6.05)
         th = 90 - 52 * sx
         p, n, t = skin.bare(s, th), skin.normal(s, th), skin.at(s)[1]
-        grow(p - n * 0.02, (n - t * 0.4).normalized(), 0.5, 0.1, -t)
+        grow(p - n * 0.02, (n - t * 0.4).normalized(), 0.62, 0.12, -t)
         p, n = skin.bare(s - 0.3, th - 10 * sx), skin.normal(s - 0.3, th - 10 * sx)
-        grow(p - n * 0.02, (n - t * 0.5).normalized(), 0.32, 0.075, -t)
+        grow(p - n * 0.02, (n - t * 0.5).normalized(), 0.4, 0.09, -t)
 
     # ---- head: placed in its own space, then turned as one -------------------------------------------
     head = head_shell()
+    surf = Surface(head)
+    eyes = []
+    for sx in (-1, 1):
+        # each eye sits in a small flat socket facing forward and out, so it lies flush and looks ahead
+        p, _ = surf.hit((0.95 * sx, -0.7, 0.24), Vector((0.27 * sx, -0.28, 0.16)) - Vector((0.95 * sx, -0.7, 0.24)))
+        out = Vector((0.64 * sx, -0.74, 0.14)).normalized()
+        eyes.append((sx, p, out))
+        for v in head.verts:
+            d = (v.co - p).length
+            if d < 0.24:
+                w = smooth(d, 0.24, 0.1)
+                v.co -= out * ((v.co - p).dot(out) + 0.012) * w * 0.9
+    head.normal_update()
     surf = Surface(head)
     add("head", head, facem, H, crease=50)
 
@@ -879,23 +906,26 @@ def build():
 
     for sx in (-1, 1):
         # the eye: a glowing violet almond, slanted up towards the ear, under the brow
-        p, nrm = surf.hit((0.95 * sx, -0.7, 0.28), Vector((0.26 * sx, -0.29, 0.2)) - Vector((0.95 * sx, -0.7, 0.28)))
-        along = Vector((sx, 0.8, 0.32))
-        eye = [(-0.5, -0.02), (-0.34, 0.08), (-0.1, 0.15), (0.18, 0.19), (0.4, 0.17), (0.56, 0.1), (0.36, 0.0), (0.1, -0.07),
-               (-0.2, -0.09), (-0.4, -0.06)]
-        add("eyes", lens([(a * 0.3, b * 0.5) for a, b in eye], 0.035, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.04)),
-            glow, H @ facing(p + nrm * 0.012, nrm, along))
+        # It is turned by hand, facing forward and out, so that from the front the outer corner is the
+        # higher one (on the sloping surface it would droop and look sad).
+        _, p, out = eyes[(sx + 1) // 2]
+        flat = Vector((0.74 * sx, 0.64, 0.0))
+        along = flat * math.cos(math.radians(EYE_SLANT)) + Vector((0, 0, 1)) * math.sin(math.radians(EYE_SLANT))
+        eye = [(-0.52, -0.03), (-0.36, 0.06), (-0.12, 0.14), (0.14, 0.18), (0.38, 0.15), (0.58, 0.06), (0.38, -0.02), (0.12, -0.07),
+               (-0.14, -0.09), (-0.36, -0.07)]
+        add("eyes", lens([(a * 0.32, b * 0.55) for a, b in eye], 0.022, rows=((0.7, 0.9), (1.0, 0.0)), centre=(0.0, 0.03)),
+            glow, H @ facing(p, out, along))
         # a dark rim round the eye, a little longer at the corners
-        rim = [(-0.62, -0.06), (-0.4, 0.1), (-0.12, 0.2), (0.18, 0.25), (0.44, 0.22), (0.68, 0.11), (0.4, -0.04), (0.1, -0.12),
-               (-0.22, -0.14), (-0.46, -0.11)]
-        add("eyes", paint(lens([(a * 0.3, b * 0.5) for a, b in rim], 0.03), 0.12), nosem, H @ facing(p + nrm * 0.004, nrm, along))
+        rim = [(-0.64, -0.06), (-0.42, 0.08), (-0.14, 0.19), (0.14, 0.24), (0.42, 0.2), (0.7, 0.07), (0.42, -0.06), (0.12, -0.12),
+               (-0.16, -0.14), (-0.42, -0.12)]
+        add("eyes", paint(lens([(a * 0.32, b * 0.55) for a, b in rim], 0.03), 0.1), nosem, H @ facing(p - out * 0.016, out, along))
         # brow: a strong ridge along the edge of the forehead, overhanging the eye
         pts = []
-        for x, y in ((0.06, -0.47), (0.14, -0.4), (0.225, -0.31), (0.3, -0.19), (0.36, -0.05)):
+        for x, y, up in ((0.06, -0.47, 0.0), (0.14, -0.4, 0.004), (0.225, -0.31, 0.014), (0.3, -0.19, 0.03), (0.36, -0.05, 0.04)):
             q, qn = surf.hit((x * sx, y, 1.5), (0, 0, -1))
-            pts.append(q + qn * 0.004)
-        add("brows", paint(loft(pts, 9, fixed([(0.025, 0.016), (0.06, 0.035), (0.08, 0.05), (0.065, 0.042), (0.025, 0.015)], P_BROW),
-                                up=(0.7 * sx, 0, 1)), 0.48), facem, H, crease=40)
+            pts.append(q + qn * 0.004 + Vector((0, 0, up)))
+        add("brows", paint(loft(pts, 9, fixed([(0.022, 0.016), (0.05, 0.036), (0.062, 0.05), (0.05, 0.042), (0.02, 0.015)], P_BROW),
+                                up=(0.45 * sx, 0, 1)), 0.48), facem, H, crease=40)
         # ears: tall, pointed, cupped forward and a little out, pale fur inside
         def ear_prof(t):
             w = 0.22 * (1 - t) ** 0.8 + 0.005
@@ -922,16 +952,14 @@ def build():
                 f = j / (cnt - 1)
                 z = lerp(0.1, -0.4, f)
                 q, qn = surf.hit((0.9 * sx, y0 + 0.12 * f, z), (-sx, 0, 0))
-                D = Vector((0.55 * sx, 1.0, -0.2 - 0.6 * f))
+                D = Vector((1.0 * sx, 0.75, -0.25 - 0.6 * f))
                 gg = lerp(0.48, 0.86, smooth(f, 0.1, 0.65))
                 add("ruff", lock(q, D, qn, L * (1 + 0.15 * math.sin(j * 2.1 + layer)), W, rise=0.12, sink=0.05, flick=0.14,
                                  curl=0.15 * sx * (1 if j % 2 else -1), g=(gg, gg + 0.04), n=5), facem, H)
-    # a few locks over the crown and the nape, flowing back into the mane; a tuft under the chin
+    # a few locks over the crown and the nape, flowing back into the mane
     for x, y, L in ((0.0, 0.08, 0.5), (-0.13, 0.22, 0.45), (0.13, 0.22, 0.45)):
         q, qn = surf.hit((x, y, 1.5), (0, 0, -1))
         add("crown", lock(q, Vector((0.3 * x, 1.0, -0.3)), qn, L, 0.15, rise=0.15, sink=0.04, g=(0.4, 0.44), n=4), facem, H)
-    q, qn = surf.hit((0.0, -0.62, -1.5), (0, 0, 1))
-    add("chin", lock(q, Vector((0, 1.0, -0.6)), qn, 0.34, 0.12, rise=0.1, sink=0.03, parted=False, g=(0.88, 0.9), n=4), facem, H)
 
     wolf.build()
     for ob in wolf.objects:
@@ -991,7 +1019,7 @@ def main():
         import review
         rig = review.Rig(wolf, samples=samples, focus=(head.x, head.y + 1.4, head.z - 1.6))
         rig.cams["face"] = review._camera("C_face", head + Vector((-0.62, -1.0, 0.1)).normalized() * 4.6, head + Vector((0, 0.3, -0.15)), 30)
-        rig.cams["face front"] = review._camera("C_facefront", head + Vector((-0.12, -1.0, 0.06)).normalized() * 4.6, head + Vector((0, 0.3, -0.15)), 30)
+        rig.cams["face front"] = review._camera("C_facefront", head + Vector((-0.12, -1.0, 0.06)).normalized() * 3.6, head + Vector((0, 0.3, -0.15)), 30)
         rig.cams["face side"] = review._camera("C_faceside", head + Vector((-1.0, -0.15, 0.05)).normalized() * 4.6, head + Vector((0, 0.4, -0.15)), 30)
         return rig, review
 

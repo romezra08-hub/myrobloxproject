@@ -276,8 +276,8 @@ def clip_half(poly, mid, n):
 
 
 # a scute's profile from its middle (q=0) to its edge (q=1): stepped growth rings, a groove at the edge
-RINGS = [(0.22, 0.128), (0.29, 0.104), (0.46, 0.098), (0.53, 0.074), (0.70, 0.067), (0.77, 0.044), (1.0, -0.035)]
-TOP = 0.135
+RINGS = [(0.24, 0.146), (0.30, 0.112), (0.47, 0.106), (0.53, 0.076), (0.70, 0.070), (0.76, 0.042), (1.0, -0.035)]
+TOP = 0.152
 
 
 def scute(i, sites, segs=14, areola=(0.0, 0.0), seed=0.0):
@@ -356,12 +356,12 @@ def scute(i, sites, segs=14, areola=(0.0, 0.0), seed=0.0):
 def flare(phi):
     """How far the rim's edge reaches out beyond the dome, and how far it rises (or drops)."""
     a = abs(phi)
-    out = 0.07 + 0.11 * bump(a, 52, 24) + 0.13 * bump(a, 135, 28) + 0.05 * bump(a, 180, 22) + 0.04 * bump(a, 0, 20)
-    up = -0.05 + 0.10 * bump(a, 52, 24) + 0.10 * bump(a, 135, 28) + 0.05 * bump(a, 0, 25)
+    out = 0.10 + 0.12 * bump(a, 52, 26) + 0.15 * bump(a, 135, 30) + 0.06 * bump(a, 180, 22) + 0.04 * bump(a, 0, 20)
+    up = -0.07 + 0.09 * bump(a, 52, 26) + 0.10 * bump(a, 135, 30) + 0.06 * bump(a, 0, 25)
     return out, up
 
 
-def marginal(k, n=24, gap=0.9):
+def marginal(k, n=24, gap=0.55):
     """One plate of the rim: from the seam with the big scutes down to the dome's edge, then out
     over the legs with a pointed tip, so that the rim is gently serrated."""
     phc = 360.0 * k / n
@@ -379,12 +379,12 @@ def marginal(k, n=24, gap=0.9):
         up = Vector((0, 0, 1))
         p2 = on_dome(map_at(rr, ph), 0.06)
         fo, fu = flare(ph)
-        p3 = p2 + out * (fo + 0.055 * tip) + up * (fu - 0.015 * tip)
+        p3 = p2 + out * (fo + 0.035 * tip) + up * (fu - 0.01 * tip)
         col = [(on_dome(map_at(ri, ph), -0.03), 0.0),
                (on_dome(map_at(ri + 0.035, ph), 0.045), 0.2 + 0.15 * tip),
                (p2, 0.45 + 0.3 * tip),
                (p3, 0.4 + 0.45 * tip),
-               (p3 - up * 0.065 - out * 0.012, 0.25 + 0.2 * tip),
+               (p3 - up * 0.045 - out * 0.01, 0.25 + 0.2 * tip),
                (on_dome(map_at(rr, ph), -0.07) - up * 0.06, 0.0)]
         verts = []
         for p, gv in col:
@@ -590,10 +590,10 @@ def tones(mat, up=None, down=None, up_mix=0.5, down_mix=0.4):
     return mat
 
 
-def skin_material(name, hexcode, up, down, size=0.085, nostrils=()):
+def skin_material(name, hexcode, up, down, size=0.07, nostrils=(), joins=0.24):
     """Leathery skin: kit.scaly's small scales, darker on top and paler below, mottled, darker in
     every fold and crease."""
-    m = kit.scaly(kit.material(name, hexcode), size=size, joins=0.34, vary=0.16, shade_down=0.08, rough=0.88)
+    m = kit.scaly(kit.material(name, hexcode), size=size, joins=joins, vary=0.13, shade_down=0.08, rough=0.88)
     tones(m, up=up, down=down, up_mix=0.55, down_mix=0.55)
     N = Nodes(m)
     col = base_colour_socket(m)
@@ -601,7 +601,7 @@ def skin_material(name, hexcode, up, down, size=0.085, nostrils=()):
     col = N.mix(blot, col, "#4E4630")
     col = N.mix(N.math('MULTIPLY', N.cavity(0.12, 0.97, 0.55), 0.85), col, "#231D13")
     if nostrils:
-        col = N.mix(N.near(nostrils, 0.012, 0.026), col, "#1A140D")
+        col = N.mix(N.near(nostrils, 0.007, 0.016), col, "#1A140D")
     N.out(m, col)
     return m
 
@@ -627,11 +627,11 @@ def scute_material(name):
 
 
 def build_materials():
-    H = M(HEAD_AT, rot=HEAD_ROT)
-    nostrils = [H @ Vector((s * 0.05, -0.405, 0.075)) for s in (-1, 1)]
+    nostrils = nostril_points()
     mats = {
-        "skin": skin_material("Skin", "#7E7556", up="#5E563A", down="#A3A386", nostrils=nostrils),
-        "plate": skin_material("ScalePlate", "#8A8160", up="#6E6646", down="#A9A88C", size=0.3),
+        "skin": skin_material("Skin", "#706B4B", up="#545036", down="#9A9D84"),
+        "headskin": skin_material("HeadSkin", "#706B4B", up="#545036", down="#9A9D84", size=0.042, joins=0.2, nostrils=nostrils),
+        "plate": skin_material("ScalePlate", "#7D7656", up="#635D40", down="#A3A388", size=0.3),
         "scute": scute_material("Scute"),
     }
     groove = kit.material("Groove", "#1E130B", rough=0.9)
@@ -643,8 +643,9 @@ def build_materials():
     horn = kit.material("Horn", "#4D4535", rough=0.75)
     N = Nodes(horn)
     g = N.attr()
-    col = N.gradient(g, [(0.0, "#3A3227"), (0.6, "#5E5541"), (1.0, "#A49773")])
-    col = N.mix(N.math('MULTIPLY', N.edge(0.015, 0.998, 0.94), 0.5), col, "#B8AC8A")
+    col = N.gradient(g, [(0.0, "#3A3324"), (0.5, "#544B35"), (1.0, "#7C7155")])
+    col = N.value(col, N.ramp(N.noise(N.co, 18.0, 3.0), 0.3, 0.7, 0.85, 1.12))
+    col = N.mix(N.math('MULTIPLY', N.edge(0.015, 0.998, 0.94), 0.5), col, "#9C9070")
     col = N.mix(N.math('MULTIPLY', N.cavity(0.06, 0.97, 0.6), 0.7), col, "#17130D")
     N.out(horn, col)
     mats["horn"] = horn
@@ -670,6 +671,35 @@ def build_materials():
     mats["fern"] = fern
     mats["eye"] = kit.material("Eye", "#140D0A", rough=0.12, coat=1.0)
     return mats
+
+
+def cranium():
+    """The head's main shape, in head space (front -Y): a blunt wedge whose top slopes to the snout,
+    with room for the jaw below, brow ridges and a small hook at the front of the upper beak."""
+    cran = rounded_box((0.64, 0.80, 0.52), n=2.5, cuts=5)
+    for v in cran.verts:
+        x, y, z = v.co
+        f = smooth01(-y / 0.40)                                     # 0 behind the middle, 1 at the snout
+        v.co.x *= 1.0 - 0.26 * f
+        v.co.z *= 1.0 - (0.24 if z > 0 else 0.36) * f
+        hook = smooth01((-y - 0.28) / 0.1) * smooth01(-z / 0.12) * max(0.0, 1 - abs(x) / 0.1) ** 2
+        v.co.z -= 0.035 * hook
+        v.co.y -= 0.01 * hook
+        for sx in (-1, 1):                                          # brow ridges over the eyes
+            d = (Vector((v.co.x, v.co.y, v.co.z)) - Vector((0.2 * sx, -0.12, 0.17))).length
+            v.co.z += 0.03 * bump(d, 0, 0.09)
+            v.co.x += 0.015 * sx * bump(d, 0, 0.09)
+    return cran
+
+
+def nostril_points():
+    bvh = BVHTree.FromBMesh(cranium())
+    H = M(HEAD_AT, rot=HEAD_ROT)
+    out = []
+    for sx in (-1, 1):
+        hit, _, _, _ = bvh.ray_cast(Vector((0.036 * sx, 0.0, 0.05)), Vector((0, -1, 0)))
+        out.append(H @ hit)
+    return out
 
 
 # ---- the tortoise -----------------------------------------------------------------------------------
@@ -712,33 +742,33 @@ def build():
     # ---- legs: sturdy columns mid-step, big scales down the front of the forelegs ---------------------------
     def foreleg(sx, step):
         y0 = -0.78
-        pts = [(0.60 * sx, y0, 1.02), (0.95 * sx, y0 - 0.25 + step * 0.3, 0.80), (1.10 * sx, y0 - 0.45 + step * 0.6, 0.55),
-               (1.06 * sx, y0 - 0.62 + step, 0.24), (1.04 * sx, y0 - 0.66 + step, 0.10)]
-        rad = [0.25, 0.25, 0.26, 0.22, 0.24]
+        pts = [(0.58 * sx, y0, 1.02), (0.90 * sx, y0 - 0.25 + step * 0.3, 0.80), (1.03 * sx, y0 - 0.45 + step * 0.6, 0.56),
+               (1.00 * sx, y0 - 0.60 + step, 0.26), (0.99 * sx, y0 - 0.64 + step, 0.12)]
+        rad = [0.27, 0.28, 0.29, 0.26, 0.27]
         bm = limb(pts, rad, segs=10, rings=12, seed=sx * 3 + step,
                   folds=wrinkles([(0.38, 0.62, 0.07, None)]))
         grounded(bm)
         bvh = BVHTree.FromBMesh(bm)
         V = [Vector(p) for p in pts]
-        for r, tt in enumerate((2.12, 2.36, 2.6, 2.84)):
+        for r, tt in enumerate((2.08, 2.30, 2.52, 2.74)):
             p = kit._spline(V, tt)
             tan = (kit._spline(V, tt + 0.02) - kit._spline(V, tt - 0.02)).normalized()
             face = Vector((0.45 * sx, -1.0, 0.0))
             face = (face - tan * face.dot(tan)).normalized()
             for c in (-1, 0, 1):
-                ang = math.radians(48 * c + (24 if r % 2 else 0) - 12)
+                ang = math.radians(44 * c + (22 if r % 2 else 0) - 11)
                 d = (Matrix.Rotation(ang, 3, tan) @ face).normalized()
-                add("leg scales", plate_on(bvh, p + d * 0.24, d, tan, 0.15, 0.15, h=0.03, nu=3, nv=3, shingle=True), "plate")
+                add("leg scales", plate_on(bvh, p + d * 0.27, d, tan, 0.22, 0.24, h=0.035, nu=3, nv=3, shingle=True), "plate")
         add("legs", bm, "skin")
-        foot(Vector((1.04 * sx, y0 - 0.72 + step, 0.0)), 8 * sx, (0.50, 0.52, 0.26), 4)
+        foot(Vector((0.99 * sx, y0 - 0.70 + step, 0.0)), 8 * sx, (0.54, 0.54, 0.26), 4)
 
     def hindleg(sx, step):
         pts = [(0.62 * sx, 0.95 + step * 0.3, 0.98), (0.90 * sx, 1.06 + step * 0.6, 0.58), (0.92 * sx, 1.02 + step, 0.22),
                (0.92 * sx, 1.0 + step, 0.10)]
-        rad = [0.28, 0.28, 0.27, 0.28]
+        rad = [0.31, 0.31, 0.30, 0.31]
         bm = limb(pts, rad, segs=10, rings=9, seed=sx * 5 + step, folds=wrinkles([(0.3, 0.55, 0.06, None)]))
         add("legs", grounded(bm), "skin")
-        foot(Vector((0.92 * sx, 0.98 + step, 0.0)), 14 * sx, (0.56, 0.56, 0.26), 4)
+        foot(Vector((0.92 * sx, 0.98 + step, 0.0)), 14 * sx, (0.60, 0.60, 0.26), 4)
 
     def foot(at, yaw, size, claws):
         F = M(at, rot=(0, 0, yaw))
@@ -747,12 +777,12 @@ def build():
             v.co.x *= 1.0 + 0.12 * (0.5 - v.co.z / size[2])        # a little wider at the sole
         add("feet", grounded(fb, F @ M((0, -0.04, size[2] / 2 - 0.03))), "skin")
         for c in range(claws):
-            a = (c - (claws - 1) / 2) * 0.42
-            base = Vector((math.sin(a) * size[0] * 0.40, -math.cos(a) * size[1] * 0.44 - 0.04, 0.075))
-            cl = tube([(0, 0, 0), (0, -0.06, -0.005), (0, -0.105, -0.045)], [0.046, 0.036, 0.014], segs=5, rings=2)
+            a = (c - (claws - 1) / 2) * 0.40
+            base = Vector((math.sin(a) * size[0] * 0.40, -math.cos(a) * size[1] * 0.42 - 0.04, 0.07))
+            cl = tube([(0, 0, 0), (0, -0.05, -0.012), (0, -0.08, -0.05)], [0.05, 0.042, 0.026], segs=5, rings=2)
             gl = layer(cl)
             for v in cl.verts:
-                v[gl] = min(1.0, max(0.0, -v.co.y / 0.105))
+                v[gl] = min(1.0, max(0.0, -v.co.y / 0.08))
             add("claws", grounded(cl, F @ M(base, rot=(0, 0, math.degrees(a)))), "horn")
 
     foreleg(-1, -0.22)             # the near foreleg steps forward
@@ -761,55 +791,59 @@ def build():
     hindleg(1, -0.16)              # the far hind leg steps forward with it
 
     # ---- tail: short, pointed, tucked under the back of the rim ------------------------------------------------
-    add("tail", limb([(0.0, 1.25, 0.78), (0.05, 1.62, 0.55), (0.12, 1.80, 0.32)], [0.13, 0.08, 0.02], segs=6, rings=4), "skin")
+    add("tail", limb([(0.0, 1.25, 0.76), (0.04, 1.52, 0.56), (0.09, 1.62, 0.38)], [0.15, 0.10, 0.035], segs=7, rings=4), "skin")
 
     # ---- neck: long and wrinkled, lifting the head clear of the shell --------------------------------------------
     H = M(HEAD_AT, rot=HEAD_ROT)
     joint = H @ Vector((0, 0.22, -0.10))
-    neck = limb([(0.0, -0.75, 1.02), (-0.02, -1.25, 1.12), (-0.07, -1.70, 1.36), joint], [0.31, 0.28, 0.24, 0.21],
-                segs=12, rings=14, folds=wrinkles([(0.12, 0.8, 0.06, math.pi), (0.18, 0.32, 0.10, None)]))
-    add("neck", neck, "skin")
+    neck = limb([(0.0, -0.75, 1.02), (-0.02, -1.25, 1.12), (-0.07, -1.70, 1.36), joint], [0.27, 0.25, 0.225, 0.20],
+                segs=12, rings=14, folds=wrinkles([(0.12, 0.8, 0.07, math.pi), (0.16, 0.32, 0.09, None)]))
+    add("neck", neck, "headskin")
 
-    # ---- head: cranium, hooked horn beak, lower jaw, eyes under heavy lids, head plates ------------------------------
-    cran = rounded_box((0.58, 0.78, 0.48), n=2.5, cuts=5)
-    for v in cran.verts:
-        f = smooth01(-v.co.y / 0.39)
-        v.co.x *= 1.0 - 0.22 * f
-        v.co.z *= 1.0 - (0.2 if v.co.z > 0 else 0.1) * f
-        for sx in (-1, 1):                                          # brow ridges over the eyes
-            d = (v.co - Vector((0.22 * sx, -0.10, 0.16))).length
-            v.co.z += 0.035 * bump(d, 0, 0.1)
+    # ---- head: one wedge-shaped cranium whose front is the horn beak, a lower jaw under it, eyes ----------------
+    # seated against its sides under heavy lids, big plates on top
+    cran = cranium()
     face = BVHTree.FromBMesh(cran)
-    plates = [((0.0, -0.06, 0.3), 0.22, 0.20), ((-0.07, -0.25, 0.3), 0.11, 0.12), ((0.07, -0.25, 0.3), 0.11, 0.12),
-              ((-0.09, 0.15, 0.3), 0.15, 0.16), ((0.09, 0.15, 0.3), 0.15, 0.16)]
+    plates = [((0.0, -0.05, 0.3), 0.23, 0.21), ((-0.075, -0.25, 0.3), 0.12, 0.12), ((0.075, -0.25, 0.3), 0.12, 0.12),
+              ((-0.10, 0.17, 0.3), 0.17, 0.17), ((0.10, 0.17, 0.3), 0.17, 0.17)]
     for (x, y, z), w, l in plates:
         hit, nrm, _, _ = face.ray_cast(Vector((x, y, z + 0.4)), Vector((0, 0, -1)))
-        add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.022), "plate", H)
-    add("head", cran, "skin", H)
-    beak = rounded_box((0.40, 0.25, 0.25), n=2.4, cuts=3)
-    for v in beak.verts:
-        f = smooth01(-v.co.y / 0.125)
-        v.co.x *= 1.0 - 0.28 * f
-        if v.co.z < 0:
-            v.co.z -= 0.05 * max(0.0, 1 - abs(v.co.x) / 0.12) ** 2 * f
-    gb = layer(beak)
-    for v in beak.verts:
-        v[gb] = smooth01(-v.co.z / 0.16)
-    add("beak", beak, "horn", H @ M((0, -0.305, -0.065)))
-    jaw = rounded_box((0.47, 0.52, 0.19), n=2.4, cuts=3)
-    for v in jaw.verts:
-        v.co.x *= 1.0 - 0.32 * smooth01(-v.co.y / 0.26)
-    add("jaw", jaw, "skin", H @ M((0, -0.08, -0.17)))
-
+        add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.018), "plate", H)
+    eyes = []
     for sx in (-1, 1):
-        c = Vector((0.232 * sx, -0.11, 0.065))
-        gaze = Vector((0.62 * sx, -0.76, 0.06)).normalized()
+        gaze = Vector((0.66 * sx, -0.74, 0.08)).normalized()
+        start = Vector((0.08 * sx, -0.12, 0.06))
+        hit, _, _, _ = face.ray_cast(start, gaze)
+        eyes.append((hit - gaze * 0.03, gaze))
+    BEAK_CO, BEAK_NO = Vector((0, -0.25, -0.11)), Vector((0, 0.30, 0.95)).normalized()
+    kit.cut(cran, BEAK_CO, BEAK_NO)
+    kit.cut(cran, (0, -0.08, 0), (0, 1, 0))
+    up_beak, cran = kit.split(cran, lambda f: kit.centre(f).y < -0.08 and (kit.centre(f) - BEAK_CO).dot(BEAK_NO) < 0)
+    gb = layer(up_beak)
+    for v in up_beak.verts:
+        v[gb] = 0.3 + 0.7 * smooth01((-(v.co - BEAK_CO).dot(BEAK_NO)) / 0.08)
+    add("beak", up_beak, "horn", H)
+    add("head", cran, "headskin", H)
+    jaw = rounded_box((0.46, 0.52, 0.18), n=2.4, cuts=3)
+    for v in jaw.verts:
+        f = smooth01(-v.co.y / 0.26)
+        v.co.x *= 1.0 - 0.42 * f
+        v.co.z += 0.035 * f
+    lo_beak, jaw = kit.split(jaw, lambda f: kit.centre(f).y < -0.18)
+    gb = layer(lo_beak)
+    for v in lo_beak.verts:
+        v[gb] = 0.3
+    J = H @ M((0, 0.0, -0.185))
+    add("jaw", jaw, "headskin", J)
+    add("beak", lo_beak, "horn", J)
+
+    for c, gaze in eyes:
         E = seat(c, gaze)
-        re = 0.088
+        re = 0.082
         add("eyes", kit.ball((2 * re, 2 * re, 2 * re), cuts=3), "eye", H @ E)
         outer = 1.0 if (E.to_3x3() @ Vector((1, 0, 0))).y > 0 else -1.0
-        add("lids", eyelid(re, outer, upper=True), "skin", H @ E)
-        add("lids", eyelid(re, outer, upper=False), "skin", H @ E)
+        add("lids", eyelid(re, outer, upper=True), "headskin", H @ E)
+        add("lids", eyelid(re, outer, upper=False), "headskin", H @ E)
 
     # ---- moss on top, with mushrooms and a fern --------------------------------------------------------------
     mc = Vector((-0.06, 0.13))
@@ -868,27 +902,27 @@ def free_mesh(me):
 
 
 def eyelid(re, outer, upper=True):
-    """A heavy lid round an eyeball of radius `re` that looks along -Y: it arches over the eye and
-    droops a little at the outer corner; its edge is thick and rolls in to touch the eye."""
-    us = [-80, -55, -28, 0, 28, 55, 80]
+    """A heavy lid round an eyeball of radius `re` that looks along -Y: it hugs the eye, arches over
+    it and droops a little at the outer corner; its edge is thick and rolls in to touch the eye, and
+    its far side sinks into the head."""
+    us = [-68, -45, -22, 0, 22, 45, 68]
     bm = bmesh.new()
     layer(bm)
 
     def edge(u):
-        k = u / 80.0
+        k = u / 68.0
         if upper:
-            return 17.0 - 22.0 * k * k - 9.0 * max(0.0, outer * k)
-        return -30.0 + 9.0 * (1 - k * k) - 3.0 * max(0.0, outer * k)
+            return 15.0 - 16.0 * k * k - 7.0 * max(0.0, outer * k)
+        return -42.0 + 14.0 * (1 - k * k) - 2.0 * max(0.0, outer * k)
 
     sgn = 1.0 if upper else -1.0
     rows = []
-    for r_fac, dv in ((0.99, -3.0), (1.17, 0.0), (1.22, 20.0), (1.14, 48.0), (0.8, 88.0)):
+    prof = ((0.985, -4.0), (1.09, 0.0), (1.10, 20.0), (1.04, 42.0), (0.8, 66.0)) if upper else \
+        ((0.985, -4.0), (1.05, 0.0), (1.05, 18.0), (0.96, 40.0), (0.8, 60.0))
+    for r_fac, dv in prof:
         row = []
         for u in us:
-            v = edge(u) + sgn * dv
-            v = max(-89.0, min(89.0, v))
-            if dv >= 88.0:
-                v = 89.0 * sgn
+            v = max(-88.0, min(88.0, edge(u) + sgn * dv))
             ur, vr = math.radians(u), math.radians(v)
             d = Vector((math.sin(ur) * math.cos(vr), -math.cos(ur) * math.cos(vr), math.sin(vr)))
             row.append(bm.verts.new(d * re * r_fac))
@@ -899,17 +933,18 @@ def eyelid(re, outer, upper=True):
     return fix_normals(bm, Vector((0, -1, 0.6 * sgn)))
 
 
-def moss_patch(bvh, c, radius, seed=0.0, segs=16, rings=4):
+def moss_patch(bvh, c, radius, seed=0.0, segs=18, rings=5):
     """A lumpy cushion of moss lying over the scutes (found with `bvh`), with a ragged outline."""
     bm = bmesh.new()
     layer(bm)
 
-    def place(m, thick):
+    def place(m, thick, bridge=True):
         p, n = dome_pt(m.x, m.y), dome_nrm(m.x, m.y)
         hit, _, _, _ = bvh.ray_cast(p + n * 0.6, -n)
-        if hit is None:
-            hit = p + n * 0.1
-        return hit + n * thick
+        h = (hit - p).dot(n) if hit is not None else 0.1
+        if bridge:
+            h = max(h, 0.11)                                        # moss bridges the grooves
+        return p + n * (h + thick)
 
     top = bm.verts.new(place(c, 0.075))
     loops = []
@@ -920,8 +955,8 @@ def moss_patch(bvh, c, radius, seed=0.0, segs=16, rings=4):
             a = 2 * math.pi * k / segs
             rr = radius * (0.72 + 0.45 * (noise.noise(Vector((math.cos(a) * 1.6, math.sin(a) * 1.6, seed))) + 0.5))
             m = c + Vector((math.cos(a), math.sin(a))) * rr * q
-            th = -0.012 if j == rings else 0.075 * (1 - q ** 2.4) + 0.02 * noise.noise(Vector((m.x * 14, m.y * 14, seed)))
-            ring.append(bm.verts.new(place(m, th)))
+            th = -0.012 if j == rings else 0.07 * (1 - q ** 2.2) + 0.018 * noise.noise(Vector((m.x * 6, m.y * 6, seed)))
+            ring.append(bm.verts.new(place(m, th, j < rings)))
         loops.append(ring)
     for k in range(segs):
         bm.faces.new((top, loops[0][k], loops[0][(k + 1) % segs]))
