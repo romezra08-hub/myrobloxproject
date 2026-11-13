@@ -1,4 +1,4 @@
-"""Fox pet, a sitting storybook fox (round 8 of practice). Built from scratch by script.
+"""Fox pet, a sitting storybook fox (round 11 of practice). Built from scratch by script.
 
     python models/pets/fox.py --review out/fox.png
     python models/pets/fox.py --export models/export/fox.fbx
@@ -28,17 +28,29 @@ def build():
     cream = kit.material("Cream", "#FFF0DA", rough=0.68)
     dark = kit.material("Dark", "#3A2218", rough=0.6)
     eye = kit.material("Eye", "#0B0B11", rough=0.08, coat=1.0)
+    deep = kit.material("OrangeDeep", "#D5661A", rough=0.66)     # baked into the same texture, so it costs no extra part
     fox = Prop("Fox")
 
     # ---- sitting body: haunches on the ground, torso rising forward to the chest ---------------------
-    fox.add(rounded_box((1.5, 1.5, 1.15), n=2.4, cuts=6), orange, M((0, 0.55, 0.6)))                      # hips
-    fox.add(tube([(0, 0.55, 0.55), (0, 0.2, 1.05), (0, -0.2, 1.6), (0, -0.32, 2.0)], [0.6, 0.72, 0.6, 0.42], segs=14, rings=10), orange)
+    def striped(bm, at=None):
+        """Add a body part with a darker stripe down the middle of its back, cut cleanly into its own surface."""
+        if at is not None:
+            bm.transform(at)
+        cut(bm, (0.3, 0, 0), (1, 0, 0))
+        cut(bm, (-0.3, 0, 0), (1, 0, 0))
+        bm.normal_update()
+        stripe, rest = split(bm, lambda f: abs(centre(f).x) < 0.3 and f.normal.y > 0.25 and centre(f).z > 0.45)
+        fox.add(stripe, deep)
+        fox.add(rest, orange)
+
+    striped(rounded_box((1.5, 1.5, 1.15), n=2.4, cuts=6), M((0, 0.55, 0.6)))                               # hips
+    striped(tube([(0, 0.55, 0.55), (0, 0.2, 1.05), (0, -0.2, 1.6), (0, -0.32, 2.0)], [0.6, 0.72, 0.6, 0.42], segs=14, rings=10))
     # chest ruff: from under the chin down between the front legs, ending in fur points
     bib = taper(ball((1.02, 0.5, 1.4), cuts=5), axis=2, lo=0.5, hi=1.0)
     fox.add(bib, cream, M((0, -0.61, 1.5), rot=(10, 0, 0)))
-    for x, z, length in ((-0.2, 0.98, 0.34), (0.03, 0.9, 0.42), (0.24, 1.0, 0.3)):
-        fox.add(tube([(0, 0, 0), (0, -0.03, -length * 0.55), (0, 0.0, -length)], [0.17, 0.12, 0.012], segs=8, rings=6), cream,
-                M((x, -0.6, z), rot=(0, x * 40, 0), scale=(1, 0.7, 1)))
+    for x, z, length in ((-0.27, 1.04, 0.4), (0.02, 0.96, 0.52), (0.29, 1.06, 0.36)):
+        fox.add(tube([(0, 0, 0), (0, -0.04, -length * 0.5), (0, -0.02, -length)], [0.19, 0.13, 0.012], segs=8, rings=7), cream,
+                M((x, -0.62, z), rot=(0, x * 75, 0), scale=(1, 0.6, 1)))
     fox.add(tube([(0, -0.3, 1.85), (0, -0.4, 2.25)], [0.45, 0.4], segs=12, rings=2), orange)             # neck
 
     for sx in (-1, 1):
@@ -98,6 +110,10 @@ def build():
             tuft = tube([(0, 0, 0), (length * 0.45 * sx, 0.03, 0), (length * 0.8 * sx, 0.1, -0.03), (length * sx, 0.17, -0.08)],
                         [fat, fat * 0.8, fat * 0.42, 0.012], segs=10, rings=9)
             fox.add(tuft, cream, H @ M((0.58 * sx, -0.26, z), rot=(0, tilt * sx, 0), scale=(1, 0.75, 1)))
+
+    for x, y, length, lean in ((-0.07, -0.1, 0.34, -16), (0.1, 0.05, 0.27, 12)):   # two tufts on the crown, between the ears
+        tuft = tube([(0, 0, 0), (0, -0.06, length * 0.55), (0, -0.16, length)], [0.15, 0.11, 0.012], segs=8, rings=7)
+        fox.add(tuft, deep, H @ M((x, y, 0.58), rot=(0, lean, 0)))
 
     for sx, lean, turn in ((1, 10, -8), (-1, -17, 10)):       # ears: the left one leans out further
         E = H @ M((0.45 * sx, 0.08, 0.92), rot=(-5, lean, turn))
