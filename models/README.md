@@ -40,7 +40,7 @@ python models/build_all.py
 3. Select what was imported in the Explorer, open `SetupPets.lua` here, copy all of it, paste it into
    the **Command Bar** (View > Command Bar) and press Enter. It makes the eyes glossy and any `GLOW`
    part Neon, switches off collisions, welds the parts to the body, puts the pivot under the feet and
-   moves the pet to **ReplicatedStorage > Pets**. Ctrl+Z undoes it. It has not been run in Studio yet.
+   moves the pet to **ReplicatedStorage > Pets**. Ctrl+Z undoes it. It parses as valid Luau but has not been run in Studio yet.
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing

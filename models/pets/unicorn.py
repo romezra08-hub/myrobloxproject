@@ -1,15 +1,17 @@
 """Unicorn pet, low-poly papercraft style, built from scratch by script.
 
-    python models/pets/unicorn.py --review out/unicorn.png      # render the review sheet
-    python models/pets/unicorn.py --export models/export/unicorn.fbx
+    python models/pets/unicorn_v8.py --review out/unicorn.png      # render the review sheet
+    python models/pets/unicorn_v8.py --export models/export/unicorn.fbx
 
 Style: a designer low-poly figurine. Flat shading, few big planes that follow the anatomy.
 Must-haves, checked in every review:
-  1. Reads as a unicorn in outline: arched neck, long legs, long tapered head, horn, flowing tail.
+  1. Reads as a unicorn in outline: arched neck, long legs, tapered head, spiral horn, flowing tail.
   2. Faceted on purpose: planes that follow the horse's build, never a pile of boxes.
   3. Pale body, pastel pink and blue mane and tail in a few bold locks, gold hooves, glowing horn.
-  4. Small dark almond eyes with a tiny highlight; friendly, not creepy.
+  4. A friendly face from the front: modest round eyes with one highlight each, a full muzzle,
+     the faintest smile. Never creepy.
   5. Alive: one front leg raised, head turned, tail swung to one side.
+  6. Sturdy from the front and the back too: a broad chest and hips, mane on both sides of the neck.
 """
 import argparse
 import math
@@ -26,7 +28,7 @@ from mathutils import Vector  # noqa: E402
 SCALE = 1.0
 LEAN = -0.10                      # how far the top of the neck swings to the side the head turns to
 POLL = (-0.98, 3.02)              # (y, z) where the head hangs from the neck
-HEAD = 1.12                       # head size, a little larger than life so the face reads
+HEAD = 1.15                       # head size, a little larger than life so the face reads
 PITCH, ROLL, YAW = 45, 6, -24     # head: nose down, a small tilt, turned towards -X
 
 
@@ -95,8 +97,9 @@ DIAMOND = [(1, 0), (0, 1), (-1, 0), (0, -0.6)]
 
 
 def shard(points, widths, thick, wide=None, flat=None, profile=DIAMOND):
-    """A lock of hair: a flat faceted blade along `points` that ends in a point. Give either `wide`
-    (roughly the direction of its broad axis) or `flat` (roughly the normal of its broad face)."""
+    """A lock of hair, or a drawn line: a flat faceted blade along `points` that ends in a point.
+    Give either `wide` (roughly the direction of its broad axis) or `flat` (roughly the normal of
+    its broad face; a list gives one per ring, for a blade that wraps round a corner)."""
     pts = [Vector(p) for p in points]
     rings = []
     for i, p in enumerate(pts[:-1]):
@@ -106,7 +109,8 @@ def shard(points, widths, thick, wide=None, flat=None, profile=DIAMOND):
             side.normalize()
             nrm = t.cross(side).normalized()
         else:
-            nrm = Vector(flat) - t * t.dot(Vector(flat))
+            ref = Vector(flat[i]) if isinstance(flat, list) else Vector(flat)
+            nrm = ref - t * t.dot(ref)
             nrm.normalize()
             side = nrm.cross(t).normalized()
         rings.append([p + side * (u * widths[i]) + nrm * (v * thick[i]) for u, v in profile])
@@ -122,23 +126,25 @@ def barrel(y, zt, zb, w, ku=0.68, kl=0.62, mid=0.5, fu=0.13, fl=0.15):
     return [V(x, y, z) for x, z in pts]
 
 
-def head_ring(s, wt, wm, wb, zt, zm, zb):
-    """A cross-section of the head, s along the nose (-Y): flat brow, cheek corner, flat jaw."""
-    return [V(wt, -s, zt), V(wm, -s, zm), V(wb, -s, zb), V(-wb, -s, zb), V(-wm, -s, zm), V(-wt, -s, zt)]
+def head_ring(s, wt, zt, we, ze, wm, zm, wb, zb):
+    """A cross-section of the head, s along the nose (-Y): a narrow flat brow, a sloping plane each
+    side of it that carries the eye (so the eyes show from the front), the cheek, the flat jaw."""
+    half = [(wt, zt), (we, ze), (wm, zm), (wb, zb)]
+    return [V(x, -s, z) for x, z in half] + [V(-x, -s, z) for x, z in reversed(half)]
 
 
-def hoof(h=0.16, k=1.18):
+def hoof(h=0.16, k=1.18, kx=1.1):
     """Top at the origin, sole h below, toe forward."""
-    top = [V(0.086 * k * u, 0.094 * k * v, 0.03) for u, v in HEX]
-    sole = [V(0.118 * k * u, 0.13 * k * v - 0.045 * k, -h) for u, v in HEX]
+    top = [V(0.086 * k * kx * u, 0.094 * k * v, 0.03) for u, v in HEX]
+    sole = [V(0.118 * k * kx * u, 0.13 * k * v - 0.045 * k, -h) for u, v in HEX]
     return loft([top, sole])
 
 
-def almond(sx, length=0.16, height=0.085, bulge=0.03, back=0.04):
-    """An eye that faces sx along X: a dark almond, the corner towards the nose a little lower."""
-    outline = [(-0.5, -0.08), (-0.18, 0.5), (0.2, 0.45), (0.5, 0.12), (0.2, -0.42), (-0.2, -0.5)]
+def eyeball(sx, length=0.145, height=0.105, bulge=0.022, back=0.04):
+    """An eye that faces sx along X: a low eight-sided dome. An oval from the side, round from the front."""
+    outline = [(0.5 * math.cos(math.radians(45 * k)), 0.5 * math.sin(math.radians(45 * k))) for k in range(8)]
     r0 = [V(-sx * back, y * length, z * height) for y, z in outline]
-    r1 = [V(sx * bulge * 0.45, y * length, z * height) for y, z in outline]
+    r1 = [V(sx * 0.006, y * length, z * height) for y, z in outline]
     return loft([r0, r1, V(sx * bulge, 0, 0)])
 
 
@@ -151,6 +157,31 @@ def ear(sx):
     r0 = [V(0.055, 0, 0), V(0, 0.04, 0), V(-0.055, 0, 0), V(0, -0.04, 0)]
     r1 = [V(0.07, 0, 0.1), V(0, 0.045, 0.1), V(-0.07, 0, 0.1), V(0, -0.035, 0.1)]
     return loft([r0, r1, V(0.012 * sx, 0, 0.3)])
+
+
+def spiral_horn(length=0.85, r0=0.085, rings=12, turns=1.2, groove=0.6):
+    """A cone with three ridges winding round it, so the spiral is real: it shows in the outline
+    as well as in the shading. Base at the origin, pointing up +Z."""
+    bm = bmesh.new()
+    loops = []
+    for i in range(rings):
+        f = i / rings
+        r = r0 * (1 - f)
+        loops.append([bm.verts.new(V(r * (1 if j % 2 == 0 else groove) * math.cos(math.radians(60 * j + 360 * turns * f)),
+                                     r * (1 if j % 2 == 0 else groove) * math.sin(math.radians(60 * j + 360 * turns * f)),
+                                     length * f)) for j in range(6)])
+    for a, b in zip(loops, loops[1:]):                    # the short diagonal every time, so the facets follow the twist
+        for j in range(6):
+            k = (j + 1) % 6
+            bm.faces.new((a[j], a[k], b[j]))
+            bm.faces.new((a[k], b[k], b[j]))
+    tip = bm.verts.new(V(0, 0, length))
+    for j in range(6):
+        bm.faces.new((loops[-1][j], loops[-1][(j + 1) % 6], tip))
+    bm.faces.new(loops[0])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    return bm
 
 
 def lean_x(z):
@@ -167,12 +198,27 @@ def warp(bm):
 
 # ---- the unicorn ---------------------------------------------------------------------------------------
 
+# The trunk, front to back: (y, top, belly, half width). A deep chest, a dip behind the withers,
+# the belly tucked up towards the flank. Round 8: about 28% wider than before, same side view.
+TRUNK = [(-0.81, 1.93, 1.50, 0.30), (-0.62, 2.10, 1.27, 0.50), (-0.30, 2.18, 1.15, 0.58), (0.18, 2.07, 1.20, 0.59),
+         (0.58, 2.10, 1.36, 0.53), (0.90, 2.18, 1.42, 0.60), (1.14, 2.06, 1.56, 0.42), (1.24, 1.94, 1.72, 0.20)]
+
 # The neck is drawn by its two outlines, seen from the side: the crest (top line, convex, so the
 # neck arches) and the throat (under line). Each ring spans from one to the other.
 CREST = [(-0.05, 1.98), (-0.14, 2.40), (-0.29, 2.76), (-0.53, 3.04), (-0.84, 3.20), (-1.02, 3.10)]
 THROAT = [(-0.70, 1.60), (-0.85, 2.05), (-0.83, 2.40), (-0.87, 2.66), (-1.00, 2.84), (-1.10, 2.94)]
-NECK_W = [0.35, 0.31, 0.26, 0.22, 0.18, 0.09]
+NECK_W = [0.44, 0.38, 0.31, 0.26, 0.21, 0.10]
 NECK_PROFILE = [(0, 1), (0.7, 0.45), (1, -0.25), (0.5, -0.9), (-0.5, -0.9), (-1, -0.25), (-0.7, 0.45)]
+
+# The head, from behind the ears to the nose: (s, brow, eye plane, cheek, jaw), each a half width and a height.
+SKULL = [(-0.12, 0.06, 0.05, 0.10, 0.00, 0.11, -0.08, 0.05, -0.18),
+         (0.06, 0.085, 0.11, 0.175, 0.03, 0.19, -0.08, 0.09, -0.31),
+         (0.21, 0.075, 0.115, 0.195, 0.01, 0.205, -0.10, 0.09, -0.33),
+         (0.40, 0.065, 0.083, 0.155, 0.00, 0.165, -0.11, 0.075, -0.30),
+         (0.55, 0.06, 0.053, 0.118, -0.005, 0.128, -0.10, 0.065, -0.24),
+         (0.66, 0.06, 0.028, 0.118, -0.022, 0.132, -0.115, 0.075, -0.24),
+         (0.735, 0.05, 0.002, 0.10, -0.04, 0.115, -0.125, 0.07, -0.228),
+         (0.77, 0.025, -0.04, 0.055, -0.068, 0.065, -0.13, 0.04, -0.192)]
 
 
 def neck():
@@ -194,12 +240,71 @@ def neck_at(u):
     return c0.lerp(c1, f), n0.lerp(n1, f).normalized(), NECK_W[k] + (NECK_W[k + 1] - NECK_W[k]) * f
 
 
+def _neck_profile(v):
+    """Half width of the neck's cross-section at v (-0.9 throat to 1 crest), as a share of the ring's width."""
+    if v >= 0.45:
+        return 0.7 * (1 - v) / 0.55
+    if v >= -0.25:
+        return 0.7 + 0.3 * (0.45 - v) / 0.7
+    return 1 - 0.5 * (-0.25 - v) / 0.65
+
+
+def neck_side(y, z):
+    """How far out the neck's surface is at the point (y, z) of the side view; 0 off the neck."""
+    best, width = 1e9, 0.0
+    for k in range(4):
+        for i in range(13):
+            f = i / 12
+            c = Vector(CREST[k]).lerp(Vector(CREST[k + 1]), f)
+            t = Vector(THROAT[k]).lerp(Vector(THROAT[k + 1]), f)
+            w = NECK_W[k] + (NECK_W[k + 1] - NECK_W[k]) * f
+            for j in range(39):
+                v = -0.9 + 1.9 * j / 38
+                p = (c + t) / 2 + (c - t) / 2 * v
+                d = (p.x - y) ** 2 + (p.y - z) ** 2
+                if d < best:
+                    best, width = d, w * _neck_profile(v)
+    return width if best < 0.05 ** 2 else 0.0
+
+
+def trunk_side(y, z):
+    """How far out the trunk's surface is at the point (y, z) of the side view; 0 off the trunk."""
+    for a, b in zip(TRUNK, TRUNK[1:]):
+        if a[0] <= y <= b[0]:
+            f = (y - a[0]) / (b[0] - a[0])
+            zt, zb, w = (a[i] + (b[i] - a[i]) * f for i in (1, 2, 3))
+            h = zt - zb
+            line = [(0, zt), (w * 0.68, zt - 0.13 * h), (w, zb + 0.5 * h), (w * 0.62, zb + 0.15 * h), (0, zb)]
+            for (x0, z0), (x1, z1) in zip(line, line[1:]):
+                if z1 <= z <= z0:
+                    return x0 + (x1 - x0) * (z0 - z) / (z0 - z1)
+    return 0.0
+
+
+def mane_lock(u, length, side, sweep, flare=0.0):
+    """One lock of the mane: it grows from the crest at u, goes over the top to `side` (-1 or 1) and
+    hangs down that side of the neck, lying on the neck and the shoulder, swept back by `sweep`."""
+    C, n, _ = neck_at(u)
+    X, d = V(side, 0, 0), V(0, sweep, -1).normalized()
+
+    def lying(p, off):
+        return V(side * (max(neck_side(p.y, p.z), trunk_side(p.y, p.z)) + off), p.y, p.z)
+    pts = [C - n * 0.10,
+           C + n * 0.07 + X * 0.06,
+           lying(C + n * 0.03 + d * (0.22 * length), 0.07 + flare),
+           lying(C + d * (0.50 * length), 0.075 + flare),
+           lying(C + d * (0.80 * length), 0.06 + flare * 0.5)]
+    return warp(shard(pts, [0.09, 0.14, 0.15, 0.11], [0.07, 0.085, 0.08, 0.06], flat=(side, -0.2, 0.25)))
+
+
 def build():
     body = kit.material("Body", "#DAD2F0", rough=0.7)
     pink = kit.material("ManePink", "#FF9CCB", rough=0.55)
     blue = kit.material("ManeBlue", "#8ECFFF", rough=0.55)
     gold = kit.material("Gold", "#EDB740", rough=0.38, metal=0.25)
     eye = kit.material("Eye", "#2A2244", rough=0.25)
+    white = kit.material("White", "#FFFFFF", rough=0.4)               # the one highlight in each eye
+    line = kit.material("Line", "#7466A8", rough=0.7)                 # the smile and the nostrils: soft, not black
     glow = kit.material("GLOW_Horn", "#FFC850", rough=0.4, emit=0.6)
     # Round 7: the owner said smooth flat colours look like cheap plastic. The faces now carry a soft
     # painted-card grain and a matte finish, so it reads as folded paper and not as moulded plastic.
@@ -207,38 +312,29 @@ def build():
         kit.furry(mat, strength=0.16, mottle=0.07, fine=16.0, length=1.3, shade_down=0.1)
     uni = Prop("Unicorn")
 
-    # ---- trunk: deep chest, a dip behind the withers, belly tucked up towards the flank -------------
-    trunk = [V(0, -0.94, 1.76),
-             barrel(-0.81, 1.93, 1.50, 0.22),
-             barrel(-0.62, 2.10, 1.27, 0.38),
-             barrel(-0.30, 2.18, 1.15, 0.45),
-             barrel(0.18, 2.07, 1.20, 0.46),
-             barrel(0.58, 2.10, 1.36, 0.41),
-             barrel(0.90, 2.18, 1.42, 0.47),
-             barrel(1.14, 2.06, 1.56, 0.31),
-             barrel(1.24, 1.94, 1.72, 0.14)]
-    uni.add(loft(trunk), body)
+    # ---- trunk ----------------------------------------------------------------------------------------
+    uni.add(loft([V(0, -0.94, 1.76)] + [barrel(*ring) for ring in TRUNK]), body)
 
-    # ---- legs: (x, y, z, half width, half depth) from the top down ------------------------------------
+    # ---- legs: (x, y, z, half width, half depth) from the top down; set wide apart under the wide trunk --
     def front_leg(sx):
-        return [(0.22 * sx, -0.40, 2.05, 0.09, 0.18), (0.30 * sx, -0.40, 1.80, 0.17, 0.33),
-                (0.295 * sx, -0.36, 1.38, 0.16, 0.24), (0.28 * sx, -0.40, 0.98, 0.10, 0.115),
-                (0.28 * sx, -0.42, 0.84, 0.112, 0.13), (0.28 * sx, -0.40, 0.70, 0.084, 0.094),
-                (0.27 * sx, -0.39, 0.37, 0.076, 0.086), (0.27 * sx, -0.41, 0.27, 0.095, 0.106),
-                (0.27 * sx, -0.48, 0.16, 0.086, 0.097)]
+        return [(0.28 * sx, -0.40, 2.05, 0.10, 0.18), (0.40 * sx, -0.40, 1.80, 0.19, 0.33),
+                (0.39 * sx, -0.36, 1.38, 0.175, 0.24), (0.365 * sx, -0.40, 0.98, 0.11, 0.115),
+                (0.365 * sx, -0.42, 0.84, 0.123, 0.13), (0.365 * sx, -0.40, 0.70, 0.092, 0.094),
+                (0.355 * sx, -0.39, 0.37, 0.084, 0.086), (0.355 * sx, -0.41, 0.27, 0.105, 0.106),
+                (0.355 * sx, -0.48, 0.16, 0.095, 0.097)]
 
     def hind_leg(sx, dy=0.0):
-        return [(0.22 * sx, 0.80, 2.10, 0.09, 0.20), (0.30 * sx, 0.78, 1.82, 0.19, 0.40),
-                (0.30 * sx, 0.69 + dy * 0.3, 1.42, 0.17, 0.28), (0.285 * sx, 0.86 + dy * 0.6, 1.08, 0.105, 0.145),
-                (0.28 * sx, 1.04 + dy, 0.86, 0.092, 0.112), (0.28 * sx, 1.02 + dy, 0.70, 0.082, 0.094),
-                (0.275 * sx, 0.96 + dy, 0.37, 0.076, 0.086), (0.275 * sx, 0.94 + dy, 0.27, 0.095, 0.106),
-                (0.275 * sx, 0.86 + dy, 0.16, 0.086, 0.097)]
+        return [(0.29 * sx, 0.80, 2.10, 0.10, 0.20), (0.41 * sx, 0.78, 1.82, 0.21, 0.40),
+                (0.41 * sx, 0.69 + dy * 0.3, 1.42, 0.19, 0.28), (0.385 * sx, 0.86 + dy * 0.6, 1.08, 0.115, 0.145),
+                (0.375 * sx, 1.04 + dy, 0.86, 0.10, 0.112), (0.375 * sx, 1.02 + dy, 0.70, 0.09, 0.094),
+                (0.365 * sx, 0.96 + dy, 0.37, 0.084, 0.086), (0.365 * sx, 0.94 + dy, 0.27, 0.105, 0.106),
+                (0.365 * sx, 0.86 + dy, 0.16, 0.095, 0.097)]
 
-    raised = [(-0.22, -0.40, 2.05, 0.09, 0.18), (-0.30, -0.40, 1.80, 0.17, 0.33),
-              (-0.295, -0.40, 1.40, 0.16, 0.24), (-0.285, -0.70, 1.12, 0.10, 0.115),
-              (-0.285, -0.81, 1.01, 0.11, 0.125), (-0.285, -0.79, 0.86, 0.084, 0.094),
-              (-0.28, -0.64, 0.58, 0.076, 0.086), (-0.28, -0.60, 0.48, 0.095, 0.104),
-              (-0.28, -0.55, 0.37, 0.086, 0.095)]
+    raised = [(-0.28, -0.40, 2.05, 0.10, 0.18), (-0.40, -0.40, 1.80, 0.19, 0.33),
+              (-0.39, -0.40, 1.40, 0.175, 0.24), (-0.375, -0.70, 1.12, 0.11, 0.115),
+              (-0.375, -0.81, 1.01, 0.121, 0.125), (-0.375, -0.79, 0.86, 0.092, 0.094),
+              (-0.37, -0.64, 0.58, 0.084, 0.086), (-0.37, -0.60, 0.48, 0.105, 0.104),
+              (-0.37, -0.55, 0.37, 0.095, 0.095)]
 
     for path in (front_leg(1), hind_leg(1, -0.12), hind_leg(-1, 0.14)):
         uni.add(limb(path), body)
@@ -249,7 +345,7 @@ def build():
         c, t, n, _ = frames(path)[-2]
         hd = path[-2][4]
         tuft = shard([c - n * (hd * 0.2) - t * 0.06, c - n * (hd + 0.02) + t * 0.03, c - n * (hd - 0.01) + t * 0.15],
-                     [0.07, 0.06], [0.07, 0.055], wide=(1, 0, 0))
+                     [0.077, 0.066], [0.07, 0.055], wide=(1, 0, 0))
         uni.add(tuft, body)
     uni.add(hoof(), gold, M((raised[-1][0], raised[-1][1], raised[-1][2]), rot=(30, 0, 0)))
 
@@ -258,71 +354,57 @@ def build():
 
     # ---- head, hung from the poll; everything on it is placed in the head's own space ------------------
     H = M((lean_x(POLL[1]), POLL[0], POLL[1]), rot=(PITCH, ROLL, YAW), scale=HEAD)
-    skull = [head_ring(-0.12, 0.06, 0.10, 0.05, 0.05, -0.07, -0.18),
-             head_ring(0.10, 0.10, 0.165, 0.085, 0.115, -0.04, -0.33),
-             head_ring(0.30, 0.085, 0.15, 0.07, 0.095, -0.07, -0.31),
-             head_ring(0.55, 0.062, 0.105, 0.055, 0.045, -0.075, -0.225),
-             head_ring(0.76, 0.06, 0.10, 0.06, 0.015, -0.085, -0.215),
-             head_ring(0.86, 0.045, 0.08, 0.05, -0.02, -0.095, -0.20),
-             head_ring(0.90, 0.025, 0.045, 0.03, -0.06, -0.105, -0.165)]
-    uni.add(loft(skull), body, H)
+    uni.add(loft([head_ring(*ring) for ring in SKULL]), body, H)
 
     for sx in (-1, 1):
-        E = H @ M((0.124 * sx, -0.28, 0.002), rot=(0, -21.7 * sx, -5 * sx))
-        uni.add(almond(sx, length=0.175, height=0.095), eye, E)
-        uni.add(gem(0.022), body, E @ M((0.026 * sx, -0.032, 0.018)))
-        lash = shard([(0, 0.05, 0.022), (0.004 * sx, 0.10, 0.042), (0, 0.14, 0.078)], [0.02, 0.014], [0.014, 0.01], flat=(sx, 0, 0))
+        # eye: in the middle of the sloping plane between the brow and the cheek, facing out, forward and up
+        E = H @ M((0.1225 * sx, -0.305, 0.052), rot=(0, -48 * sx, -13.75 * sx))
+        uni.add(eyeball(sx), eye, E)
+        hy, hz = (0.012, 0.02) if sx > 0 else (0.03, -0.012)                              # the highlight: upper left on both eyes
+        uni.add(gem(0.024), white, E @ M((0.012 * sx, hy, hz), scale=(0.5, 1, 1)))
+        lash = shard([(0, 0.04, -0.03), (0.003 * sx, 0.07, -0.048), (0, 0.095, -0.06)], [0.016, 0.011], [0.012, 0.009], flat=(sx, 0, 0))
         uni.add(lash, eye, E)
-        N = H @ M((0.074 * sx, -0.80, -0.04), rot=(0, -22 * sx, -8 * sx))
-        uni.add(almond(sx, length=0.05, height=0.03, bulge=0.008, back=0.02), eye, N)
-        EAR = H @ M((0.09 * sx, 0.03, 0.04), rot=(-30, 22 * sx, 0))
+        N = H @ M((0.082 * sx, -0.70, -0.009), rot=(0, -45.6 * sx, -28 * sx))
+        uni.add(eyeball(sx, length=0.045, height=0.03, bulge=0.008, back=0.02), line, N)
+        # smile: a thin line across the front of the muzzle that wraps round and turns up at the corner
+        smile = shard([(0, -0.77, -0.163), (0.056 * sx, -0.77, -0.152), (0.104 * sx, -0.735, -0.151),
+                       (0.118 * sx, -0.66, -0.145), (0.121 * sx, -0.575, -0.121)],
+                      [0.007, 0.008, 0.008, 0.007], [0.009, 0.009, 0.009, 0.008],
+                      flat=[(0, -1, -0.1), (0.45 * sx, -0.85, -0.25), (0.8 * sx, -0.5, -0.35), (0.91 * sx, -0.1, -0.41)])
+        uni.add(smile, line, H)
+        EAR = H @ M((0.12 * sx, 0.02, 0.03), rot=(-25, 28 * sx, 0), scale=1.15)
         uni.add(ear(sx), body, EAR)
         uni.add(gem(1.0), pink, EAR @ M((0.004 * sx, -0.027, 0.15), rot=(-10, 0, 0), scale=(0.04, 0.014, 0.085)))
 
-    # horn: five stacked, twisted steps, so it reads as a spiral
-    HN = H @ M((0, -0.2, 0.06), rot=(-25, 0, 0))
-    length, r0, steps = 0.90, 0.09, 5
-    for k in range(steps):
-        z0, z1 = length * k / steps, length * (k + 1) / steps
-        rb = r0 * (1 - k / (steps + 0.4))
-        rt = r0 * (1 - (k + 1) / (steps + 0.4)) * 0.62
-
-        def ring(r, z, turn):
-            return [V(r * math.cos(math.radians(turn + 72 * j)), r * math.sin(math.radians(turn + 72 * j)), z) for j in range(5)]
-        top = V(0, 0, z1) if k == steps - 1 else ring(rt, z1 + 0.01, 36 * k + 24)
-        uni.add(loft([ring(rb, z0, 36 * k), top]), glow, HN)
-
+    # horn: a true spiral, above the eyes, with a gold collar where it meets the brow
+    HN = H @ M((0, -0.12, 0.07), rot=(-25, 0, 0))
+    uni.add(spiral_horn(), glow, HN)
     collar = [[V(r * math.cos(math.radians(60 * j)), r * math.sin(math.radians(60 * j)), z) for j in range(6)]
               for r, z in ((0.102, -0.04), (0.106, 0.012), (0.09, 0.04))]
     uni.add(loft(collar), gold, HN)
 
-    # forelock: one bold lock swept across in front of the ear to the side the head turns to, a smaller one the other way
-    uni.add(shard([(0.0, 0.09, 0.02), (-0.04, -0.02, 0.22), (-0.15, -0.10, 0.20), (-0.19, -0.10, 0.08)],
-                  [0.08, 0.11, 0.09], [0.05, 0.06, 0.045], flat=(-0.4, 0, 1)), pink, H)
-    uni.add(shard([(0.0, 0.09, 0.02), (0.04, -0.01, 0.19), (0.12, -0.07, 0.16), (0.17, -0.09, 0.05)],
-                  [0.06, 0.08, 0.06], [0.04, 0.05, 0.035], flat=(0.4, 0, 1)), blue, H)
+    # forelock: one bold lock swept round the horn and over the temple on the side the head turns to, a smaller one the other way
+    uni.add(shard([(-0.02, 0.09, 0.02), (-0.08, 0.01, 0.20), (-0.19, -0.07, 0.17), (-0.215, -0.16, 0.03)],
+                  [0.07, 0.095, 0.08], [0.05, 0.06, 0.045], flat=(-0.4, 0, 1)), pink, H)
+    uni.add(shard([(0.02, 0.09, 0.02), (0.07, 0.02, 0.18), (0.16, -0.04, 0.15), (0.20, -0.11, 0.04)],
+                  [0.055, 0.075, 0.06], [0.04, 0.05, 0.035], flat=(0.4, 0, 1)), blue, H)
 
-    # ---- mane: six bold locks along the crest, falling back and to the show side -----------------------
-    X, back, down = V(-1, 0, 0), V(0, 1, 0), V(0, 0, -1)
-    locks = ((0.95, 0.72, blue), (0.83, 0.92, pink), (0.70, 1.0, blue), (0.56, 1.0, pink), (0.42, 0.85, blue), (0.28, 0.62, pink))
-    for u, L, mat in locks:
-        C, n, w = neck_at(u)
-        out = 0.05 + 0.10 * (1 - u)
-        pts = [C - n * 0.10,
-               C + n * 0.09 + X * 0.03,
-               C + n * 0.17 + (back * 0.16 + down * 0.10) * L + X * (0.05 + out * 0.4),
-               C + n * 0.15 + (back * 0.38 + down * 0.34) * L + X * (0.05 + out * 0.8),
-               C + n * 0.14 + (back * 0.60 + down * 0.64) * L + X * (0.06 + out)]
-        uni.add(warp(shard(pts, [0.09, 0.14, 0.16, 0.11], [0.08, 0.10, 0.095, 0.07], flat=(-1, -0.45, 0.3))), mat)
+    # ---- mane: locks from the crest falling down BOTH sides of the neck, longer on the show side ---------
+    for u, length, sweep, flare, mat in ((0.90, 0.85, 0.35, 0.02, blue), (0.78, 1.0, 0.33, 0.02, pink), (0.66, 1.0, 0.30, 0.0, blue),
+                                         (0.54, 0.95, 0.28, 0.0, pink), (0.42, 0.8, 0.32, 0.0, blue), (0.29, 0.55, 0.38, 0.0, pink)):
+        uni.add(mane_lock(u, length, -1, sweep, flare), mat)
+    for u, length, sweep, flare, mat in ((0.84, 0.8, 0.35, 0.02, pink), (0.72, 0.9, 0.32, 0.01, blue), (0.60, 0.9, 0.29, 0.0, pink),
+                                         (0.48, 0.8, 0.30, 0.0, blue), (0.35, 0.55, 0.36, 0.0, pink)):
+        uni.add(mane_lock(u, length, 1, sweep, flare), mat)
 
-    # ---- tail: three big locks from the dock, up, over and down, swung to the show side ----------------
+    # ---- tail: three big locks from the dock, up, over and down, swung to the show side; each ends in a full brush ----
     TAIL = M((0, 1.14, 1.9), rot=(0, 0, 12)) @ M((0, -1.20, -1.9))
-    uni.add(shard([(0, 1.18, 1.90), (-0.02, 1.42, 2.04), (-0.08, 1.68, 1.86), (-0.15, 1.80, 1.40), (-0.20, 1.76, 0.92), (-0.30, 1.98, 0.42)],
-                  [0.12, 0.17, 0.21, 0.21, 0.15], [0.11, 0.14, 0.15, 0.14, 0.10], wide=(1, 0, 0)), pink, TAIL)
-    uni.add(shard([(0, 1.20, 1.94), (0.02, 1.50, 2.12), (0.0, 1.84, 2.02), (-0.04, 2.04, 1.62), (-0.02, 2.02, 1.20), (0.06, 2.24, 0.80)],
-                  [0.11, 0.15, 0.17, 0.17, 0.12], [0.10, 0.12, 0.12, 0.11, 0.08], wide=(1, 0, 0)), blue, TAIL)
-    uni.add(shard([(0, 1.20, 1.96), (0.04, 1.52, 2.18), (0.08, 1.88, 2.22), (0.10, 2.14, 2.04), (0.14, 2.30, 1.74)],
-                  [0.09, 0.12, 0.12, 0.08], [0.08, 0.09, 0.08, 0.06], wide=(1, 0, 0)), pink, TAIL)
+    uni.add(shard([(0, 1.18, 1.90), (-0.02, 1.42, 2.04), (-0.08, 1.68, 1.86), (-0.15, 1.80, 1.40), (-0.20, 1.77, 0.95), (-0.27, 1.88, 0.60), (-0.31, 2.03, 0.40)],
+                  [0.13, 0.18, 0.22, 0.23, 0.21, 0.16], [0.11, 0.14, 0.15, 0.15, 0.14, 0.11], wide=(1, 0, 0)), pink, TAIL)
+    uni.add(shard([(0, 1.20, 1.94), (0.02, 1.50, 2.12), (0.0, 1.84, 2.02), (-0.04, 2.04, 1.62), (-0.02, 2.03, 1.24), (0.03, 2.14, 0.96), (0.07, 2.30, 0.80)],
+                  [0.11, 0.15, 0.18, 0.18, 0.17, 0.13], [0.10, 0.12, 0.12, 0.12, 0.11, 0.09], wide=(1, 0, 0)), blue, TAIL)
+    uni.add(shard([(0, 1.20, 1.96), (0.04, 1.52, 2.18), (0.08, 1.88, 2.22), (0.10, 2.12, 2.08), (0.13, 2.27, 1.88), (0.15, 2.34, 1.72)],
+                  [0.09, 0.12, 0.13, 0.12, 0.09], [0.08, 0.09, 0.09, 0.08, 0.06], wide=(1, 0, 0)), pink, TAIL)
 
     uni.build(SCALE)
     for ob in uni.objects:                                     # outward normals, then flat facets

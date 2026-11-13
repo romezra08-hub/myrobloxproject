@@ -43,6 +43,7 @@ def main():
     ap.add_argument("--out", default=os.path.join(HERE, "preview", "lineup.png"))
     ap.add_argument("--width", type=int, default=1800)
     a = ap.parse_args()
+    os.environ["PETS_FAST"] = "1"                        # coarser textures are fine at this size, and much quicker
     have = pets()
     row = [n for n in ORDER if n in have] + [n for n in have if n not in ORDER]
     kit.fresh()
@@ -69,7 +70,7 @@ def main():
 
     import review
     group = Group(props)
-    rig = review.Rig(group)
+    rig = review.Rig(group, samples=28)
     lo, hi = group.bounds()
     wide, tall = hi.x - lo.x + 3.2, hi.z - lo.z          # room for the 5-stud block on the right
     target = Vector(((lo.x + hi.x) / 2 + 0.9, 0, lo.z + tall * 0.4))

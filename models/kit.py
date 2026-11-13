@@ -366,6 +366,8 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     Roblox the matte look comes from the part's material or a roughness map).
     """
     import numpy as np
+    if os.environ.get("PETS_FAST"):                  # a quick, coarser bake for pictures of several pets at once
+        size, samples = min(size, 512), min(samples, 16)
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
     sc.cycles.device, sc.cycles.samples = 'CPU', samples
