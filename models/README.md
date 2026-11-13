@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`).
 
 ## The pets so far
 
@@ -59,6 +59,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Penguin | Carved, hand-painted wooden toy with a bobble hat | 5,506 | 3 |
 | Turtle | Storybook turtle with a plated shell and a sprout on top | 6,562 | 2 |
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
+| Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -94,6 +95,9 @@ Known weak points, from the last review of each:
   so the drawn feather shafts blur away. Up close the head is a rounded, slightly boxy shape, the
   backs of the wings are plain with the wing arm reading as a dark rod, and the rows of chest
   feathers are an even spiky pattern.
+- Griffin: the white breast is a regular pattern of scale-like feathers that reads as armour more
+  than soft plumage, and goes nearly flat white in strong light. The beak is a little large and
+  bright, the lion body and thighs are smooth, the tail is thin and the eagle shanks are long.
 
 ## How the practice rounds work
 
