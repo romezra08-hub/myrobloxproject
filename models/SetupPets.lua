@@ -6,8 +6,9 @@
 --
 -- For each pet it tidies the part names, makes the eyes glossy and any GLOW part Neon with a small
 -- light, switches off collisions, welds the parts to the body, puts the pivot under the feet and
--- moves the pet into ReplicatedStorage > Pets (eggs go into ReplicatedStorage > Eggs). Running it
--- again on the same pet is safe. Pickaxes are tools: set those up with SetupTools.lua.
+-- moves the pet into ReplicatedStorage > Pets (eggs go into ReplicatedStorage > Eggs, ore rocks into
+-- ReplicatedStorage > Ores; ore rocks keep their collisions so players bump into them and can click
+-- them). Running it again on the same pet is safe. Pickaxes are tools: set those up with SetupTools.lua.
 -- Ctrl+Z undoes it.
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
@@ -41,9 +42,9 @@ local function selectedParts(): { MeshPart }
 	return found
 end
 
--- The folder the finished pets go into; eggs ("MeadowEgg", "EmberEgg", ...) go into their own.
+-- The folder the finished pets go into; eggs ("MeadowEgg", ...) and ore rocks ("GoldOre", ...) go into their own.
 local function folderFor(name: string): Instance
-	local folderName = if name:match("Egg$") then "Eggs" else "Pets"
+	local folderName = if name:match("Egg$") then "Eggs" elseif name:match("Ore$") then "Ores" else "Pets"
 	local existing = ReplicatedStorage:FindFirstChild(folderName)
 	if existing then
 		return existing
@@ -77,6 +78,7 @@ local finished: { Instance } = {}
 
 for petName, parts in pets do
 	local folder = folderFor(petName)
+	local solid = petName:match("Ore$") ~= nil -- ore rocks are bumped into and clicked; pets and eggs are not
 	-- The body is the part called Pet_Body, or failing that the biggest part.
 	table.sort(parts, function(a: MeshPart, b: MeshPart): boolean
 		return a.Size.Magnitude > b.Size.Magnitude
@@ -100,12 +102,13 @@ for petName, parts in pets do
 		end
 
 		part.Anchored = true -- the stored pet stays put; your pet system moves its own copies
-		part.CanCollide = false
-		part.CanTouch = false
-		part.CanQuery = false
+		local glow = part.Name:lower():find("glow", 1, true) ~= nil
+		part.CanCollide = solid and not glow
+		part.CanTouch = solid and not glow
+		part.CanQuery = solid
 		part.Massless = true
 		pcall(function()
-			part.CollisionFidelity = Enum.CollisionFidelity.Box
+			part.CollisionFidelity = if solid and not glow then Enum.CollisionFidelity.Hull else Enum.CollisionFidelity.Box
 		end)
 		pcall(function()
 			part.RenderFidelity = Enum.RenderFidelity.Precise
