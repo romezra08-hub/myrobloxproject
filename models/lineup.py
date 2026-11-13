@@ -74,10 +74,10 @@ def main():
     rig.ground.scale = (6, 6, 1)                         # a long row would otherwise run off the edge of the floor
     lo, hi = group.bounds()
     wide, tall = hi.x - lo.x + 3.2, hi.z - lo.z          # room for the 5-stud block on the right
-    target = Vector(((lo.x + hi.x) / 2 + 0.9, 0, lo.z + tall * 0.4))
+    target = Vector(((lo.x + hi.x) / 2 - 1.0, 0, lo.z + tall * 0.4))  # left of centre: the near (left) end looks bigger
     half = math.radians(15)
     aspect = min(0.6, max(0.34, (tall * 1.35 + 0.8) / wide))
-    away = (wide / 2 + 0.6) / math.tan(half)
+    away = (wide / 2 + 1.0) / math.tan(half)
     cam = review._camera("C_lineup", target + Vector((-0.28, -1.0, 0.24)).normalized() * away, target, 30)
     sc = bpy.context.scene
     sc.camera = cam
