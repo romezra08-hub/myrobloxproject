@@ -1,0 +1,622 @@
+"""Golem pet: an ancient crystal golem, a stone guardian. Built from scratch by script.
+
+    python models/pets/golem.py --review out/golem.png      # render the review sheet
+    python models/pets/golem.py --export models/export/golem.fbx
+
+Style: a legendary creature next to the adult dragon, phoenix and griffin. Cool, ancient and
+powerful; never cute, never a rounded cartoon rock man. Must-haves:
+  1. Adult, imposing proportions: very broad shoulders, a deep chest leaning forward, a narrower
+     waist, long heavy arms with huge fists hanging at knee height, short thick legs.
+  2. Assembled from separate carved blocks with dark gaps between them (chest, shoulder boulders,
+     upper arms, forearms, fists, pelvis, thighs, shins, feet), held by dark joint stones.
+  3. A small low head sunk between the shoulders: a heavy carved brow over a glowing visor slit.
+     No eyes, no mouth.
+  4. Crisp chiselled planes: every block is a box cut by flat planes (chamfers, knocked-off
+     corners, hewn facets), slightly irregular. No rounded pillows.
+  5. Weathered dark slate with warm-brown variation, dark moss on some top surfaces, emerald
+     crystal clusters on the shoulders, back and a forearm, and a modest emerald glow (visor,
+     crystal cores, a few rune cracks on the chest and forearms).
+"""
+import argparse
+import math
+import os
+import random
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import kit  # noqa: E402  (first: it brings in bpy, which puts bmesh and mathutils on the path)
+from kit import M, Prop  # noqa: E402
+
+import bmesh  # noqa: E402
+from mathutils import Matrix, Vector  # noqa: E402
+from mathutils.bvhtree import BVHTree  # noqa: E402
+
+LEAN = 10.0                       # the upper body leans forward this many degrees, round the waist
+PIVOT = Vector((0.0, 0.1, 4.4))   # the point it leans round
+
+
+# ---- small helpers ----------------------------------------------------------------------------------
+
+def layer(bm, name):
+    return bm.verts.layers.float.get(name) or bm.verts.layers.float.new(name)
+
+
+def sharpen(bm, degrees):
+    """Mark the edges where the surface turns by more than `degrees` as sharp: crisp creases."""
+    lim = math.radians(degrees)
+    bm.normal_update()
+    for e in bm.edges:
+        if len(e.link_faces) == 2 and e.calc_face_angle(0.0) > lim:
+            e.smooth = False
+    return bm
+
+
+def frame(a, b, xref=(1, 0, 0)):
+    """A transform whose Z runs from a to b (centred between them), its X as near `xref` as it can
+    be, and the distance from a to b."""
+    a, b = Vector(a), Vector(b)
+    z = (b - a).normalized()
+    x = Vector(xref)
+    x = (x - z * x.dot(z)).normalized()
+    y = z.cross(x)
+    m = Matrix((x, y, z)).transposed().to_4x4()
+    m.translation = (a + b) / 2
+    return m, (b - a).length
+
+
+def aim(origin, direction, roll=0.0):
+    """A transform standing a shape built along +Z on `origin`, pointing along `direction`."""
+    d = Vector(direction).normalized()
+    m = d.to_track_quat('Z', 'Y').to_matrix().to_4x4() @ Matrix.Rotation(math.radians(roll), 4, 'Z')
+    m.translation = Vector(origin)
+    return m
+
+
+class Surface:
+    """Finds points exactly on a shape, so that details sit on it and neither float nor sink."""
+
+    def __init__(self, bm):
+        bm.normal_update()
+        self.bvh = BVHTree.FromBMesh(bm)
+
+    def hit(self, origin, direction):
+        loc, nrm, _, _ = self.bvh.ray_cast(Vector(origin), Vector(direction).normalized())
+        if loc is None:
+            raise ValueError("nothing in the way of the ray from %s" % (tuple(origin),))
+        return loc, nrm
+
+
+# ---- carved stone -------------------------------------------------------------------------------------
+
+def slice_off(bm, co, no):
+    """Cut away everything in front of the plane through `co` facing `no`, and close the cut with a
+    flat face: one stroke of the chisel."""
+    no = Vector(no).normalized()
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-5,
+                           plane_co=Vector(co), plane_no=no, clear_outer=True)
+    edges = [e for e in bm.edges if len(e.link_faces) == 1]
+    if edges:
+        bmesh.ops.holes_fill(bm, edges=edges, sides=0)
+    return bm
+
+
+def hewn(size, top=(1.0, 1.0), bottom=(1.0, 1.0), shift=(0.0, 0.0), seed=0, chamfer=(0.04, 0.1),
+         corner=(0.08, 0.3), facets=3, tilt=(5.0, 12.0), rock=0, rock_depth=(0.84, 0.96), extra=()):
+    """A carved stone block centred on the origin: a box `size` whose top is scaled by `top` and
+    moved by `shift` and whose bottom is scaled by `bottom`, with every edge cut by a flat chamfer of
+    a random width, every corner knocked off by a random plane and `facets` faces broken into two
+    planes a few degrees apart. `rock` more random planes make a faceted boulder, and `extra` are
+    more cuts, each (point, normal), in the block's own space. Chamfer and corner depths are
+    fractions of the smallest side."""
+    rnd = random.Random(seed)
+    sx, sy, sz = (s / 2.0 for s in size)
+    small = min(size)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=2.0)
+    for v in bm.verts:
+        t = top if v.co.z > 0 else bottom
+        d = shift if v.co.z > 0 else (0.0, 0.0)
+        v.co = Vector((v.co.x * sx * t[0] + d[0], v.co.y * sy * t[1] + d[1], v.co.z * sz))
+    bm.normal_update()
+    planes = []
+    for e in bm.edges:
+        n = (e.link_faces[0].normal + e.link_faces[1].normal).normalized()
+        mid = (e.verts[0].co + e.verts[1].co) / 2
+        planes.append((mid - n * rnd.uniform(*chamfer) * small, n))
+    for v in bm.verts:
+        n = sum((f.normal for f in v.link_faces), Vector()).normalized()
+        planes.append((v.co - n * rnd.uniform(*corner) * small, n))
+    faces = list(bm.faces)
+    rnd.shuffle(faces)
+    for f in faces[:facets]:
+        n = f.normal.copy()
+        c = f.calc_center_median()
+        a = n.orthogonal().normalized()
+        a = Matrix.Rotation(rnd.uniform(0, 2 * math.pi), 3, n) @ a
+        reach = max((v.co - c).dot(a) for v in f.verts)
+        hinge = c + a * rnd.uniform(-0.35, 0.2) * reach
+        n2 = Matrix.Rotation(math.radians(rnd.uniform(*tilt)), 3, n.cross(a)) @ n
+        if n2.dot(a) < 0:
+            n2 = Matrix.Rotation(-2 * n.angle(n2), 3, n.cross(a)) @ n2
+        planes.append((hinge, n2))
+    for _ in range(rock):
+        n = Vector((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 1))).normalized()
+        reach = math.sqrt((sx * n.x) ** 2 + (sy * n.y) ** 2 + (sz * n.z) ** 2)
+        planes.append((n * reach * rnd.uniform(*rock_depth), n))
+    planes += [(Vector(co), Vector(n)) for co, n in extra]
+    for co, n in planes:
+        slice_off(bm, co, n)
+    return bm
+
+
+# ---- crystals ------------------------------------------------------------------------------------------
+
+def crystal(length, radius, seed=0, tip=(1.2, 2.0), sink=0.35):
+    """A hexagonal crystal along +Z: a slightly tapering, slightly irregular prism from `sink` below
+    its foot to a pointed tip. Every vertex stores how far up it is (0 to 1) in the layer "grad"."""
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    lay = layer(bm, "grad")
+    turn = rnd.uniform(0, math.pi / 3)
+    tip_h = min(radius * rnd.uniform(*tip), length * 0.45)
+    shoulder = length - tip_h
+    taper = rnd.uniform(0.78, 0.92)
+    radii = [radius * rnd.uniform(0.9, 1.1) for _ in range(6)]
+    rings = []
+    for z, s, g in ((-sink * radius - 0.05, 1.0, 0.0), (shoulder, taper, 0.8)):
+        ring = []
+        for j in range(6):
+            a = turn + j * math.pi / 3
+            v = bm.verts.new((math.cos(a) * radii[j] * s, math.sin(a) * radii[j] * s, z))
+            v[lay] = g
+            ring.append(v)
+        rings.append(ring)
+    apex = bm.verts.new((rnd.uniform(-0.15, 0.15) * radius, rnd.uniform(-0.15, 0.15) * radius, length))
+    apex[lay] = 1.0
+    lo, hi = rings
+    for j in range(6):
+        k = (j + 1) % 6
+        bm.faces.new((lo[j], lo[k], hi[k], hi[j]))
+        bm.faces.new((hi[j], hi[k], apex))
+    bm.faces.new(lo[::-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def ribbon(points, normals, width, lift, sink=0.012):
+    """A thin ridge laid along a line of surface points: its crest `lift` above the surface, its two
+    edges `sink` below it, `width` across and pinched to nothing at both ends."""
+    bm = bmesh.new()
+    pts = [Vector(p) for p in points]
+    nrm = [Vector(n).normalized() for n in normals]
+    n = len(pts)
+    rows = []
+    for i in range(n):
+        t = (pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized()
+        side = nrm[i].cross(t).normalized()
+        w = width * (0.15 if i in (0, n - 1) else 1.0) / 2
+        rows.append((bm.verts.new(pts[i] + side * w - nrm[i] * sink), bm.verts.new(pts[i] + nrm[i] * lift),
+                     bm.verts.new(pts[i] - side * w - nrm[i] * sink)))
+    for a, b in zip(rows, rows[1:]):
+        bm.faces.new((a[0], b[0], b[1], a[1]))
+        bm.faces.new((a[1], b[1], b[2], a[2]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bm.normal_update()
+    if sum((f.normal for f in bm.faces), Vector()).dot(sum(nrm, Vector())) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    return bm
+
+
+# ---- materials -------------------------------------------------------------------------------------------
+
+class Nodes:
+    def __init__(self, mat):
+        self.tree = mat.node_tree
+        self.new, self.link = self.tree.nodes.new, self.tree.links.new
+
+    def noise(self, vec, scale, detail=2.0, rough=0.5):
+        n = self.new("ShaderNodeTexNoise")
+        n.inputs["Scale"].default_value, n.inputs["Detail"].default_value = scale, detail
+        n.inputs["Roughness"].default_value = rough
+        self.link(vec, n.inputs["Vector"])
+        return n
+
+    def ramp(self, src, a, b, c=0.0, d=1.0, smooth=True):
+        r = self.new("ShaderNodeMapRange")
+        if smooth:
+            r.interpolation_type = 'SMOOTHSTEP'
+        r.inputs["From Min"].default_value, r.inputs["From Max"].default_value = a, b
+        r.inputs["To Min"].default_value, r.inputs["To Max"].default_value = c, d
+        self.link(src, r.inputs["Value"])
+        return r.outputs["Result"]
+
+    def math(self, op, a, b=None, c=None):
+        m = self.new("ShaderNodeMath")
+        m.operation = op
+        for i, x in enumerate((a, b, c)):
+            if x is None:
+                continue
+            if isinstance(x, (int, float)):
+                m.inputs[i].default_value = x
+            else:
+                self.link(x, m.inputs[i])
+        return m.outputs[0]
+
+    def mix(self, fac, a, b):
+        m = self.new("ShaderNodeMix")
+        m.data_type = 'RGBA'
+        for sock, x in ((m.inputs[0], fac), (m.inputs[6], a), (m.inputs[7], b)):
+            if isinstance(x, (int, float)):
+                sock.default_value = x
+            elif isinstance(x, str):
+                sock.default_value = (*kit.srgb(x), 1.0)
+            else:
+                self.link(x, sock)
+        return m.outputs[2]
+
+    def value(self, colour, v):
+        h = self.new("ShaderNodeHueSaturation")
+        self.link(colour, h.inputs["Color"])
+        self.link(v, h.inputs["Value"])
+        return h.outputs["Color"]
+
+    def edge(self, radius=0.035, lo=0.997, hi=0.95):
+        """1 on the sharp edges of the shape, 0 on its flat planes (the Bevel node rounds the normal
+        near an edge; where that differs from the face's own normal there is an edge)."""
+        bev = self.new("ShaderNodeBevel")
+        bev.samples = 4
+        bev.inputs["Radius"].default_value = radius
+        geo = self.new("ShaderNodeNewGeometry")
+        dot = self.new("ShaderNodeVectorMath")
+        dot.operation = 'DOT_PRODUCT'
+        self.link(bev.outputs["Normal"], dot.inputs[0])
+        self.link(geo.outputs["True Normal"], dot.inputs[1])
+        return self.ramp(dot.outputs["Value"], lo, hi)
+
+    def up(self, lo, hi):
+        geo = self.new("ShaderNodeNewGeometry")
+        sep = self.new("ShaderNodeSeparateXYZ")
+        self.link(geo.outputs["Normal"], sep.inputs[0])
+        return self.ramp(sep.outputs[2], lo, hi)
+
+
+def stone(name, base="#3D4044", warm="#4C443C", edge="#76736C", crack="#18191B", moss="#2C3A22",
+          moss_amount=0.0, wear=0.42, cracks=0.55, rough=0.92):
+    """Weathered slate: warm and cool patches, a mottle of mineral grains, fine speckle, hairline
+    cracks, paler worn edges and, on surfaces that face up, patches of dark moss. Worked out in 3D,
+    so it has no seams; bake_texture bakes it into the colour image."""
+    m = kit.material(name, base, rough=rough)
+    b = kit.principled(m)
+    N = Nodes(m)
+    co = N.new("ShaderNodeTexCoord").outputs["Object"]
+    warp = N.noise(co, 1.4, 2.0)
+    wv = N.new("ShaderNodeVectorMath")
+    wv.operation = 'MULTIPLY_ADD'
+    N.link(warp.outputs["Color"], wv.inputs[0])
+    wv.inputs[1].default_value = (0.3, 0.3, 0.3)
+    N.link(co, wv.inputs[2])
+    warped = wv.outputs[0]
+    # warm and cool patches
+    big = N.noise(co, 0.55, 3.0)
+    col = N.mix(N.math('MULTIPLY', N.ramp(big.outputs["Fac"], 0.45, 0.68), 0.8), base, warm)
+    # mineral grains and speckle
+    cells = N.new("ShaderNodeTexVoronoi")
+    cells.inputs["Scale"].default_value = 2.6
+    N.link(warped, cells.inputs["Vector"])
+    bw = N.new("ShaderNodeRGBToBW")
+    N.link(cells.outputs["Color"], bw.inputs[0])
+    grain = N.math('MULTIPLY_ADD', bw.outputs[0], 0.26, 0.87)
+    speck = N.noise(co, 13.0, 6.0, 0.62)
+    fine = N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.36, 0.82)
+    col = N.value(col, N.math('MULTIPLY', grain, fine))
+    # hairline cracks, only in some places
+    cr = N.new("ShaderNodeTexVoronoi")
+    cr.feature = 'DISTANCE_TO_EDGE'
+    cr.inputs["Scale"].default_value = 1.7
+    N.link(warped, cr.inputs["Vector"])
+    line = N.ramp(cr.outputs["Distance"], 0.0, 0.045, 1.0, 0.0)
+    where = N.ramp(N.noise(co, 0.9, 2.0).outputs["Fac"], 0.48, 0.6)
+    col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', line, where), cracks), col, crack)
+    # worn, paler edges, unevenly
+    worn = N.ramp(N.noise(co, 4.0, 3.0).outputs["Fac"], 0.3, 0.62, 0.35, 1.0)
+    col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', N.edge(), worn), wear), col, edge)
+    # moss on top surfaces, sparingly
+    if moss_amount:
+        patch = N.ramp(N.noise(co, 1.2, 4.0, 0.6).outputs["Fac"], 0.5, 0.6)
+        mo = N.math('MULTIPLY', N.math('MULTIPLY', N.up(0.5, 0.85), patch), moss_amount)
+        mossy = N.value(N.mix(0.0, moss, moss), N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.7, 0.65))
+        col = N.mix(mo, col, mossy)
+    N.link(col, b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = rough
+    return m
+
+
+def crystal_material(name):
+    """Emerald: dark at the foot, clear green in the body, pale at the tip; each facet a little
+    lighter or darker by the way it faces, and its edges catching the light."""
+    m = kit.material(name, "#12784C", rough=0.3)
+    b = kit.principled(m)
+    N = Nodes(m)
+    a = N.new("ShaderNodeAttribute")
+    a.attribute_type, a.attribute_name = 'GEOMETRY', "grad"
+    ramp = N.new("ShaderNodeValToRGB")
+    els = ramp.color_ramp.elements
+    stops = [(0.0, "#03251A"), (0.4, "#0A5A3A"), (0.78, "#1A9C63"), (1.0, "#A6F5D2")]
+    els[0].position, els[0].color = stops[0][0], (*kit.srgb(stops[0][1]), 1.0)
+    els[1].position, els[1].color = stops[-1][0], (*kit.srgb(stops[-1][1]), 1.0)
+    for pos, hexcode in stops[1:-1]:
+        e = els.new(pos)
+        e.color = (*kit.srgb(hexcode), 1.0)
+    N.link(a.outputs["Fac"], ramp.inputs["Fac"])
+    geo = N.new("ShaderNodeNewGeometry")
+    dot = N.new("ShaderNodeVectorMath")
+    dot.operation = 'DOT_PRODUCT'
+    N.link(geo.outputs["True Normal"], dot.inputs[0])
+    dot.inputs[1].default_value = (-0.45, -0.55, 0.7)
+    facet = N.math('MULTIPLY_ADD', dot.outputs["Value"], 0.28, 1.0)
+    col = N.value(ramp.outputs["Color"], facet)
+    col = N.mix(N.math('MULTIPLY', N.edge(0.03, 0.995, 0.9), 0.55), col, "#C8FFE6")
+    N.link(col, b.inputs["Base Color"])
+    return m
+
+
+# ---- the golem ------------------------------------------------------------------------------------------
+
+def build():
+    rock = stone("Stone", moss_amount=0.85)
+    core = stone("CoreStone", base="#2C2D30", warm="#352F2A", edge="#55534E", wear=0.3, cracks=0.4)
+    scorch = stone("Scorch", base="#161716", warm="#1C1A17", edge="#2A2A28", wear=0.2, cracks=0.0)
+    gem = crystal_material("Crystal")
+    glow = kit.material("GLOW_Emerald", "#1FD873", rough=0.4, emit=3.5)
+
+    g = Prop("Golem")
+    g.tally = {}
+    seeds = iter(range(1000))
+
+    def add(part, bm, mat, at=None, crease=1.0, keep=False):
+        layer(bm, "grad")
+        if at is not None:
+            bm.transform(at)
+        for v in bm.verts:
+            v.co.z = max(v.co.z, 0.0)
+        if crease is not None:
+            sharpen(bm, crease)
+        surf = Surface(bm) if keep else None
+        g.tally[part] = g.tally.get(part, 0) + sum(len(f.verts) - 2 for f in bm.faces)
+        g.add(bm, mat)
+        return surf
+
+    def block(part, size, at, mat=None, keep=False, **kw):
+        kw.setdefault("seed", next(seeds) * 7 + 3)
+        return add(part, hewn(size, **kw), mat or rock, at, keep=keep)
+
+    L = Matrix.Translation(PIVOT) @ Matrix.Rotation(math.radians(LEAN), 4, 'X') @ Matrix.Translation(-PIVOT)
+
+    def lean(p):
+        return L @ Vector(p)
+
+    # ---- legs: short, thick pillars on broad feet, the left foot a little forward -------------------
+    for sx in (-1, 1):
+        fy = -0.35 if sx < 0 else 0.1
+        x = 1.12 * sx
+        F = M((x, fy, 0.0), rot=(0, 0, 9 * sx))
+        block("feet", (1.45, 1.9, 0.75), F @ M((0, 0.08, 0.32)), top=(0.8, 0.7), shift=(0, 0.2))
+        for k, (w, ln, h) in zip((-1, 0, 1), ((0.44, 0.55, 0.46), (0.5, 0.66, 0.5), (0.44, 0.56, 0.44))):
+            block("toes", (w, ln, h), F @ M((0.46 * k, -0.98 + 0.07 * abs(k), 0.18), rot=(0, 0, 5 * k)),
+                  top=(0.8, 0.45), shift=(0, 0.14))
+        block("joints", (0.95, 0.95, 0.55), M((x, fy + 0.08, 0.78)), core, rock=8)
+        block("shins", (1.3, 1.35, 1.35), M((x * 1.02, fy + 0.04, 1.36), rot=(6, 0, -3 * sx)), top=(1.06, 1.05), bottom=(0.86, 0.86))
+        block("joints", (0.95, 0.95, 0.7), M((x * 1.02, fy, 2.1)), core, rock=8)
+        block("knees", (0.8, 0.5, 0.62), M((x * 1.02, fy - 0.62, 2.15), rot=(16, 0, -6 * sx)), top=(0.8, 0.7), shift=(0, 0.06))
+        block("thighs", (1.3, 1.4, 1.25), M((x * 0.95, fy * 0.5 + 0.1, 2.78), rot=(-10, 0, 4 * sx)), top=(1.08, 1.06), bottom=(0.86, 0.9))
+
+    # ---- hips and waist: a heavy pelvis, a narrow dark core with two stacked belly stones ----------------
+    block("pelvis", (2.1, 1.5, 0.85), M((0, 0.12, 3.6)), bottom=(0.78, 0.86))
+    for sx in (-1, 1):
+        block("pelvis", (0.7, 1.2, 0.85), M((1.22 * sx, 0.14, 3.42), rot=(0, -8 * sx, 0)), bottom=(0.78, 0.9))
+    block("joints", (1.3, 1.05, 1.2), M((0, 0.15, 4.35)), core)
+    block("belly", (1.2, 0.55, 0.45), M((0, -0.4, 4.1), rot=(4, 0, 0)), top=(1.0, 0.9), bottom=(0.84, 1.0))
+    block("belly", (1.4, 0.58, 0.5), L @ M((0, -0.55, 4.6), rot=(2, 0, 0)), top=(1.06, 0.9), bottom=(0.86, 1.0))
+
+    # ---- chest: a slab broad at the top and narrow at the waist, two angular pectoral plates ----------------
+    chest = block("chest", (3.8, 2.3, 2.65), L @ M((0, 0.1, 6.05)), top=(1.0, 1.0), bottom=(0.55, 0.76), keep=True)
+    pecs = []
+    for sx in (-1, 1):
+        pecs.append(block("pecs", (1.6, 0.46, 1.35), L @ M((0.86 * sx, -1.15, 6.4), rot=(-4, 0, -10 * sx)),
+                          top=(1.0, 0.86), bottom=(0.7, 1.0), shift=(0.06 * sx, 0.0), keep=True))
+    block("chest", (1.7, 0.42, 0.6), L @ M((0, -1.02, 5.3), rot=(8, 0, 0)), top=(1.0, 0.9), bottom=(0.8, 1.0))
+    hump = block("back", (3.0, 1.9, 1.6), L @ M((0, 0.95, 7.45), rot=(-12, 0, 0)), top=(0.7, 0.62), keep=True)
+
+    # ---- shoulders: two big faceted boulders riding higher than the head ---------------------------------------
+    boulders = []
+    for sx in (-1, 1):
+        boulders.append(block("shoulders", (2.3, 2.25, 2.05), L @ M((2.22 * sx, 0.15, 7.3)), rock=18,
+                              chamfer=(0.02, 0.05), keep=True))
+
+    # ---- head: a small low block sunk between the shoulders, a heavy frowning brow over a glowing visor slit ---
+    H = L @ M((0, -1.05, 7.12))
+    block("head", (0.9, 0.85, 0.8), H @ M((0, 0.15, 0.0)), core)
+    frown = [((0.6 * sx, -0.45, -0.2), (0.42 * sx, -0.32, -0.85)) for sx in (-1, 1)]
+    block("brow", (1.16, 0.95, 0.56), H @ M((0, -0.02, 0.33)), top=(0.84, 0.66), shift=(0, 0.16), extra=frown, facets=1)
+    block("head", (0.92, 0.95, 0.52), H @ M((0, 0.0, -0.36)), top=(1.0, 1.0), bottom=(0.72, 0.84))
+    for sx in (-1, 1):
+        visor = hewn((0.42, 0.08, 0.07), seed=5 + sx, chamfer=(0.05, 0.1), corner=(0.1, 0.2), facets=0)
+        add("visor", visor, glow, H @ M((0.2 * sx, -0.43, -0.03), rot=(0, -9 * sx, 8 * sx)))
+
+    # ---- arms: long and heavy, angled a little out from the body, huge fists at knee height --------------------
+    forearms = []
+    for sx in (-1, 1):
+        S = lean((2.42 * sx, 0.0, 6.8))
+        block("joints", (1.0, 1.0, 1.0), Matrix.Translation(S), core, rock=10)
+        E = Vector((2.78 * sx, -0.3, 4.7))
+        m, ln = frame(E + Vector((0, 0, 0.1)), S + Vector((0.05 * sx, 0, -0.15)), (sx, 0, 0))
+        block("upper arms", (1.15, 1.2, ln), m, top=(1.1, 1.05), bottom=(0.86, 0.86))
+        block("joints", (0.85, 0.85, 0.75), Matrix.Translation(E), core, rock=8)
+        W = Vector((2.92 * sx, -0.55, 2.72))
+        m, ln = frame(W, E - Vector((0, 0, 0.12)), (sx, 0, 0))
+        forearms.append((block("forearms", (1.42, 1.48, ln), m, top=(0.78, 0.8), bottom=(1.0, 1.0), keep=True), m, ln, sx))
+        block("elbows", (0.6, 0.45, 0.66), Matrix.Translation(E + Vector((0.08 * sx, 0.48, 0.0))) @ M(rot=(-10, 0, 0)), top=(0.8, 0.7))
+        block("joints", (0.8, 0.8, 0.6), Matrix.Translation(W + Vector((0, 0, -0.1))), core, rock=8)
+        # the fist: the back of the hand, a row of knuckles underneath, the curled fingers on the palm side, a thumb
+        Fz = M((2.96 * sx, -0.6, 1.97), rot=(0, 0, -6 * sx))
+        block("fists", (1.2, 1.45, 1.0), Fz @ M((0.05 * sx, 0, 0.24)), top=(0.88, 0.84), bottom=(1.0, 1.0))
+        for k, yk in enumerate((-0.52, -0.17, 0.18, 0.52)):
+            drop = (0.0, 0.06, 0.04, -0.03)[k]
+            block("fists", (0.95, 0.32, 0.55), Fz @ M((0.08 * sx, yk, -0.4 - drop), rot=(0, 6 * sx, 0)), top=(1.0, 1.0), bottom=(0.9, 0.8))
+            block("fists", (0.5, 0.3, 0.45), Fz @ M((-0.5 * sx, yk, -0.2 - drop * 0.5), rot=(0, -10 * sx, 0)), top=(0.85, 1.0))
+        block("fists", (0.45, 0.48, 0.8), Fz @ M((-0.26 * sx, -0.82, 0.0), rot=(18, 0, 14 * sx)), top=(0.8, 0.8))
+
+    # ---- rune cracks: a glowing seam down the chest, a branching crack over one pectoral, one up each forearm --
+    def crack(surf, pts2d, origin_of, direction, width=0.045):
+        pts, nrms = [], []
+        for u, v in pts2d:
+            p, n = surf.hit(origin_of(u, v), direction)
+            pts.append(p)
+            nrms.append(n)
+        add("rune rims", ribbon(pts, nrms, width * 2.8, 0.008), scorch, crease=None)
+        add("runes", ribbon(pts, nrms, width, 0.022), glow, crease=None)
+
+    fwd = L.to_3x3() @ Vector((0, 1, 0))
+    left, right = pecs
+    crack(left, [(-0.44, -0.26), (-0.42, -0.08), (-0.47, 0.12), (-0.62, 0.22), (-0.72, 0.45)], lambda u, v: lean((u, -3.0, 6.3 + v)), fwd)
+    crack(left, [(-0.47, 0.12), (-0.57, -0.02), (-0.74, -0.1)], lambda u, v: lean((u, -3.0, 6.3 + v)), fwd, width=0.035)
+    crack(right, [(0.55, 0.6), (0.5, 0.42), (0.62, 0.25)], lambda u, v: lean((u, -3.0, 6.3 + v)), fwd, width=0.035)
+    crack(chest, [(0.0, 0.62), (0.02, 0.3), (-0.02, 0.0), (0.03, -0.32), (0.0, -0.55)], lambda u, v: lean((u, -3.0, 6.15 + v)), fwd, width=0.05)
+    for surf, m, ln, sx in forearms:
+        path = [(0.1, -0.35), (-0.05, -0.15), (0.06, 0.05), (-0.08, 0.22), (0.02, 0.4)]
+        out = m.to_3x3() @ Vector((1, 0, 0))
+        crack(surf, path, lambda u, v, m=m: m @ Vector((3.0, u, v * ln)), -out)
+
+    # ---- emerald crystals: clusters on the shoulders, the back and the left forearm --------------------------
+    def cluster(surf, centre, direction, length, count, seed, spread=30.0):
+        """Crystals growing out of the shape `surf` where a ray from inside it at `centre` along
+        `direction` comes out: one long one and the rest shorter and splayed round it."""
+        rnd = random.Random(seed)
+        d = Vector(direction).normalized()
+        p, nrm = surf.hit(Vector(centre) + d * 4.0, -d)
+        side = d.orthogonal().normalized()
+        for k in range(count):
+            if k == 0:
+                ln, off, tilt = length, Vector(), 0.0
+            else:
+                ln = length * rnd.uniform(0.38, 0.72)
+                ang = 2 * math.pi * k / (count - 1) + rnd.uniform(-0.4, 0.4)
+                off = Matrix.Rotation(ang, 3, d) @ side * length * rnd.uniform(0.12, 0.22)
+                tilt = rnd.uniform(0.5, 1.0) * spread
+            axis = Matrix.Rotation(math.radians(tilt), 3, d.cross(off).normalized()) @ d if off.length else d
+            for f in (1.0, 0.6, 0.3, 0.0):
+                try:
+                    q, qn = surf.hit(p + off * f + d * 1.5, -d)
+                    break
+                except ValueError:
+                    continue
+            r = ln * rnd.uniform(0.15, 0.19)
+            add("crystals", crystal(ln, r, seed=seed * 31 + k), gem, aim(q, axis, rnd.uniform(0, 60)))
+        # the glowing heart of the cluster: a slimmer crystal in the middle of the others
+        q, qn = surf.hit(p - side * length * 0.06 + d * 1.5, -d)
+        add("crystal cores", crystal(length * 0.78, length * 0.105, seed=seed + 99, tip=(1.6, 2.2)), glow,
+            aim(q, Matrix.Rotation(math.radians(8), 3, side) @ d, 10))
+
+    for sx, surf, ln, n in ((-1, boulders[0], 1.75, 6), (1, boulders[1], 1.35, 5)):
+        cluster(surf, lean((2.22 * sx, 0.15, 7.3)), (0.5 * sx, 0.22, 1.0), ln, n, 11 + sx)
+    hc = lean((0, 0.95, 7.45))
+    cluster(hump, hc + Vector((-0.5, 0.0, 0.0)), (-0.3, 0.9, 1.0), 1.5, 5, 21)
+    cluster(hump, hc + Vector((0.7, 0.0, 0.0)), (0.6, 1.0, 0.6), 1.0, 4, 23)
+    surf, m, ln, sx = forearms[0]
+    cluster(surf, m @ Vector((0, 0, 0.1 * ln)), (-1.0, 0.75, 0.35), 0.72, 3, 31, spread=25)
+
+    g.build()
+    for ob in g.objects:
+        print("  %-26s %6d triangles" % (ob.name, sum(len(p.vertices) - 2 for p in ob.data.polygons)))
+    return g
+
+
+def bake(golem, texture):
+    """Everything that does not glow becomes one textured mesh, Golem_Body: the stone and crystal
+    colours and the shading in the gaps between the blocks are baked into its colour image. The
+    glowing parts are joined into one mesh, Golem_GLOW, that keeps its emissive material."""
+    glow = [ob for ob in golem.objects if "GLOW" in ob.name]
+    body = kit.bake_texture([ob for ob in golem.objects if ob not in glow], texture, name="Golem_Body",
+                            shade=0.62, soften=2, rough=0.9, samples=32, uv_angle=70.0, uv_margin=0.004, pack_margin=0.003)
+    import bpy
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in glow:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = glow[0]
+    if len(glow) > 1:
+        bpy.ops.object.join()
+    gl = bpy.context.view_layer.objects.active
+    gl.name = gl.data.name = "Golem_GLOW"
+    golem.objects = [body, gl]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--review", help="write a review contact sheet to this PNG")
+    ap.add_argument("--export", help="write an FBX for Roblox Studio to this path")
+    ap.add_argument("--face", help="also write a tight picture of the head and chest to this PNG")
+    ap.add_argument("--peek", help="quick look while building: write these views, unbaked, to this PNG")
+    ap.add_argument("--views", default="front 3/4,face,side,game distance:silhouette",
+                    help="views for --quick and --peek, each 'view' or 'view:look'")
+    ap.add_argument("--look", default="clay")
+    ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--samples", type=int, default=40)
+    ap.add_argument("--quick", action="store_true", help="with --review: four views instead of eight")
+    ap.add_argument("--title", default="Golem review")
+    ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "golem_colour.png"))
+    a = ap.parse_args()
+    kit.fresh()
+    golem = build()
+    print("triangles by part:", dict(sorted(golem.tally.items(), key=lambda kv: -kv[1])))
+    L = Matrix.Translation(PIVOT) @ Matrix.Rotation(math.radians(LEAN), 4, 'X') @ Matrix.Translation(-PIVOT)
+    head = L @ Vector((0, -1.05, 6.95))
+
+    def shots(default_look):
+        out = []
+        for v in a.views.split(","):
+            view, _, look = v.strip().partition(":")
+            out.append((view.strip(), look.strip() or default_look))
+        return out
+
+    def rig_for(samples):
+        import review
+        rig = review.Rig(golem, samples=samples, focus=(head.x, head.y + 0.4, head.z - 1.0))
+        rig.cams["face"] = review._camera("C_face", head + Vector((-0.55, -1.0, 0.18)).normalized() * 9.0,
+                                          head + Vector((0, 0.3, -0.35)), 30)
+        return rig, review
+
+    if a.peek:
+        rig, _ = rig_for(16)
+        rig.sheet(os.path.abspath(a.peek), shots(a.look), px=a.px, title="peek")
+        return
+    os.makedirs(os.path.dirname(os.path.abspath(a.texture)), exist_ok=True)
+    bake(golem, os.path.abspath(a.texture))
+    tris = golem.triangles()
+    lo, hi = golem.bounds()
+    print("triangles:", tris, "total", sum(tris.values()))
+    print("size in studs: %.2f wide, %.2f long, %.2f tall; lowest point z=%.4f" % (hi.x - lo.x, hi.y - lo.y, hi.z - lo.z, lo.z))
+    me = golem.objects[0].data
+    uv = me.uv_layers.active.data
+    a3 = sum(pl.area for pl in me.polygons)
+    a2 = 0.0
+    for pl in me.polygons:
+        pts = [uv[i].uv for i in pl.loop_indices]
+        a2 += abs(sum(pts[i].x * pts[(i + 1) % len(pts)].y - pts[(i + 1) % len(pts)].x * pts[i].y for i in range(len(pts)))) / 2
+    print("texture: %.0f%% of the image used, about %.0f pixels to a stud" % (a2 * 100, (a2 * 1024 * 1024 / a3) ** 0.5))
+    if a.export:
+        os.makedirs(os.path.dirname(os.path.abspath(a.export)), exist_ok=True)
+        kit.export_fbx(golem.objects, os.path.abspath(a.export))
+        print("exported", a.export)
+    if a.review or a.face:
+        rig, review = rig_for(a.samples)
+        if a.review:
+            os.makedirs(os.path.dirname(os.path.abspath(a.review)), exist_ok=True)
+            rig.sheet(os.path.abspath(a.review), shots("full") if a.quick else review.STANDARD, px=a.px, title=a.title)
+            print("review sheet", a.review)
+        if a.face:
+            rig.render(os.path.abspath(a.face), "face", "full", a.px)
+            print("face", a.face)
+
+
+if __name__ == "__main__":
+    main()
