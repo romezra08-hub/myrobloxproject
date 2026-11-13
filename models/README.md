@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`).
 
 ## The pets so far
 
@@ -61,6 +61,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
 | Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
 | Golem | Ancient crystal golem: carved slate blocks with moss, emerald crystal clusters, glowing eye slots and rune cracks, 9.9 studs tall | 7,314 | 6 |
+| Wolf | Shadow wolf: shaggy charcoal-indigo coat of fur shards, silver ruff, dark crystals with violet glow down the spine, violet eyes, 6.7 studs tall | 15,334 | 9 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -102,6 +103,9 @@ Known weak points, from the last review of each:
 - Golem: the legs and feet read as stacked boxes, a little robotic, and many limb blocks are similar
   slabs. The cracks, worn edges and carvings vanish at game distance, where the stone is plain dark
   grey. Each crystal's glowing core reads as one brighter crystal rather than light from inside.
+- Wolf: the weakest of the big creatures. Up close the head is blocky, with flat facets and a plain
+  rounded nose, and the half-closed eyes look unimpressed more than noble. The lower forelegs are
+  smooth columns under the fur, and the front outline is narrow next to the winged creatures.
 
 ## How the practice rounds work
 

@@ -16,6 +16,28 @@ powerful, never cute, never creepy, never plastic. Must-haves, checked in every 
   5. Not plastic: streaked fur, layered fur shards that shade each other, a matte finish, darker on
      the back and lighter underneath, crisp creases on the brow, cheekbones, claws and crystals.
 
+Round 9: from straight in front the brows drooped at their outer ends, so the eyes looked heavy-lidded
+and a little sad: the brows now rise towards the temples, and the eyes are crisper almonds with a
+pointed, raised outer corner, so the look is calm and alert. A rounder crown (the forehead read as a
+flat box).
+
+Round 8: the coat went too pale and blue in round 7, the forelegs into smooth slate pillars: a darker
+charcoal base again, a weaker streak sheen on smooth skin (the shard tips keep theirs), silver only on
+the lower fronts of the legs. Two rows of shaggy fur over each upper foreleg blend it into the barrel,
+as on the thighs. The mouth stays level and ends cleanly under the eye (a flare of the jaw behind it
+made a smirk in round 7).
+
+Round 7 (after review by the art lead): legs that read as powerful from the front, not thin posts:
+thicker forearms, heavier thighs and hocks, a wider stance, a fringe of feathering down the back of
+each foreleg, tufts at the elbows, wrists and hocks, rows of shaggy fur over the thighs blending into
+the croup, bigger paws with lighter, separate toes. The face no longer looks grumpy: the closed mouth
+runs level to its corner under the eye (it turned down),
+the brow is higher, the silver blends softly from the muzzle into the cheeks and throat (it was a
+hard band, like a mask) and the eyes are a saturated violet (their centres went lavender-pink). The
+coat keeps its form at a distance: lighter charcoal-indigo values, frosted shard tips, a blue-grey
+light on fur facing up, silver down the fronts of the legs and further onto the chest. The tail is
+six rings of six big drooping locks of uneven length instead of a regular bottle-brush.
+
 Round 6: more presence in the head, which looked small against the mane: 6 percent larger and level,
 looking ahead (raising the muzzle made it look haughty). The eye is an open almond with an arched top
 edge and a little gap under the brow (a flat top edge read as heavy-lidded and sullen). A shaggier underline: four arcs of longer fur
@@ -75,9 +97,9 @@ BODY = [
     (0.00, 1.65, 3.94, 0.84, 0.58, 0.78, 2.2),    # 2  hips
     (0.00, 0.85, 3.92, 0.74, 0.48, 0.62, 2.2),    # 3  loins: the narrow waist, the belly tucked up
     (0.00, 0.05, 3.84, 0.88, 0.60, 1.02, 2.2),    # 4  back of the ribs
-    (0.00, -0.75, 3.78, 1.00, 0.86, 1.34, 2.2),   # 5  ribcage, deep
-    (0.00, -1.45, 3.80, 1.05, 1.00, 1.40, 2.15),  # 6  shoulders: withers at 4.8, brisket at 2.4
-    (0.00, -2.05, 3.80, 0.88, 0.86, 1.08, 2.1),   # 7  chest, broad and pushed out
+    (0.00, -0.75, 3.78, 1.02, 0.86, 1.34, 2.2),   # 5  ribcage, deep
+    (0.00, -1.45, 3.80, 1.10, 1.00, 1.40, 2.15),  # 6  shoulders: withers at 4.8, brisket at 2.4
+    (0.00, -2.05, 3.80, 0.96, 0.86, 1.08, 2.1),   # 7  chest, broad and pushed out
     (0.00, -2.38, 3.86, 0.42, 0.50, 0.55, 2.0),   # 8  the point of the chest
 ]
 # The neck is a skin of its own, from inside the shoulders up into the head (the mane hides the join).
@@ -91,25 +113,27 @@ NECK_TOP = [(0, 0.52, -0.26), (0.44, 0.40, 0.42, 2.0), (0, 0.28, -0.10), (0.30, 
 # The skull, in its own space (muzzle towards -Y): y, crown z and half width, brow corner z and half
 # width, cheek z and half width, jaw corner z and half width, chin z. Flat planes between corners.
 SKULL = [
-    (0.48, 0.18, 0.10, 0.06, 0.22, -0.14, 0.26, -0.34, 0.20, -0.42),      # into the neck
-    (0.30, 0.31, 0.14, 0.19, 0.29, -0.07, 0.36, -0.34, 0.25, -0.42),      # back of the skull
-    (0.08, 0.37, 0.15, 0.25, 0.31, -0.03, 0.42, -0.31, 0.26, -0.38),      # crown, the cheekbones flare widest
-    (-0.14, 0.35, 0.12, 0.25, 0.28, -0.03, 0.36, -0.27, 0.24, -0.33),     # over the eyes
-    (-0.32, 0.255, 0.08, 0.17, 0.18, -0.05, 0.25, -0.24, 0.205, -0.265),  # the stop
-    (-0.56, 0.195, 0.05, 0.13, 0.12, -0.06, 0.185, -0.21, 0.17, -0.235),  # muzzle: a narrow bridge, broad lips
-    (-0.82, 0.16, 0.04, 0.10, 0.10, -0.07, 0.15, -0.19, 0.14, -0.21),
-    (-1.0, 0.125, 0.03, 0.075, 0.075, -0.08, 0.11, -0.165, 0.10, -0.185),
-    (-1.06, 0.09, 0.02, 0.05, 0.05, -0.08, 0.07, -0.15, 0.065, -0.17),    # the rounded end of the muzzle
+    (0.48, 0.18, 0.10, 0.06, 0.22, -0.14, 0.26, -0.34, 0.20, -0.42),       # into the neck
+    (0.30, 0.31, 0.14, 0.19, 0.29, -0.07, 0.36, -0.30, 0.25, -0.40),       # back of the skull
+    (0.08, 0.37, 0.15, 0.26, 0.31, -0.03, 0.42, -0.22, 0.26, -0.36),       # crown, the cheekbones flare widest
+    (-0.14, 0.35, 0.12, 0.265, 0.28, -0.03, 0.36, -0.155, 0.24, -0.25),    # over the eyes; the corner of the mouth
+    (-0.32, 0.255, 0.08, 0.185, 0.18, -0.05, 0.25, -0.165, 0.205, -0.19),  # the stop
+    (-0.56, 0.195, 0.05, 0.13, 0.12, -0.06, 0.185, -0.172, 0.17, -0.197),  # muzzle: a narrow bridge, broad lips
+    (-0.82, 0.16, 0.04, 0.10, 0.10, -0.07, 0.15, -0.172, 0.14, -0.197),
+    (-1.0, 0.125, 0.03, 0.075, 0.075, -0.08, 0.11, -0.165, 0.10, -0.188),
+    (-1.06, 0.09, 0.02, 0.05, 0.05, -0.08, 0.07, -0.15, 0.065, -0.17),     # the rounded end of the muzzle
 ]
-# The lower jaw, just inside the upper lip so that the closed mouth is a crease in shadow:
-# y, top z, top half width, lip corner z and half width, chin z.
+# The lower jaw: y, top z, top half width, lip corner z and half width, chin z. It sits just inside
+# the upper lip, so the closed mouth is a crease in shadow that runs level back to its corner under
+# the eye; behind that the cheek ruff covers it.
 JAW = [
-    (0.10, -0.24, 0.20, -0.32, 0.22, -0.40),
-    (-0.14, -0.24, 0.19, -0.30, 0.20, -0.37),
-    (-0.32, -0.22, 0.16, -0.27, 0.17, -0.33),
-    (-0.56, -0.20, 0.13, -0.245, 0.142, -0.30),
-    (-0.80, -0.185, 0.105, -0.225, 0.115, -0.27),
-    (-0.95, -0.175, 0.075, -0.21, 0.08, -0.245),
+    (0.12, -0.21, 0.20, -0.255, 0.24, -0.40),
+    (-0.10, -0.17, 0.20, -0.195, 0.228, -0.37),
+    (-0.20, -0.17, 0.19, -0.195, 0.215, -0.35),     # the corner of the mouth
+    (-0.32, -0.175, 0.16, -0.20, 0.177, -0.33),
+    (-0.56, -0.18, 0.13, -0.207, 0.145, -0.29),
+    (-0.80, -0.178, 0.105, -0.207, 0.118, -0.26),
+    (-0.95, -0.172, 0.075, -0.197, 0.082, -0.235),
 ]
 
 # Cross-sections, (side, up), going round.
@@ -120,8 +144,8 @@ P_BROW = [(0, 1.0), (0.95, -0.2), (0.55, -0.7), (-0.55, -0.7), (-0.95, -0.2)]
 # Width of a fur shard along its length, as a fraction of its half width (0 root, 1 tip).
 LOCK = [(0, 0.0), (0.1, 0.6), (0.4, 1.0), (0.75, 0.75), (1, 0.0)]
 
-# The coat: charcoal-black, deep indigo, slate, silver-grey (read from each vertex's colour position g).
-COAT = [(0.0, "#0B0B11"), (0.14, "#13131D"), (0.32, "#1F2139"), (0.52, "#3D4162"), (0.72, "#7A7F98"), (1.0, "#B4B8C6")]
+# The coat: charcoal, deep indigo, slate, silver-grey (read from each vertex's colour position g).
+COAT = [(0.0, "#0F0F17"), (0.14, "#171826"), (0.32, "#232641"), (0.52, "#41476A"), (0.72, "#7F859E"), (1.0, "#BCC0CC")]
 
 
 # ---- small helpers ----------------------------------------------------------------------------------
@@ -160,7 +184,7 @@ def lerp(a, b, t):
     return a + (b - a) * t
 
 
-LAYERS = ("g", "xn", "d", "f")
+LAYERS = ("g", "xn", "d", "f", "tip")
 
 
 def _layers(bm):
@@ -170,7 +194,7 @@ def _layers(bm):
 def paint(bm, g, feather=0.0):
     """Give every vertex of a shape the colour position g: a number, or a function of the vertex
     (its co and normal are up to date)."""
-    lg, lx, ld, lf = _layers(bm)
+    lg, lx, ld, lf, lt = _layers(bm)
     if callable(g):
         bm.normal_update()
     for v in bm.verts:
@@ -222,7 +246,7 @@ def loft(points, n, profile, up=None, side=None, ref=None, g=(0.0, 0.0), gpow=1.
     it is (xn, -1 to 1), how far along it is in studs (d) and whether it is a fur shard (f)."""
     C = Curve(points)
     bm = bmesh.new()
-    lg, lx, ld, lf = _layers(bm)
+    lg, lx, ld, lf, lt = _layers(bm)
     rings, sign = [], None
     for i in range(n + 1):
         t = i / n
@@ -243,7 +267,7 @@ def loft(points, n, profile, up=None, side=None, ref=None, g=(0.0, 0.0), gpow=1.
         fv = 1.0 if feather else 0.0
         if (tip and i == n) or (root and i == 0):
             v = bm.verts.new(p)
-            v[lg], v[lx], v[ld], v[lf] = gv, 0.0, C.L * t, fv
+            v[lg], v[lx], v[ld], v[lf], v[lt] = gv, 0.0, C.L * t, fv, t * fv
             rings.append([v])
             continue
         prof = profile(t)
@@ -251,7 +275,7 @@ def loft(points, n, profile, up=None, side=None, ref=None, g=(0.0, 0.0), gpow=1.
         ring = []
         for x, y in prof:
             v = bm.verts.new(p + W * x + N * y)
-            v[lg], v[lx], v[ld], v[lf] = gv, x / wmax, C.L * t, fv
+            v[lg], v[lx], v[ld], v[lf], v[lt] = gv, x / wmax, C.L * t, fv, t * fv
             ring.append(v)
         rings.append(ring)
     m = max(len(r) for r in rings)
@@ -328,7 +352,7 @@ def row(place, count, closed=False, cols=2, rows=3, depth=0.6, lift=0.08, sink=0
     tip and is buried `sink` at its root, so the next row covers its root. g is (root, tip) or a
     function g(u, v); lift may be a function of u."""
     bm = bmesh.new()
-    lg, lx, ld, lf = _layers(bm)
+    lg, lx, ld, lf, lt = _layers(bm)
     ncol = count * cols + (0 if closed else 1)
     top, bot = [], []
     for c in range(ncol):
@@ -348,7 +372,7 @@ def row(place, count, closed=False, cols=2, rows=3, depth=0.6, lift=0.08, sink=0
                     bc.append(tc[-1])
                     continue
                 vert = bm.verts.new(p + nrm * off)
-                vert[lg], vert[lx], vert[ld], vert[lf] = gv, q, v * L, 1.0
+                vert[lg], vert[lx], vert[ld], vert[lf], vert[lt] = gv, q, v * L, 1.0, v
                 lst.append(vert)
         top.append(tc)
         bot.append(bc)
@@ -460,7 +484,7 @@ def shell(sections, corners, per=3, m=2, back_cap=0.0, nose_cap=0.0):
 
 def skull_corners(sec):
     y, zt, wt, zb, wb, zc, wc, zj, wj, zk = sec
-    dome = 0.2 * wt                                   # the crown and the bridge are gently rounded
+    dome = 0.3 * wt                                   # the crown and the bridge are gently rounded
     return [(0, zt + dome), (-0.5 * wt, zt + dome * 0.7), (-wt, zt), (-wb, zb), (-wc, zc), (-wj, zj),
             (-0.5 * wj, zk + 0.025), (0, zk), (0.5 * wj, zk + 0.025), (wj, zj), (wc, zc), (wb, zb),
             (wt, zt), (0.5 * wt, zt + dome * 0.7)]
@@ -472,13 +496,24 @@ def jaw_corners(sec):
 
 
 class Surface:
-    """Finds points exactly on a mesh, so that details sit on it and neither float nor sink."""
+    """Finds points exactly on one or more meshes, so that details sit on them and neither float nor sink."""
 
-    def __init__(self, bm):
-        self.bvh = BVHTree.FromBMesh(bm)
+    def __init__(self, *bms):
+        if len(bms) == 1:
+            self.bvh = BVHTree.FromBMesh(bms[0])
+            return
+        verts, polys = [], []
+        for bm in bms:
+            off = len(verts)
+            bm.verts.index_update()
+            verts += [v.co.copy() for v in bm.verts]
+            polys += [[off + v.index for v in f.verts] for f in bm.faces]
+        self.bvh = BVHTree.FromPolygons(verts, polys)
 
-    def hit(self, origin, direction, out=0.0):
+    def hit(self, origin, direction, out=0.0, nearest=False):
         loc, nrm, _, _ = self.bvh.ray_cast(Vector(origin), Vector(direction).normalized())
+        if loc is None and nearest:                      # the ray missed: take the nearest point instead
+            loc, nrm, _, _ = self.bvh.find_nearest(Vector(origin))
         if loc is None:
             raise ValueError("nothing in the way of the ray from %s" % (tuple(origin),))
         return loc + nrm * out, nrm
@@ -647,7 +682,8 @@ def _node_ops(tree):
     return new, link, attr, op, remap, ramp
 
 
-def coat_material(name, stops, streak, strands=2.5, strand_amt=0.16, rough=0.88, frost=0.0, frost_colour="#4A5080"):
+def coat_material(name, stops, streak, strands=2.5, strand_amt=0.16, rough=0.88, frost=0.0, frost_colour="#4A5080",
+                  tip_frost=0.0, top_light=0.0, streak_frost=None):
     """Fur: a colour ramp read from each vertex's colour position g, kit.furry's streaks over it so it
     is not flat plastic, and on the fur shards (f = 1) light and dark strands running their length,
     a little darker at the edges."""
@@ -674,8 +710,13 @@ def coat_material(name, stops, streak, strands=2.5, strand_amt=0.16, rough=0.88,
         sep = new("ShaderNodeSeparateXYZ")
         link(geo.outputs["Normal"], sep.inputs[0])
         upright = remap(op('ABSOLUTE', sep.outputs[2]), 0.35, 0.8, 1.0, 0.0, smooth=True)
-        fac = op('MULTIPLY', remap(streak.outputs[0], 0.5, 0.72, 0.0, frost, smooth=True), op('MULTIPLY', upright, op('SUBTRACT', 1.0, f)))
+        sf = frost if streak_frost is None else streak_frost
+        fac = op('MULTIPLY', remap(streak.outputs[0], 0.5, 0.72, 0.0, sf, smooth=True), op('MULTIPLY', upright, op('SUBTRACT', 1.0, f)))
         fac = op('ADD', fac, op('MULTIPLY', remap(lines, 1.0, 1.0 + strand_amt, 0.0, frost * 0.8), f))
+        # the tips of the shards and the fur facing up catch a cool light, so the layered shapes still
+        # read on the dark coat from a distance
+        fac = op('ADD', fac, op('MULTIPLY', remap(attr("tip"), 0.45, 1.0, 0.0, tip_frost, smooth=True), f))
+        fac = op('ADD', fac, remap(sep.outputs[2], 0.25, 0.95, 0.0, top_light, smooth=True))
         b = kit.principled(m)
         sheen = new("ShaderNodeMix")
         sheen.data_type, sheen.blend_type = 'RGBA', 'SCREEN'
@@ -700,14 +741,15 @@ def ramp_material(name, stops, rough=0.5, streak=None):
 # ---- the wolf ---------------------------------------------------------------------------------------
 
 def build():
-    coat = coat_material("Coat", COAT, dict(strength=0.36, mottle=0.14, fine=9.5, length=4.5), frost=0.42)
+    coat = coat_material("Coat", COAT, dict(strength=0.36, mottle=0.14, fine=9.5, length=4.5), frost=0.38, frost_colour="#525C88",
+                         tip_frost=0.32, top_light=0.08, streak_frost=0.2)
     facecoat = coat_material("Face", COAT, dict(strength=0.22, mottle=0.06, fine=17.0, length=3.0), frost=0.12)
     tipfur = coat_material("TipFur", [(0.0, "#1A1B2A"), (0.5, "#2E2852"), (1.0, "#6A4FB0")],
-                           dict(strength=0.3, mottle=0.1, fine=7.0, length=6.0), frost=0.3, frost_colour="#5A4A9A")
+                           dict(strength=0.3, mottle=0.1, fine=7.0, length=6.0), frost=0.3, frost_colour="#5A4A9A", tip_frost=0.3)
     claw = ramp_material("Claw", [(0.0, "#2A2A34"), (0.6, "#16161D"), (1.0, "#0A0A0E")], rough=0.45)
     crystal_mat = ramp_material("Crystal", [(0.0, "#0F0E1C"), (0.55, "#231D40"), (1.0, "#4A3A85")], rough=0.3)
     dark = kit.material("Dark", "#0B0B10", rough=0.5)
-    glow = kit.material("GLOW_Violet", "#6E44FF", rough=0.4, emit=2.2)
+    glow = kit.material("GLOW_Violet", "#5A2BFF", rough=0.4, emit=1.4)
 
     wolf = Prop("Wolf")
     wolf.tally = {}
@@ -733,11 +775,14 @@ def build():
     skin = Skin(BODY)
     neck = Skin(NECK + [(*hs(NECK_TOP[0]), *NECK_TOP[1]), (*hs(NECK_TOP[2]), *NECK_TOP[3])])
 
+    s_ch0, s_ch1 = skin.s_of(6.3), skin.s_of(7.6)
+
     def skin_g(s, th):
         sn = math.sin(math.radians(th))
         if sn >= 0:
             return 0.18 - 0.13 * sn
-        return 0.18 + 0.6 * smooth(sn, -0.3, -0.9)
+        chest = smooth(s, s_ch0, s_ch1)                         # on the chest the silver comes further up the sides
+        return 0.18 + 0.6 * smooth(sn, lerp(-0.3, 0.05, chest), lerp(-0.9, -0.6, chest))
     add("skin", skin.mesh(segs=20, g=skin_g), coat)
     add("skin", neck.mesh(segs=18, g=skin_g), coat)
 
@@ -780,10 +825,14 @@ def build():
                                th0=8.0 - 4 * (k % 2), span=164.0 + 8 * (k % 2))
         add("coat", row(place, count, rows=2, depth=0.55, lift=0.08, sink=0.04, ridge=0.03, thick=0.035,
                         g=lambda u, v, th_of=th_of: skin_g(0, th_of(u)) + 0.05 * v, L=L, point=0.85), coat)
+    # over the croup, the shaggy fur runs down onto the tops of the thighs
+    place, th_of = ring_of(skin, skin.s_of(1.8), 11, lambda th: 0.72 * (1 + 0.1 * math.sin(math.radians(th) * 4)), th0=-28.0, span=236.0)
+    add("coat", row(place, 11, rows=2, depth=0.55, lift=0.09, sink=0.04, ridge=0.03, thick=0.035,
+                    g=lambda u, v: skin_g(0, th_of(u)) + 0.05 * v, L=0.72, point=0.85), coat)
     # a fringe of longer fur along the underside of the ribcage
     for k, (idx, L) in enumerate(((6.15, 0.7), (5.5, 0.68), (4.85, 0.64), (4.2, 0.56))):
-        place, th_of = ring_of(skin, skin.s_of(idx), 7, lambda th, L=L: L, th0=-155.0 + 8 * (k % 2), span=130.0)
-        add("fringe", row(place, 7, rows=2, depth=0.5, lift=0.1, sink=0.04, ridge=0.03, thick=0.035,
+        place, th_of = ring_of(skin, skin.s_of(idx), 6, lambda th, L=L: L, th0=-155.0 + 8 * (k % 2), span=130.0)
+        add("fringe", row(place, 6, rows=2, depth=0.5, lift=0.1, sink=0.04, ridge=0.03, thick=0.035,
                           g=lambda u, v, th_of=th_of: skin_g(0, th_of(u)) + 0.06 * v, L=L, point=0.85), coat)
 
     def strip(roots, D, out, length, count, **kw):
@@ -799,81 +848,134 @@ def build():
     # ---- legs: long and powerful, each one continuous loft from the shoulder or hip to the paw --------
     def leg_g(sx):
         def g(v):
-            n = v.normal
-            return 0.17 + 0.42 * smooth(-n.x * sx, 0.1, 0.85) + 0.1 * smooth(n.y, 0.3, 0.9) + 0.25 * smooth(n.z, -0.3, -0.9)
+            n, z = v.normal, v.co.z
+            inner = smooth(-n.x * sx, 0.1, 0.85)
+            front = smooth(-n.y, 0.3, 0.85) * smooth(z, 2.3, 0.9)                   # silver down the fronts of the lower legs
+            return min(0.17 + 0.32 * inner + 0.08 * smooth(n.y, 0.3, 0.9) + 0.25 * smooth(n.z, -0.3, -0.9) + 0.42 * front, 0.84)
         return g
 
-    for sx in (-1, 1):
-        fore = [(0.6 * sx, -1.38, 3.95), (0.68 * sx, -1.12, 2.85), (0.66 * sx, -1.2, 2.25), (0.62 * sx, -1.3, 1.5),
-                (0.61 * sx, -1.36, 0.95), (0.61 * sx, -1.42, 0.6), (0.61 * sx, -1.5, 0.26)]
-        add("legs", paint(limb(fore, [(0.46, 0.72), (0.42, 0.6), (0.37, 0.46), (0.3, 0.34), (0.25, 0.28), (0.25, 0.28), (0.26, 0.3)],
-                               P_LEG, 20, up=(0, -1, 0.05)), leg_g(sx)), coat)
-        add("legs", paint(kit.ball((0.56, 1.1, 1.4), cuts=3), leg_g(sx)), coat, M((0.71 * sx, -1.45, 3.45), rot=(18, 0, 0)))
-        # feathering down the back of the forearm
-        add("legs", strip([(0.68 * sx, -0.84, 2.75), (0.65 * sx, -0.9, 2.25), (0.63 * sx, -0.98, 1.75)], (0, 0.45, -1), (0.2 * sx, 1, 0),
-                          0.42, 4, rows=2, depth=0.5, lift=0.06, sink=0.03, ridge=0.025, thick=0.03, g=(0.3, 0.42), L=0.42, point=0.85), coat)
-        hind = [(0.62 * sx, 1.75, 4.05), (0.76 * sx, 1.30, 3.0), (0.75 * sx, 1.48, 2.3), (0.72 * sx, 1.85, 1.75),
-                (0.69 * sx, 2.2, 1.3), (0.67 * sx, 2.12, 0.72), (0.66 * sx, 2.02, 0.27)]
-        add("legs", paint(limb(hind, [(0.58, 1.1), (0.53, 0.9), (0.44, 0.62), (0.34, 0.44), (0.28, 0.34), (0.235, 0.27), (0.255, 0.29)],
-                               P_LEG, 22, up=(0, -1, 0.05)), leg_g(sx)), coat)
-        add("legs", paint(kit.ball((0.58, 1.22, 1.3), cuts=3), leg_g(sx)), coat, M((0.72 * sx, 1.7, 3.12), rot=(-28, 0, 5 * sx)))
-        # breeches: long fur down the back of the thigh
-        for k, (dy, L) in enumerate(((0.0, 0.62), (0.14, 0.5))):
-            add("legs", strip([(0.71 * sx, 2.38 + dy, 3.75 - 0.1 * k), (0.75 * sx, 2.4 + dy, 3.25 - 0.1 * k), (0.73 * sx, 2.28 + dy, 2.75 - 0.1 * k)],
-                              (0, 0.35, -1), (0.35 * sx, 1, 0), L, 4, rows=2, depth=0.5, lift=0.08, sink=0.03, ridge=0.025, thick=0.03,
-                              g=(0.16 + 0.1 * k, 0.26 + 0.1 * k), L=L, point=0.85), coat)
+    def tuft(surf, rays, ray_dir, D, length, count, g, **kw):
+        """A row of shards whose roots sit where rays from the points along the curve `rays` (going
+        along ray_dir) meet `surf`, each pointing along D; length may be a function of u."""
+        C = Curve(rays)
+        D = Vector(D).normalized()
+        cache = {}
 
-        # paws: a broad pad, four toes, short dark claws touching the floor
-        for paw, size in ((Vector((0.61 * sx, -1.58, 0.0)), 1.08), (Vector((0.66 * sx, 1.96, 0.0)), 0.98)):
+        def place(u, v):
+            key = round(u, 5)
+            if key not in cache:
+                cache[key] = surf.hit(C.at(min(u / count, 1.0)), ray_dir, nearest=True)
+            q, qn = cache[key]
+            ln = length(u) if callable(length) else length
+            return q + D * ln * v, qn
+        return row(place, count, g=g, L=length if not callable(length) else length(0.0), **kw)
+
+    shard = dict(rows=2, depth=0.5, sink=0.03, ridge=0.03, thick=0.035, point=0.85)
+    for sx in (-1, 1):
+        fore = [(0.62 * sx, -1.38, 3.95), (0.72 * sx, -1.12, 2.85), (0.71 * sx, -1.2, 2.25), (0.67 * sx, -1.3, 1.5),
+                (0.66 * sx, -1.36, 0.95), (0.66 * sx, -1.42, 0.6), (0.66 * sx, -1.5, 0.26)]
+        leg = paint(limb(fore, [(0.48, 0.74), (0.46, 0.64), (0.42, 0.52), (0.34, 0.4), (0.28, 0.31), (0.27, 0.3), (0.28, 0.32)],
+                         P_LEG, 16, up=(0, -1, 0.05)), leg_g(sx))
+        shoulder = paint(kit.ball((0.6, 1.1, 1.4), cuts=3), leg_g(sx))
+        shoulder.transform(M((0.74 * sx, -1.45, 3.45), rot=(18, 0, 0)))
+        upper = Surface(leg, shoulder)
+        surf = Surface(leg)
+        add("legs", leg, coat)
+        add("legs", shoulder, coat)
+        # shaggy fur over the outside of the upper foreleg, blending it into the barrel
+        for k, (pts, L) in enumerate((([(-1.9, 3.4), (-1.42, 3.55), (-0.95, 3.35)], 0.56), ([(-1.8, 2.8), (-1.38, 2.86), (-0.98, 2.72)], 0.48))):
+            add("legs", tuft(upper, [(2.5 * sx, y, z) for y, z in pts], (-sx, 0, 0), (0.22 * sx, 0.3, -1), L, 4,
+                             lambda u, v, k=k: 0.14 + 0.05 * k + 0.12 * v, lift=0.08, **shard), coat)
+        # feathering: a fringe of long fur down the back of the foreleg, longest at the elbow
+        add("legs", tuft(surf, [(0.72 * sx, 1.0, 2.9), (0.7 * sx, 1.0, 2.05), (0.67 * sx, 1.0, 1.15)], (0, -1, 0), (0.14 * sx, 0.5, -1),
+                         lambda u: 0.62 - 0.04 * u, 6, lambda u, v: 0.28 + 0.12 * v, lift=0.1, **shard), coat)
+        add("legs", tuft(surf, [(0.84 * sx, 1.0, 2.6), (0.8 * sx, 1.0, 1.9), (0.76 * sx, 1.0, 1.3)], (0, -1, 0), (0.3 * sx, 0.45, -1),
+                         0.44, 4, lambda u, v: 0.22 + 0.12 * v, lift=0.08, **shard), coat)
+        # a tuft sticking back from the elbow, and a short one at the back of the wrist
+        add("legs", tuft(surf, [(0.5 * sx, 1.0, 2.86), (0.92 * sx, 1.0, 2.82)], (0, -1, 0), (0.35 * sx, 1.0, -0.5),
+                         0.5, 3, lambda u, v: 0.2 + 0.14 * v, lift=0.1, **shard), coat)
+        add("legs", tuft(surf, [(0.5 * sx, 1.0, 0.98), (0.84 * sx, 1.0, 0.98)], (0, -1, 0), (0.1 * sx, 0.7, -1),
+                         0.3, 3, lambda u, v: 0.3 + 0.12 * v, lift=0.06, **shard), coat)
+
+        hind = [(0.64 * sx, 1.75, 4.05), (0.8 * sx, 1.30, 3.0), (0.79 * sx, 1.48, 2.3), (0.76 * sx, 1.85, 1.75),
+                (0.72 * sx, 2.2, 1.3), (0.7 * sx, 2.12, 0.72), (0.69 * sx, 2.02, 0.27)]
+        leg = paint(limb(hind, [(0.62, 1.15), (0.58, 0.96), (0.48, 0.68), (0.38, 0.5), (0.32, 0.38), (0.27, 0.3), (0.28, 0.32)],
+                         P_LEG, 18, up=(0, -1, 0.05)), leg_g(sx))
+        haunch = paint(kit.ball((0.64, 1.3, 1.4), cuts=3), leg_g(sx))
+        haunch.transform(M((0.76 * sx, 1.7, 3.15), rot=(-28, 0, 5 * sx)))
+        surf = Surface(leg, haunch)
+        add("legs", leg, coat)
+        add("legs", haunch, coat)
+        # shaggy fur over the outside of the thigh, in three rows lying over each other
+        for k, (pts, L, n) in enumerate((([(1.05, 3.58), (1.7, 3.82), (2.35, 3.6)], 0.62, 5),
+                                         ([(1.0, 3.02), (1.65, 3.14), (2.3, 2.95)], 0.56, 5),
+                                         ([(1.15, 2.5), (1.55, 2.55), (1.95, 2.4)], 0.48, 4))):
+            add("legs", tuft(surf, [(2.5 * sx, y, z) for y, z in pts], (-sx, 0, 0), (0.25 * sx, 0.55, -1), L, n,
+                             lambda u, v, k=k: 0.14 + 0.05 * k + 0.12 * v, lift=0.09, **shard), coat)
+        # a tuft at the back of the hock
+        add("legs", tuft(surf, [(0.52 * sx, 4.0, 1.32), (0.9 * sx, 4.0, 1.32)], (0, -1, 0), (0.1 * sx, 0.55, -1),
+                         0.36, 3, lambda u, v: 0.22 + 0.12 * v, lift=0.07, **shard), coat)
+
+        # paws: big, a broad pad and four separate toes, short dark claws touching the floor
+        for paw, size in ((Vector((0.66 * sx, -1.6, 0.0)), 1.18), (Vector((0.7 * sx, 1.96, 0.0)), 1.08)):
             P = M(paw, scale=size)
-            add("paws", paint(rounded_box((0.58, 0.66, 0.34), n=3.0, cuts=2), 0.15), coat, P @ M((0, 0, 0.17)))
-            for k, ox in enumerate((-0.22, -0.074, 0.074, 0.22)):
+            add("paws", paint(rounded_box((0.56, 0.56, 0.32), n=3.0, cuts=2), lambda v: 0.2 + 0.24 * smooth(-v.normal.y, 0.2, 0.9)),
+                coat, P @ M((0, 0.05, 0.16)))
+            for k, ox in enumerate((-0.215, -0.072, 0.072, 0.215)):
                 dy = -0.05 if k in (1, 2) else 0.0
-                add("paws", paint(kit.ball((0.2, 0.26, 0.2), cuts=1), 0.17), coat, P @ M((ox, -0.28 + dy, 0.1)))
-                cl = [(ox, -0.36 + dy, 0.12), (ox, -0.43 + dy, 0.08), (ox, -0.46 + dy, 0.0)]
+                add("paws", paint(kit.ball((0.19, 0.3, 0.24), cuts=1), 0.42), coat, P @ M((ox, -0.27 + dy, 0.12), rot=(0, 0, 7 * (k - 1.5))))
+                cl = [(ox * 1.04, -0.40 + dy, 0.13), (ox * 1.05, -0.47 + dy, 0.08), (ox * 1.06, -0.50 + dy, 0.0)]
                 add("claws", loft(cl, 3, fixed([0.045, 0.03, 0.005], P_CLAW), up=(0, -0.3, 1), g=(0.2, 1.0), tip=True),
                     claw, P, crease=50)
 
-    # ---- tail: bushy, held low, the end lifting a little; rings of shards round a core ---------------
+    # ---- tail: bushy, held low; big locks of fur of uneven length sweep back and droop ----------------
     tail = [(0, 2.40, 4.18), (0.0, 2.90, 3.98), (0.04, 3.30, 3.42), (0.10, 3.60, 2.74), (0.14, 3.86, 2.12),
-            (0.13, 4.16, 1.70), (0.08, 4.50, 1.60), (0.02, 4.80, 1.78)]
+            (0.13, 4.16, 1.70), (0.08, 4.50, 1.58), (0.02, 4.80, 1.70)]
     core_r = [0.2, 0.26, 0.31, 0.34, 0.34, 0.3, 0.22, 0.08]
-    add("tail", paint(loft(tail, 18, fixed(core_r, round_shape(10)), up=(0, 0, 1)),
+    add("tail", paint(loft(tail, 14, fixed(core_r, round_shape(10)), up=(0, 0, 1)),
                       lambda v: 0.08 + 0.6 * smooth(v.normal.z, -0.1, -0.85)), coat)
     TC = Curve(tail)
 
-    def tail_place(t0, L, count, stagger):
+    def tail_place(t0, length_of, count, stagger, droop):
         def place(u, v):
-            t = min(t0 + L / TC.L * v * 0.95, 1.0)
+            ln = length_of(u)
+            t = min(t0 + ln / TC.L * v * 0.9, 1.0)
             c, T = TC.at(t), TC.tangent(t)
             X = T.cross(Vector((0, 0, 1))).normalized()
             Y = X.cross(T).normalized()
             ang = 2 * math.pi * (u + stagger) / count
             radial = X * math.cos(ang) + Y * math.sin(ang)
             rad = _cr(core_r, t * (len(core_r) - 1)) * 0.95
-            return c + radial * rad, radial
+            return c + radial * rad - Vector((0, 0, droop * ln * v * v)), radial
         return place
 
-    for k in range(8):
-        t0 = 0.1 + 0.092 * k
-        L = 0.6 + 0.035 * k
-        tip = k >= 7
-        def tg(u, v, k=k, tip=tip):
-            ang = 2 * math.pi * (u + 0.5 * (k % 2)) / 9
+    for k in range(6):
+        t0 = 0.1 + 0.12 * k
+        L = 0.72 + 0.05 * k
+        tip = k >= 5
+        stagger = 0.5 * (k % 2) + 0.23 * k
+
+        def tg(u, v, k=k, tip=tip, stagger=stagger):
             if tip:
                 return 0.25 + 0.6 * v
-            return 0.08 + 0.55 * smooth(math.sin(ang), 0.1, -0.9) + 0.05 * v
-        add("tail", row(tail_place(t0, L, 9, 0.5 * (k % 2)), 9, closed=True, rows=2, depth=0.5, lift=0.12 + 0.012 * k,
-                        sink=0.04, ridge=0.03, thick=0.035, g=tg, L=L, point=0.85), tipfur if tip else coat)
-    # the tip: a brush of long shards closing over a small glowing core
+            ang = 2 * math.pi * (u + stagger) / 6
+            return 0.08 + 0.55 * smooth(math.sin(ang), 0.1, -0.9) + 0.12 * v
+
+        def length_of(u, L=L, k=k):
+            return L * (1 + 0.2 * math.sin(2.1 * u + 1.7 * k) * math.cos(0.9 * u + k))
+        add("tail", row(tail_place(t0, length_of, 6, stagger, 0.28), 6, closed=True, rows=3, depth=0.45, lift=0.14 + 0.015 * k,
+                        sink=0.04, ridge=0.035, thick=0.04, g=tg, L=L, point=0.8), tipfur if tip else coat)
+    # the tip: a brush of long shards closing over a small glowing core, drooping a little
     end, T = TC.at(1.0), TC.tangent(1.0)
     X = T.cross(Vector((0, 0, 1))).normalized()
     Y = X.cross(T).normalized()
+    Z = Vector((0, 0, 1))
     for k in range(7):
         ang = 2 * math.pi * k / 7
         rad = X * math.cos(ang) + Y * math.sin(ang)
-        Lk = 0.6 if k % 2 == 0 else 0.5
-        pts = [end - T * 0.2 + rad * 0.06, end + T * 0.1 + rad * 0.16, end + T * (0.6 * Lk) + rad * 0.13, end + T * Lk + rad * 0.03]
+        Lk = 0.62 if k % 2 == 0 else 0.5
+        pts = [end - T * 0.2 + rad * 0.06, end + T * 0.1 + rad * 0.16, end + T * (0.6 * Lk) + rad * 0.13 - Z * 0.05,
+               end + T * Lk + rad * 0.03 - Z * 0.13]
         add("tail", loft(pts, 7, blade(LOCK, 0.1, 0.04, cup=0.25), up=rad, g=(0.4, 1.0), feather=True, tip=True, root=True,
                          sharp=(0, 2)), tipfur)
     add("glow", loft([end - T * 0.05, end + T * 0.2, end + T * 0.42], 5, fixed([0.07, 0.07, 0.01], round_shape(6)),
@@ -891,15 +993,19 @@ def build():
 
     # ---- head: placed in its own space, then turned as one -------------------------------------------
     skull = shell(SKULL, skull_corners, per=3, m=2, back_cap=0.05, nose_cap=0.02)
-    face = Surface(skull)
+    jaw = shell(JAW, jaw_corners, per=2, m=2, back_cap=0.04, nose_cap=0.01)
+    face = Surface(skull, jaw)
 
     def head_g(v):
+        # dark crown, a slate bridge; the silver comes up highest on the muzzle and blends softly down
+        # over the cheeks into the throat, so it reads as fur and not as a band
         co = v.co
-        low = smooth(co.z, 0.04, -0.12)
-        muzzle = smooth(co.y, -0.22, -0.45)
-        return lerp(lerp(0.1, 0.3, muzzle), 0.84, low)
+        m = smooth(co.y, -0.1, -0.62)
+        z0 = lerp(-0.16, -0.02, m)
+        low = smooth(co.z, z0 + 0.14, z0 - 0.14)
+        return lerp(lerp(0.12, 0.34, m), lerp(0.68, 0.8, m), low)
     add("head", paint(skull, head_g), facecoat, H, crease=40)
-    add("head", paint(shell(JAW, jaw_corners, per=2, m=2, back_cap=0.04, nose_cap=0.01), 0.8), facecoat, H, crease=40)
+    add("head", paint(jaw, head_g), facecoat, H, crease=40)
 
     # the nose: a dark, angular pad over the end of the muzzle
     nose = rounded_box((0.17, 0.13, 0.11), n=4.0, cuts=2)
@@ -911,14 +1017,14 @@ def build():
     for sx in (-1, 1):
         # the eye: a glowing almond, slanted up towards the temple, tucked under the brow
         p, nrm = face.hit((0.8 * sx, -0.25, 0.078), (-sx, 0.0, 0.0))
-        eye = [(-0.5, -0.02), (-0.3, 0.1), (-0.05, 0.19), (0.2, 0.21), (0.42, 0.17), (0.5, 0.13), (0.3, 0.02), (0.0, -0.05),
-               (-0.28, -0.06)]
+        eye = [(-0.5, -0.03), (-0.3, 0.08), (-0.05, 0.17), (0.2, 0.21), (0.4, 0.21), (0.52, 0.19), (0.32, 0.07), (0.05, -0.03),
+               (-0.26, -0.06)]
         add("eyes", lens([(a * 0.23, b * 0.4) for a, b in eye], 0.04, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.06)),
             glow, H @ facing(p + nrm * 0.004, nrm, Vector((0, 1, 0.05))))
         # brow: a heavy ridge from the stop back over the eye, casting it into shadow
-        brow = [(0.07 * sx, -0.38, 0.205), (0.15 * sx, -0.32, 0.228), (0.235 * sx, -0.235, 0.226), (0.29 * sx, -0.12, 0.214),
-                (0.31 * sx, 0.02, 0.17)]
-        add("brows", paint(loft(brow, 10, fixed([(0.022, 0.018), (0.045, 0.036), (0.058, 0.044), (0.05, 0.04), (0.022, 0.018)], P_BROW),
+        brow = [(0.07 * sx, -0.38, 0.215), (0.15 * sx, -0.32, 0.238), (0.235 * sx, -0.235, 0.245), (0.29 * sx, -0.12, 0.25),
+                (0.31 * sx, 0.02, 0.235)]
+        add("brows", paint(loft(brow, 10, fixed([(0.022, 0.016), (0.045, 0.032), (0.056, 0.04), (0.048, 0.036), (0.022, 0.016)], P_BROW),
                                 up=(0.6 * sx, 0, 1)), 0.12), facecoat, H, crease=38)
         # cheekbone: a hard ridge from under the eye back towards the ear
         cheek = [(0.2 * sx, -0.34, -0.035), (0.3 * sx, -0.16, -0.025), (0.385 * sx, 0.06, -0.02), (0.36 * sx, 0.24, 0.02)]
@@ -1008,6 +1114,7 @@ def main():
         rig = review.Rig(wolf, samples=samples, focus=(head.x, head.y + 1.4, head.z - 1.6))
         rig.cams["face"] = review._camera("C_face", head + Vector((-0.62, -1.0, 0.12)).normalized() * 4.2, head + Vector((0, 0.35, -0.1)), 30)
         rig.cams["spine"] = review._camera("C_spine", Vector((-3.0, -2.4, 6.9)), Vector((0.0, -0.3, 4.8)), 30)
+        rig.cams["face front"] = review._camera("C_facefront", head + Vector((-0.17, -1.0, 0.04)).normalized() * 4.2, head + Vector((0, 0.3, -0.12)), 30)
         return rig, review
 
     if a.peek:
