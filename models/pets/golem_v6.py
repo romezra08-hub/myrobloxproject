@@ -150,6 +150,16 @@ def hewn(size, top=(1.0, 1.0), bottom=(1.0, 1.0), shift=(0.0, 0.0), seed=0, cham
     return bm
 
 
+def ridge(face, half, axis, degrees, inset=0.01):
+    """Two more cuts for hewn(): they break one face of a block into two planes meeting along a ridge
+    through its middle, the way a mason dresses a stone. `face` is the face's outward direction in the
+    block's own space, `half` how far out from the centre the face lies, `axis` the ridge's direction."""
+    n = Vector(face).normalized()
+    a = Vector(axis).normalized()
+    co = n * (half - inset)
+    return [(co, Matrix.Rotation(math.radians(degrees), 3, a) @ n), (co, Matrix.Rotation(math.radians(-degrees), 3, a) @ n)]
+
+
 # ---- crystals ------------------------------------------------------------------------------------------
 
 def crystal(length, radius, seed=0, tip=(1.2, 2.0), sink=0.35):
@@ -355,7 +365,7 @@ def crystal_material(name):
     a.attribute_type, a.attribute_name = 'GEOMETRY', "grad"
     ramp = N.new("ShaderNodeValToRGB")
     els = ramp.color_ramp.elements
-    stops = [(0.0, "#021C10"), (0.38, "#07492B"), (0.76, "#13804A"), (1.0, "#8FE3B4")]
+    stops = [(0.0, "#021A0F"), (0.4, "#063F25"), (0.8, "#0F6E40"), (1.0, "#7FD6A8")]
     els[0].position, els[0].color = stops[0][0], (*kit.srgb(stops[0][1]), 1.0)
     els[1].position, els[1].color = stops[-1][0], (*kit.srgb(stops[-1][1]), 1.0)
     for pos, hexcode in stops[1:-1]:
@@ -369,7 +379,7 @@ def crystal_material(name):
     dot.inputs[1].default_value = (-0.45, -0.55, 0.7)
     facet = N.math('MULTIPLY_ADD', dot.outputs["Value"], 0.4, 1.0)
     col = N.value(ramp.outputs["Color"], facet)
-    col = N.mix(N.math('MULTIPLY', N.edge(0.03, 0.995, 0.9), 0.55), col, "#C8FFE6")
+    col = N.mix(N.math('MULTIPLY', N.edge(0.025, 0.995, 0.9), 0.32), col, "#A8EBC8")
     N.link(col, b.inputs["Base Color"])
     return m
 
@@ -421,7 +431,7 @@ def build():
             block("toes", (w, ln, h), F @ M((0.45 * k, -0.95 + 0.06 * abs(k), 0.15), rot=(0, 0, 4 * k)),
                   top=(0.92, 0.72), shift=(0, 0.08), corner=(0.05, 0.25))
         block("joints", (0.95, 0.95, 0.55), M((x, fy + 0.08, 0.78)), core, rock=8)
-        shins.append((block("shins", (1.42, 1.48, 1.4), M((x * 1.02, fy + 0.04, 1.36), rot=(5, 0, -3 * sx)), top=(0.92, 0.9), bottom=(1.0, 1.0), rock=6, rock_depth=(0.88, 0.98), keep=True), x * 1.02, sx))
+        shins.append((block("shins", (1.42, 1.48, 1.4), M((x * 1.02, fy + 0.04, 1.36), rot=(5, 0, -3 * sx)), top=(0.92, 0.9), bottom=(1.0, 1.0), rock=6, rock_depth=(0.88, 0.98), extra=ridge((0, -1, 0), 0.7, (0, 0, 1), 14), keep=True), x * 1.02, sx))
         block("joints", (0.95, 0.95, 0.7), M((x * 1.02, fy, 2.12)), core, rock=8)
         block("knees", (0.7, 0.42, 0.5), M((x * 1.02, fy - 0.55, 2.12), rot=(14, 0, -6 * sx)), top=(0.8, 0.7), shift=(0, 0.06), rock=5)
         block("thighs", (1.3, 1.4, 1.25), M((x * 0.95, fy * 0.5 + 0.1, 2.78), rot=(-10, 0, 4 * sx)), top=(1.08, 1.06), bottom=(0.86, 0.9), rock=5, rock_depth=(0.88, 0.98))
@@ -431,7 +441,8 @@ def build():
     for sx in (-1, 1):
         block("pelvis", (0.7, 1.2, 0.85), M((1.22 * sx, 0.14, 3.42), rot=(0, -8 * sx, 0)), bottom=(0.78, 0.9))
     block("joints", (1.3, 1.05, 1.2), M((0, 0.15, 4.35)), core)
-    block("belly", (1.3, 0.6, 0.78), L @ M((0, -0.5, 4.4), rot=(3, 0, 0)), top=(1.08, 0.92), bottom=(0.78, 1.0))
+    block("belly", (1.3, 0.6, 0.78), L @ M((0, -0.5, 4.4), rot=(3, 0, 0)), top=(1.08, 0.92), bottom=(0.78, 1.0),
+          extra=ridge((0, -1, 0), 0.29, (0, 0, 1), 12))
 
     # ---- chest: a slab broad at the top and narrow at the waist, two angular pectoral plates ----------------
     chest = block("chest", (3.8, 2.3, 2.65), L @ M((0, 0.1, 6.05)), top=(1.0, 1.0), bottom=(0.55, 0.76), keep=True)
@@ -439,7 +450,7 @@ def build():
     for sx in (-1, 1):
         pecs.append(block("pecs", (1.62, 0.42, 1.26), L @ M((0.86 * sx, -1.13, 6.26), rot=(-4, 0, -12 * sx)),
                           top=(1.0, 0.86), bottom=(0.68, 1.0), shift=(0.08 * sx, 0.0), chamfer=(0.03, 0.08),
-                          corner=(0.0, 0.3), facets=2, tilt=(9.0, 15.0), keep=True))
+                          corner=(0.0, 0.3), facets=1, tilt=(9.0, 15.0), extra=ridge((0, -1, 0), 0.2, (1, 0, 0), 13), keep=True))
     block("chest", (1.7, 0.42, 0.6), L @ M((0, -1.02, 5.3), rot=(8, 0, 0)), top=(1.0, 0.9), bottom=(0.8, 1.0))
     hump = block("back", (3.1, 2.0, 1.95), L @ M((0, 1.0, 7.7), rot=(-14, 0, 0)), top=(0.62, 0.55), shift=(0, 0.1), rock=8, rock_depth=(0.86, 0.97), keep=True)
 
@@ -477,7 +488,8 @@ def build():
         block("joints", (0.85, 0.85, 0.75), Matrix.Translation(E), core, rock=8)
         W = Vector((2.92 * sx, E.y - 0.25, 2.72))
         m, ln = frame(W, E - Vector((0, 0, 0.12)), (sx, 0, 0))
-        forearms.append((block("forearms", (1.42, 1.48, ln), m, top=(0.78, 0.8), bottom=(1.0, 1.0), rock=5, rock_depth=(0.88, 0.98), keep=True), m, ln, sx))
+        forearms.append((block("forearms", (1.42, 1.48, ln), m, top=(0.78, 0.8), bottom=(1.0, 1.0), rock=5, rock_depth=(0.88, 0.98),
+                               extra=ridge((1, 0, 0), 0.63, (0, 0, 1), 12), keep=True), m, ln, sx))
         block("elbows", (0.6, 0.45, 0.66), Matrix.Translation(E + Vector((0.08 * sx, 0.48, 0.0))) @ M(rot=(-10, 0, 0)), top=(0.8, 0.7))
         block("joints", (0.8, 0.8, 0.6), Matrix.Translation(W + Vector((0, 0, -0.1))), core, rock=8)
         # the fist: the back of the hand, a row of knuckles underneath, the curled fingers on the palm side, a thumb
@@ -574,8 +586,8 @@ def build():
         add("crystal cores", crystal(length * 0.78, length * 0.105, seed=seed + 99, tip=(1.6, 2.2)), glow,
             aim(q, Matrix.Rotation(math.radians(8), 3, side) @ d, 10))
 
-    for sx, surf, ln, n in ((-1, boulders[0], 1.95, 6), (1, boulders[1], 1.45, 5)):
-        cluster(surf, lean((2.22 * sx, 0.15, 7.3)), (0.5 * sx, 0.22, 1.0), ln, n, 11 + sx)
+    for sx, surf, ln, n in ((-1, boulders[0], 2.15, 6), (1, boulders[1], 1.6, 5)):
+        cluster(surf, lean((2.22 * sx, 0.15, 7.3)), (0.62 * sx, 0.22, 1.0), ln, n, 11 + sx)
     hc = lean((0, 1.0, 7.7))
     cluster(hump, hc + Vector((-0.35, 0.0, 0.0)), (-0.2, 1.05, 1.0), 1.85, 6, 21)
     cluster(hump, hc + Vector((0.75, 0.0, -0.2)), (0.7, 1.0, 0.45), 1.15, 4, 23)
