@@ -66,7 +66,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 |---|---|---|---|
 | Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
 | Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
-| Unicorn | Low-poly, flat faces with a painted-card grain | 1,828 | 8 |
+| Unicorn | Moonlight unicorn as a faceted low-poly sculpture: prancing horse, pearl-silver coat, sapphire-to-violet mane and tail, twisted glowing crystal horn, gold hooves | 5,864 | 15 (7 since the remake) |
 | Dragon | Adult obsidian fire dragon: wedge head, horn crown, raised red wings, glowing ember eyes and chest seams, 10.2 studs tall | 18,304 | 11 (6 since the redesign) |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
@@ -144,7 +144,9 @@ Known weak points, from the last review of each:
 - Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
 - Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
 - Fox: about 11,600 triangles, heavy for a pet if many are on screen.
-- Unicorn: the horn is stacked steps, not a true spiral.
+- Unicorn: under strong light the coat reads nearly flat white and the gold dapple is faint. Head-on
+  the almond eyes are seen edge-on and look a little sleepy. The legs are slim and it is narrow from
+  the front, so it is small at game distance.
 - Penguin: the wood is only half convincing. The forms are smooth like clay, with no chisel marks,
   and on the navy the grain can read as brushed felt.
 - Turtle: only two rounds. The shell plates are smooth and pillow-like, the skin is a bright lime
