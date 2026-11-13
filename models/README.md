@@ -9,6 +9,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `review.py` | A fixed set of lights and cameras, so each round is judged from the same views |
 | `lineup.py` | Renders all the pets side by side at the same scale (`preview/lineup.png`) |
 | `build_all.py` | Rebuilds every pet (Roblox file, texture, review sheet) and the line-up in one go |
+| `SetupPets.lua` | Paste into Studio's Command Bar after importing a pet, to set it up in one go |
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
@@ -34,14 +35,16 @@ python models/build_all.py
 
 ## Put a pet into Roblox Studio
 
-1. Download `export/<name>.fbx` (the texture is inside it).
+1. Download `export/<name>.fbx` (its textures are inside it).
 2. In Studio: **Home > Import 3D**, pick the file, turn on **Anchored**, then **Import**.
-3. What arrives:
-   - **Fox**: two parts, `Fox_Body` (textured) and `Fox_Eye`. Set `Fox_Eye` to a glossy material
-     such as SmoothPlastic or Glass.
-   - **Puppy**: two parts, `Puppy_Body` (textured) and `Puppy_Gloss` (eyes and nose; make it glossy).
-   - **Unicorn**: two parts, `Unicorn_Body` (textured) and `Unicorn_GLOW_Horn`. Set the horn to Neon.
+3. Select what was imported in the Explorer, open `SetupPets.lua` here, copy all of it, paste it into
+   the **Command Bar** (View > Command Bar) and press Enter. It makes the eyes glossy and any `GLOW`
+   part Neon, switches off collisions, welds the parts to the body, puts the pivot under the feet and
+   moves the pet to **ReplicatedStorage > Pets**. Ctrl+Z undoes it. It has not been run in Studio yet.
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
+
+Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`).
 
 ## The pets so far
 
