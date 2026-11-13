@@ -42,11 +42,24 @@ python models/pets/fox.py --review out/fox.png --export models/export/fox.fbx
 
 | Pet | Style | Triangles | Rounds |
 |---|---|---|---|
-| Fox | Sitting storybook animal with a soft, friendly face | 11,144 | 13 |
-| Puppy | Plush toy with stitches and patches | 8,710 | 6 |
+| Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,116 | 19 |
+| Puppy | Plush toy with stitches, patches and a fleecy nap | 8,710 | 7 |
 | Unicorn | Low-poly, flat faces | 1,448 | 6 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
+
+## Why they do not look like plastic
+
+Smooth shapes in one flat colour read as cheap plastic. Three things in `kit.py` work against that,
+and all of them end up in the texture Roblox reads:
+
+- `furry(material)` paints short fur or a cloth nap: fine streaks and soft mottling.
+- `scaly(material)` paints a skin of small scales with darker joins.
+- `bake_texture(...)` adds soft shadow in the creases and writes a matte roughness image
+  (`<name>_rough.png`) next to the colour image.
+
+If a pet still looks shiny in Studio, open its body part's SurfaceAppearance and set RoughnessMap to
+that `_rough.png` image.
 
 None of them has been checked inside Roblox Studio yet; the renders are from Blender.
 

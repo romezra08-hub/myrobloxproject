@@ -59,6 +59,108 @@ def material(name, hexcode, rough=0.55, metal=0.0, emit=0.0, coat=0.0):
     return m
 
 
+def furry(mat, strength=0.3, mottle=0.12, fine=26.0, length=7.0, shade_down=0.0):
+    """Stop a flat-coloured material looking like plastic: give it the look of short fur.
+
+    Fine light and dark streaks run downwards (`fine` of them per stud across, each about
+    `length` times longer than wide), a soft mottling sits on top, and with `shade_down` the
+    colour deepens towards the feet. It is worked out in 3D space, so it has no seams, and
+    bake_texture bakes it into the colour image that Roblox reads.
+    """
+    tree = mat.node_tree
+    new, link = tree.nodes.new, tree.links.new
+    coord = new("ShaderNodeTexCoord")
+    stretch = new("ShaderNodeMapping")
+    stretch.inputs["Scale"].default_value = (fine, fine, fine / length)
+    link(coord.outputs["Object"], stretch.inputs["Vector"])
+    streak = new("ShaderNodeTexNoise")
+    streak.inputs["Scale"].default_value, streak.inputs["Detail"].default_value = 1.0, 2.0
+    link(stretch.outputs["Vector"], streak.inputs["Vector"])
+    blotch = new("ShaderNodeTexNoise")
+    blotch.inputs["Scale"].default_value, blotch.inputs["Detail"].default_value = 2.2, 1.0
+    link(coord.outputs["Object"], blotch.inputs["Vector"])
+
+    def times_plus(src, k, c):                       # src * k + c
+        m = new("ShaderNodeMath")
+        m.operation = 'MULTIPLY_ADD'
+        m.inputs[1].default_value, m.inputs[2].default_value = k, c
+        link(src, m.inputs[0])
+        return m
+
+    v1 = times_plus(streak.outputs[0], 2 * strength, 1 - strength - mottle)
+    v2 = new("ShaderNodeMath")
+    v2.operation = 'MULTIPLY_ADD'                    # blotch * (2 * mottle) + v1
+    v2.inputs[1].default_value = 2 * mottle
+    link(blotch.outputs[0], v2.inputs[0])
+    link(v1.outputs[0], v2.inputs[2])
+    return _tint(mat, coord, v2, shade_down, 0.95)
+
+
+def scaly(mat, size=0.16, joins=0.32, vary=0.16, shade_down=0.0, rough=0.8):
+    """Stop a flat-coloured material looking like plastic: give it a skin of small scales.
+
+    Cells about `size` studs across, each a slightly different shade (`vary`), with darker joins
+    between them (`joins`). Like furry(), it is worked out in 3D space, so it has no seams, and
+    bake_texture bakes it into the colour image that Roblox reads.
+    """
+    tree = mat.node_tree
+    new, link = tree.nodes.new, tree.links.new
+    coord = new("ShaderNodeTexCoord")
+    cells = new("ShaderNodeMapping")
+    cells.inputs["Scale"].default_value = (1 / size, 1 / size, 1 / (size * 1.3))     # a little taller than wide
+    link(coord.outputs["Object"], cells.inputs["Vector"])
+    edge = new("ShaderNodeTexVoronoi")
+    edge.feature = 'DISTANCE_TO_EDGE'
+    edge.inputs["Scale"].default_value = 1.0
+    link(cells.outputs["Vector"], edge.inputs["Vector"])
+    inside = new("ShaderNodeMapRange")                 # 0 on a join, 1 well inside a scale
+    inside.inputs["From Max"].default_value = 0.14
+    link(edge.outputs["Distance"], inside.inputs["Value"])
+    cell = new("ShaderNodeTexVoronoi")
+    cell.feature = 'F1'
+    cell.inputs["Scale"].default_value = 1.0
+    link(cells.outputs["Vector"], cell.inputs["Vector"])
+    a = new("ShaderNodeMath")
+    a.operation = 'MULTIPLY_ADD'                       # inside * joins + (1 - joins)
+    a.inputs[1].default_value, a.inputs[2].default_value = joins, 1 - joins
+    link(inside.outputs["Result"], a.inputs[0])
+    b2 = new("ShaderNodeMath")
+    b2.operation = 'MULTIPLY_ADD'                      # each scale's own shade * (2 * vary) + (1 - vary)
+    b2.inputs[1].default_value, b2.inputs[2].default_value = 2 * vary, 1 - vary
+    link(cell.outputs["Color"], b2.inputs[0])
+    both = new("ShaderNodeMath")
+    both.operation = 'MULTIPLY'
+    link(a.outputs[0], both.inputs[0])
+    link(b2.outputs[0], both.inputs[1])
+    return _tint(mat, coord, both, shade_down, rough)
+
+
+def _tint(mat, coord, value, shade_down, rough):
+    """Multiply a material's flat colour by the brightness pattern `value`, deepening it towards
+    the feet by `shade_down`, and make it matte."""
+    tree, b = mat.node_tree, principled(mat)
+    base = tuple(b.inputs["Base Color"].default_value)
+    new, link = tree.nodes.new, tree.links.new
+    if shade_down:
+        split_xyz = new("ShaderNodeSeparateXYZ")
+        link(coord.outputs["Generated"], split_xyz.inputs[0])
+        ramp = new("ShaderNodeMath")
+        ramp.operation = 'MULTIPLY_ADD'                # height * shade_down + (1 - shade_down)
+        ramp.inputs[1].default_value, ramp.inputs[2].default_value = shade_down, 1 - shade_down
+        link(split_xyz.outputs[2], ramp.inputs[0])
+        shaded = new("ShaderNodeMath")
+        shaded.operation = 'MULTIPLY'
+        link(value.outputs[0], shaded.inputs[0])
+        link(ramp.outputs[0], shaded.inputs[1])
+        value = shaded
+    hsv = new("ShaderNodeHueSaturation")
+    hsv.inputs["Color"].default_value = base
+    link(value.outputs[0], hsv.inputs["Value"])
+    link(hsv.outputs["Color"], b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = rough
+    return mat
+
+
 def M(loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
     """A transform: scale, then rotate (degrees, XYZ), then move."""
     if isinstance(scale, (int, float)):
@@ -251,7 +353,7 @@ def export_fbx(objects, path):
                              embed_textures=True, mesh_smooth_type='FACE')
 
 
-def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3):
+def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3, sheen=0.0):
     """Join `objects` into one mesh and bake their flat colours, darkened in the creases, into one
     image. This is what stops a flat-coloured model looking like plastic, and it turns several
     MeshParts into one.
@@ -260,6 +362,8 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     the only wiring Roblox's importer reads. `shade` is how dark the deepest crease gets (0 to 1).
     `soften` blurs the shading by about that many pixels, so that where two shapes meet there is a
     soft shadow and not a thin dark line (on a face those lines read as cracks).
+    `sheen` adds the soft pale rim that fuzzy cloth and fur have (it shows in renders here; in
+    Roblox the matte look comes from the part's material or a roughness map).
     """
     import numpy as np
     sc = bpy.context.scene
@@ -313,9 +417,25 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     mat = bpy.data.materials.new((name or ob.name) + "_Baked")
     b = principled(mat)
     b.inputs["Roughness"].default_value = rough
+    if sheen and "Sheen Weight" in b.inputs:
+        b.inputs["Sheen Weight"].default_value = sheen
+        if "Sheen Roughness" in b.inputs:
+            b.inputs["Sheen Roughness"].default_value = 0.5
     tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
     tex.image = final
     mat.node_tree.links.new(tex.outputs["Color"], b.inputs["Base Color"])
+    # A plain grey roughness image as well, so that an importer that reads roughness maps makes the
+    # surface as matte as it is here and not shiny by default. It sits beside the colour image.
+    stem = os.path.splitext(path)[0]
+    rough_path = (stem[:-len("_colour")] if stem.endswith("_colour") else stem) + "_rough.png"
+    grey = bpy.data.images.new(os.path.splitext(os.path.basename(rough_path))[0], 8, 8, alpha=False)
+    grey.pixels.foreach_set([rough, rough, rough, 1.0] * 64)
+    grey.filepath_raw, grey.file_format = rough_path, 'PNG'
+    grey.save()
+    grey.colorspace_settings.name = 'Non-Color'
+    rtex = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    rtex.image = grey
+    mat.node_tree.links.new(rtex.outputs["Color"], b.inputs["Roughness"])
     ob.data.materials.clear()
     ob.data.materials.append(mat)
     ob.data.polygons.foreach_set("material_index", [0] * len(ob.data.polygons))

@@ -226,6 +226,10 @@ def build():
     brown = kit.material("Brown", "#70452A", rough=0.9)
     gloss = kit.material("Gloss", "#141012", rough=0.1)
     red = kit.material("Collar", "#D5402E", rough=0.5)
+    # Round 7: the owner said smooth flat colours look like cheap plastic. The cloth parts get a short
+    # fleecy nap baked into the texture, a matte finish and a soft rim, like real plush.
+    for mat in (tan, cream, brown):
+        kit.furry(mat, strength=0.24, mottle=0.1, fine=34.0, length=2.2, shade_down=0.06)
     pup = Prop("Puppy")
 
     # ---- body: a pear that leans forward, chest over the front legs, weight on the haunches ------------
@@ -326,11 +330,11 @@ def build():
 
 
 def bake(pup, texture):
-    """Round 6: fur, cream, brown and collar become one textured mesh with soft shading baked in,
+    """Fur, cream, brown and collar become one textured mesh with soft shading baked in,
     so the toy stops looking like flat-coloured clay. The glossy eyes and nose stay a mesh of
     their own. Roblox gets two MeshParts instead of five."""
     gloss = [ob for ob in pup.objects if ob.name.endswith("_Gloss")]
-    body = kit.bake_texture([ob for ob in pup.objects if ob not in gloss], texture, name="Puppy_Body", shade=0.5, soften=3, rough=0.9)
+    body = kit.bake_texture([ob for ob in pup.objects if ob not in gloss], texture, name="Puppy_Body", shade=0.5, soften=3, rough=0.95, sheen=0.4)
     pup.objects = [body] + gloss
 
 
