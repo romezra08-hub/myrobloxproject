@@ -251,13 +251,15 @@ def export_fbx(objects, path):
                              embed_textures=True, mesh_smooth_type='FACE')
 
 
-def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None):
+def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3):
     """Join `objects` into one mesh and bake their flat colours, darkened in the creases, into one
     image. This is what stops a flat-coloured model looking like plastic, and it turns several
     MeshParts into one.
 
     Returns the joined object. Its single material has the image wired straight into Base Color,
     the only wiring Roblox's importer reads. `shade` is how dark the deepest crease gets (0 to 1).
+    `soften` blurs the shading by about that many pixels, so that where two shapes meet there is a
+    soft shadow and not a thin dark line (on a face those lines read as cracks).
     """
     import numpy as np
     sc = bpy.context.scene
@@ -296,6 +298,9 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
 
     colour = bake('DIFFUSE', pass_filter={'COLOR'})
     ao = bake('AO')[..., :1]
+    for _ in range(2 if soften else 0):                           # two box blurs; reach stays inside the 12-pixel bake margin
+        for axis in (0, 1):
+            ao = sum(np.roll(ao, d, axis) for d in range(-soften, soften + 1)) / (2 * soften + 1)
     ao = np.clip((ao - 0.25) / 0.75, 0, 1) ** 0.8                 # stretch the useful range of the occlusion
     out = colour.copy()
     out[..., :3] = colour[..., :3] * (1 - shade * (1 - ao))

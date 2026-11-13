@@ -30,9 +30,23 @@ python models/pets/fox.py --review out/fox.png --export models/export/fox.fbx
 
 1. Download `export/<name>.fbx` (the texture is inside it).
 2. In Studio: **Home > Import 3D**, pick the file, turn on **Anchored**, then **Import**.
-3. The fox arrives as two parts: `Fox_Body` (textured) and `Fox_Eye`. Set `Fox_Eye` to a glossy
-   material such as SmoothPlastic or Glass.
+3. What arrives:
+   - **Fox**: two parts, `Fox_Body` (textured) and `Fox_Eye`. Set `Fox_Eye` to a glossy material
+     such as SmoothPlastic or Glass.
+   - **Puppy**: five flat-coloured parts (tan, cream, brown, collar, and the glossy eyes and nose).
+     Fabric suits the fur parts.
+   - **Unicorn**: six flat-coloured parts. Set `GLOW_Horn` to Neon.
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
+
+## The pets so far
+
+| Pet | Style | Triangles | Rounds |
+|---|---|---|---|
+| Fox | Sitting storybook animal, soft shading baked into a texture | 11,144 | 13 |
+| Puppy | Plush toy with stitches and patches | 8,710 | 5 |
+| Unicorn | Low-poly, flat faces | 1,448 | 5 |
+
+None of them has been checked inside Roblox Studio yet; the renders are from Blender.
 
 ## How the practice rounds work
 
