@@ -1,4 +1,4 @@
-"""Cat pet, a needle-felted tabby (3 rounds of practice). Built from scratch by script.
+"""Cat pet, a needle-felted tabby (5 rounds of practice). Built from scratch by script.
 
     python models/pets/cat.py --review out/cat.png
     python models/pets/cat.py --export models/export/cat.fbx
@@ -297,9 +297,9 @@ def build():
     bib = kit.lumpy(taper(ball((0.98, 0.5, 1.08), cuts=5), axis=2, lo=0.6, hi=1.0), 0.025, 1.6, seed=6.0)
     bib.transform(M((0, -0.55, 1.27), rot=(10, 0, 0)))
     on_bib = BVHTree.FromBMesh(bib)
-    for x, z, length in ((-0.15, 1.0, 0.15), (0.02, 0.93, 0.18), (0.17, 1.01, 0.14)):     # short and blunt: long ones read as tusks
+    for x, z, length in ((0.01, 0.95, 0.17),):       # one soft point ends the bib: three long ones read as tusks, three small ones as teeth
         p, _ = hit(on_bib, x, z)
-        cat.add(point(p, (x * 1.2, -0.12, -1), length + 0.04, 0.11), cream)
+        cat.add(point(p, (x * 0.4, -0.1, -1), length + 0.04, 0.125, segs=8), cream)
     cat.add(bib, cream)
 
     for sx in (-1, 1):

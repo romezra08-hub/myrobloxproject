@@ -1,8 +1,8 @@
 """Dragon pet: a big, friendly dragon in a chunky cartoon-fantasy style with plated scales.
 Built from scratch by script.
 
-    python models/pets/dragon_v1.py --review out/dragon.png      # render the review sheet
-    python models/pets/dragon_v1.py --export models/export/dragon.fbx
+    python models/pets/dragon.py --review out/dragon.png      # render the review sheet
+    python models/pets/dragon.py --export models/export/dragon.fbx
 
 Style: smooth rounded forms (not faceted, not plush, not fur) carrying plates: a gentle guardian
 that a child would want as a pet. Must-haves, checked in every review:
@@ -11,7 +11,7 @@ that a child would want as a pet. Must-haves, checked in every review:
   2. Big and sturdy: about 7 studs to the horn tips and 9 long, a barrel body on four short thick
      legs, a strong arched neck. The head is in proportion (NOT a simulator pet).
   3. A simple, clearly friendly face: modest bead eyes with one highlight each, a gentle closed
-     smile, soft brows that do not frown. Nothing crowding the face.
+     smile. Nothing crowding the face (round 3: no brow ridges, they read as worried).
   4. Plated: big overlapping cream plates down the throat and belly, coral plates down the spine,
      darker shields along the back.
   5. Not plastic: a scale pattern and several tones baked into the texture, a matte finish.
@@ -34,6 +34,7 @@ from mathutils.bvhtree import BVHTree  # noqa: E402
 SCALE = 1.0
 HEAD_AT = (-0.50, -2.98, 5.22)
 HEAD_ROT = (9, 5, -24)             # nose a little down, a small tilt, turned towards -X (where the cameras are)
+HEAD_SIZE = 0.9                    # round 2: the head was baby-sized against the body
 
 # The neck, trunk and tail are one skin over these sections, from the head to the tail tip:
 # centre x, y, z, then half width, height above the centre line, depth below it, squareness.
@@ -295,7 +296,7 @@ def plate(skin, s0, s1, half, centre=-90.0, lift=(0.03, 0.11), bow=0.0, pinch=0.
     return bm
 
 
-def lens(outline, thick, rows=((0.72, 0.9), (1.0, 0.0)), centre=(0.0, 0.0)):
+def lens(outline, thick, rows=((0.55, 0.8), (1.0, 0.0)), centre=(0.0, 0.0)):
     """A pebble: flat, `thick` through the middle and thinning to its rim, with the outline given as
     (a, b) points going round `centre`. It lies in the XZ plane, a along X and b along Z."""
     bm = bmesh.new()
@@ -465,13 +466,13 @@ def build():
     # Seven flat colours. The owner found smooth flat colour "like plastic", so every skin colour gets
     # a pattern of scales that is baked into the texture, and the body has three tones: a deeper,
     # bluer back, the teal flanks and a paler underside.
-    teal = kit.scaly(kit.material("Teal", "#2FA79A"), size=0.22, joins=0.28, vary=0.14, shade_down=0.12, rough=0.85)
+    teal = kit.scaly(kit.material("Teal", "#2FA79A"), size=0.34, joins=0.34, vary=0.16, shade_down=0.12, rough=0.85)
     tones(teal, up="#1A6F86", down="#8FE0B0", up_mix=0.5, down_mix=0.45)
     deep = kit.scaly(kit.material("Deep", "#176577"), size=0.5, joins=0.12, vary=0.10, rough=0.85)
-    cream = kit.scaly(kit.material("Cream", "#F6E2A6"), size=0.42, joins=0.14, vary=0.07, shade_down=0.15, rough=0.85)
-    coral = kit.scaly(kit.material("Coral", "#EC6548"), size=0.36, joins=0.16, vary=0.10, rough=0.85)
-    skinm = kit.scaly(kit.material("Membrane", "#F79A5E"), size=0.40, joins=0.14, vary=0.08, rough=0.85)
-    ivory = kit.furry(kit.material("Ivory", "#EFE2C4"), strength=0.14, mottle=0.06, fine=9.0, length=6.0)
+    cream = kit.scaly(kit.material("Cream", "#FBEBB6"), size=0.5, joins=0.2, vary=0.08, shade_down=0.06, rough=0.85)
+    coral = kit.scaly(kit.material("Coral", "#EC6548"), size=0.4, joins=0.22, vary=0.12, rough=0.85)
+    skinm = kit.scaly(kit.material("Membrane", "#F79A5E"), size=0.45, joins=0.2, vary=0.10, rough=0.85)
+    ivory = kit.furry(kit.material("Ivory", "#EFE2C4"), strength=0.24, mottle=0.08, fine=5.0, length=6.0)
     eye = kit.material("Eye", "#15111B", rough=0.18)
     d = Prop("Dragon")
     d.tally = {}
@@ -499,8 +500,8 @@ def build():
         s1 = Skin.along(belly, dist + size * 1.2)
         front = i < 5.3                                                   # the plates a player sees get more shape
         p = plate(skin, s0, s1, half, lift=(0.03, rise), bow=0.10 * size, pinch=0.22,
-                  vs=(0, 0.12, 0.45, 0.8, 0.94, 1) if front else (0, 0.15, 0.6, 0.92, 1),
-                  qs=(-1, -0.9, -0.55, -0.2, 0.2, 0.55, 0.9, 1) if front else (-1, -0.86, -0.3, 0.3, 0.86, 1))
+                  vs=(0, 0.16, 0.5, 0.84, 1) if front else (0, 0.2, 0.6, 0.86, 1),
+                  qs=(-1, -0.82, -0.45, 0, 0.45, 0.82, 1) if front else (-1, -0.8, -0.3, 0.3, 0.8, 1))
         add("belly plates", p, cream)
         dist += size
 
@@ -513,7 +514,7 @@ def build():
         size = _table([(0.7, 0.42), (1.5, 0.56), (2.3, 0.62), (3.0, 0.50), (3.7, 0.46), (4.4, 0.62), (5.2, 0.90), (6.3, 1.0),
                        (7.5, 0.90), (8.5, 0.78), (9.5, 0.66), (11, 0.54), (13, 0.40), (15.6, 0.26)], i)
         c, t, u, side, _, a, _, _ = skin.at(s)
-        fin = lens(arch(size, size * 0.72), 0.06 + 0.2 * size, centre=(0.05 * size, 0.22 * size))
+        fin = lens(arch(size * 1.06, size * 0.84), 0.06 + 0.2 * size, centre=(0.05 * size, 0.24 * size))
         add("back plates", fin, coral, stand(c + u * (a - 0.02), t, u))
         dist += size * 0.9
 
@@ -527,7 +528,7 @@ def build():
             size = _table([(1, 0.46), (3, 0.52), (5, 0.74), (7.5, 0.74), (9, 0.56), (10.6, 0.42)], i)
             s1 = Skin.along(ridge, dist + size * 1.22)
             p = plate(skin, s0, s1, 15.0, centre=90.0 + 31.0 * sgn, lift=(0.02, 0.085), bow=0.22 * size, pinch=0.4,
-                      vs=(0, 0.2, 0.74, 1), qs=(-1, -0.8, 0, 0.8, 1))
+                      vs=(0, 0.25, 0.72, 1), qs=(-1, -0.6, 0, 0.6, 1))
             add("shields", p, deep)
             dist += size
 
@@ -579,7 +580,7 @@ def build():
     add("spade", spade, coral, stand(c - t * 0.1, t.cross(facing), t))
 
     # ---- head: everything is placed in the head's own space, then turned as one ------------------------
-    H = M(HEAD_AT, rot=HEAD_ROT)
+    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SIZE)
     head = head_shell()
     face = Surface(head)
     core = Vector((0, -0.95, -0.26))                                      # a point inside the snout
@@ -628,14 +629,15 @@ def build():
         add("eyes", ball((0.32, 0.20, 0.36), cuts=3), eye, H @ E)
         g = Vector((-0.30, -0.90, 0.30)).normalized()                     # one highlight, on the same side of both eyes
         add("face", ball((0.08, 0.04, 0.08), cuts=2), ivory, H @ E @ M((0.16 * g.x, 0.10 * g.y, 0.18 * g.z)))
-        up = E.to_3x3() @ Vector((0, 0, 1))                               # a soft brow over the eye, its outer end lower
-        bp, bn = face.hit(p + up * 0.34 + nrm, -nrm)
-        add("face", ball((0.46, 0.12, 0.13), cuts=2), teal, H @ seat(bp, bn) @ M(rot=(0, 9 * sx, 0)))
-        horn = [(0.50 * sx, 0.35, 0.62), (0.66 * sx, 0.60, 1.10), (0.82 * sx, 0.98, 1.46), (0.90 * sx, 1.38, 1.66), (0.90 * sx, 1.60, 1.70)]
+        horn = [(0.50 * sx, 0.35, 0.62), (0.68 * sx, 0.62, 1.14), (0.86 * sx, 1.04, 1.56), (0.95 * sx, 1.50, 1.80), (0.96 * sx, 1.78, 1.88)]
         add("horns", tube(horn, [0.27, 0.24, 0.18, 0.11, 0.06], segs=10, rings=8), ivory, H)
         fin = smooth_outline([(0, 1.0), (0.24, 0.72), (0.36, 0.40), (0.26, 0.10), (0, -0.12), (-0.26, 0.10), (-0.36, 0.40), (-0.24, 0.72)], per=2)
         add("ears", lens([(a * 0.85, b * 0.9) for a, b in fin], 0.16, centre=(0.0, 0.36)), skinm,
             H @ M((0.98 * sx, 0.42, 0.10), rot=(0, 58 * sx, 28 * sx)))
+    for back, size in ((0.02, 0.46), (0.52, 0.56)):                       # two plates on top of the head carry the row forward
+        p, _ = face.hit((0, back, 5.0), (0, 0, -1))
+        add("back plates", lens(arch(size, size * 0.86), 0.06 + 0.2 * size, centre=(0.05 * size, 0.24 * size)), coral,
+            H @ stand(p - Vector((0, 0, 0.03)), (0, 1, 0), (0, 0, 1)))
     add("head", head, teal, H)
 
     d.build(SCALE)
@@ -662,6 +664,7 @@ def main():
     ap.add_argument("--views", default="front 3/4,side,front,back 3/4")
     ap.add_argument("--look", default="clay")
     ap.add_argument("--px", type=int, default=512)
+    ap.add_argument("--quick", action="store_true", help="with --review: four views instead of eight")
     ap.add_argument("--title", default="Dragon review")
     ap.add_argument("--texture", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "export", "dragon_colour.png"))
     a = ap.parse_args()
@@ -703,7 +706,8 @@ def main():
         rig, review = rig_for(40)
         if a.review:
             os.makedirs(os.path.dirname(os.path.abspath(a.review)), exist_ok=True)
-            rig.sheet(os.path.abspath(a.review), review.STANDARD, px=a.px, title=a.title)
+            quick = [("front 3/4", "full"), ("close-up", "full"), ("face", "full"), ("game distance", "full")]
+            rig.sheet(os.path.abspath(a.review), quick if a.quick else review.STANDARD, px=a.px, title=a.title)
             print("review sheet", a.review)
         if a.face:
             rig.render(os.path.abspath(a.face), "face", "full", a.px)

@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`, `Cat_Gloss`).
 
 ## The pets so far
 
@@ -52,7 +52,10 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`).
 |---|---|---|---|
 | Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
 | Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
-| Unicorn | Low-poly, flat faces with a painted-card grain | 1,448 | 7 |
+| Unicorn | Low-poly, flat faces with a painted-card grain | 1,828 | 8 |
+| Dragon | Big, chunky cartoon dragon with scaled skin, 7.3 studs tall | 12,766 | 4 |
+| Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
+| Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -70,6 +73,15 @@ If a pet still looks shiny in Studio, open its body part's SurfaceAppearance and
 that `_rough.png` image.
 
 None of them has been checked inside Roblox Studio yet; the renders are from Blender.
+
+Known weak points, from the last review of each:
+
+- Dragon: its texture is spread over hundreds of small pieces, so the scales are soft close up. It
+  reads as a sturdy young dragon more than a huge one, and its legs and wing arms are plain.
+- Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
+- Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
+- Fox: about 11,600 triangles, heavy for a pet if many are on screen.
+- Unicorn: the horn is stacked steps, not a true spiral.
 
 ## How the practice rounds work
 

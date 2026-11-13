@@ -71,6 +71,7 @@ def main():
     import review
     group = Group(props)
     rig = review.Rig(group, samples=28)
+    rig.ground.scale = (6, 6, 1)                         # a long row would otherwise run off the edge of the floor
     lo, hi = group.bounds()
     wide, tall = hi.x - lo.x + 3.2, hi.z - lo.z          # room for the 5-stud block on the right
     target = Vector(((lo.x + hi.x) / 2 + 0.9, 0, lo.z + tall * 0.4))
