@@ -354,7 +354,7 @@ def export_fbx(objects, path):
 
 
 def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, name=None, soften=3, sheen=0.0,
-                 uv_angle=66.0, uv_margin=0.012):
+                 uv_angle=66.0, uv_margin=0.012, pack_margin=None):
     """Join `objects` into one mesh and bake their flat colours, darkened in the creases, into one
     image. This is what stops a flat-coloured model looking like plastic, and it turns several
     MeshParts into one.
@@ -369,6 +369,10 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     most of the image on the gaps between its pieces (the dragon used 15% of it); a smaller margin
     and a wider angle give it far more pixels (39% at 85 degrees and 0.004), at the price of a
     little colour bleeding between neighbouring pieces when seen from far away.
+    `pack_margin`, when given, packs the pieces again by their real outlines, turned to any angle,
+    with that gap between them. The automatic unwrap packs each piece as its bounding box, which
+    wastes most of a triangular wing or a curved feather: re-packed at 0.003, the dragon went from
+    28% to 38% of the image and the phoenix from 23% to 41%.
     """
     import numpy as np
     if os.environ.get("PETS_FAST"):                  # a quick, coarser bake for pictures of several pets at once
@@ -388,6 +392,10 @@ def bake_texture(objects, path, size=1024, shade=0.6, samples=48, rough=0.65, na
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(uv_angle), island_margin=uv_margin)
+    if pack_margin is not None:
+        bpy.ops.uv.select_all(action='SELECT')
+        bpy.ops.uv.pack_islands(shape_method='CONCAVE', rotate=True, rotate_method='ANY',
+                                margin_method='FRACTION', margin=pack_margin)
     bpy.ops.object.mode_set(mode='OBJECT')
 
     def bake(kind, **kw):

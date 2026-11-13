@@ -813,7 +813,7 @@ def bake(phoenix, texture):
     own bright material. Roblox gets two MeshParts."""
     glow = [ob for ob in phoenix.objects if "GLOW" in ob.name]
     body = kit.bake_texture([ob for ob in phoenix.objects if ob not in glow], texture, name="Phoenix_Body",
-                            shade=0.55, soften=2, rough=0.85, sheen=0.0, uv_angle=85.0, uv_margin=0.004)
+                            shade=0.55, soften=2, rough=0.85, sheen=0.0, uv_angle=85.0, uv_margin=0.004, pack_margin=0.003)
     for ob in glow:
         ob.name = ob.data.name = "Phoenix_GLOW"
     phoenix.objects = [body] + glow

@@ -830,7 +830,7 @@ def bake(dragon, texture):
     one mesh, Dragon_GLOW, that keeps its emissive material. Roblox gets two MeshParts."""
     glow = [ob for ob in dragon.objects if "GLOW" in ob.name]
     body = kit.bake_texture([ob for ob in dragon.objects if ob not in glow], texture, name="Dragon_Body",
-                            shade=0.55, soften=2, rough=0.8, uv_angle=85.0, uv_margin=0.004)
+                            shade=0.55, soften=2, rough=0.8, uv_angle=85.0, uv_margin=0.004, pack_margin=0.003)
     import bpy
     bpy.ops.object.select_all(action='DESELECT')
     for ob in glow:
