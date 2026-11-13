@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`).
 
 ## The pets so far
 
@@ -53,7 +53,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`
 | Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
 | Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
 | Unicorn | Low-poly, flat faces with a painted-card grain | 1,828 | 8 |
-| Dragon | Big, chunky cartoon dragon with scaled skin, 7.3 studs tall | 12,766 | 5 |
+| Dragon | Adult obsidian fire dragon: wedge head, horn crown, raised red wings, glowing ember eyes and chest seams, 10.2 studs tall | 18,304 | 11 (6 since the redesign) |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
 | Penguin | Carved, hand-painted wooden toy with a bobble hat | 5,506 | 3 |
@@ -78,10 +78,9 @@ None of them has been checked inside Roblox Studio yet; the renders are from Ble
 
 Known weak points, from the last review of each:
 
-- Dragon: its texture is spread over hundreds of small pieces. Round 5 unwrapped it more tightly,
-  which gave it 2.6 times the pixels, but at about 40 pixels to a stud it is still softer than the
-  puppy's 90. It reads as a sturdy young dragon more than a huge one, and its legs and wing arms
-  are plain.
+- Dragon: the texture fills only 28% of the image, so the small body scales turn to noise at mid
+  range. The body barrel and thighs are smooth masses, the horns read grey-brown rather than black
+  with bone tips, and at game distance the small head loses its face detail apart from the eyes.
 - Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
 - Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
 - Fox: about 11,600 triangles, heavy for a pet if many are on screen.
