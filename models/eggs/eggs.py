@@ -1362,6 +1362,13 @@ def numbers(prop, size):
 
 # ---- the review sheet -----------------------------------------------------------------------------------------
 
+def extent(prop):
+    """The true bounds of a prop as it stands (its vertices, not its turned bounding boxes)."""
+    pts = [ob.matrix_world @ v.co for ob in prop.objects for v in ob.data.vertices]
+    return (Vector((min(q.x for q in pts), min(q.y for q in pts), min(q.z for q in pts))),
+            Vector((max(q.x for q in pts), max(q.y for q in pts), max(q.z for q in pts))))
+
+
 class Group:
     """Several props treated as one, for the review rig."""
 
@@ -1369,7 +1376,7 @@ class Group:
         self.props = props
 
     def bounds(self):
-        los, his = zip(*(p.bounds() for p in self.props))
+        los, his = zip(*(extent(p) for p in self.props))
         return (Vector((min(v.x for v in los), min(v.y for v in los), min(v.z for v in los))),
                 Vector((max(v.x for v in his), max(v.y for v in his), max(v.z for v in his))))
 
@@ -1407,7 +1414,7 @@ def sheet(props, labels, out, samples=32, scale=1.0, extra=False, title="", keep
         for ob in p.objects:
             ob.location, ob.rotation_euler = (0.0, 0.0, 0.0), (0.0, 0.0, turn)
         bpy.context.view_layer.update()
-        lo, hi = p.bounds()
+        lo, hi = extent(p)
         for ob in p.objects:
             ob.location.x = edge - lo.x
             ob.location.y = -(lo.y + hi.y) / 2
@@ -1422,10 +1429,14 @@ def sheet(props, labels, out, samples=32, scale=1.0, extra=False, title="", keep
     mid = Vector(((lo.x + hi.x) / 2 + 0.9, 0.0, 2.1))
     width = hi.x - lo.x + 4.0
     away = (width / 2) / math.tan(math.radians(11))
+    # game distance: a player's eye 5.5 studs up, far enough back for the whole row and the block at FOV 70
+    right = rig.dummy.location.x + 1.0
+    gx = (lo.x + right) / 2
+    gd = max(20.0, ((right - lo.x) / 2 + 1.5) / math.tan(math.radians(35)))
     cams = {
         "front": review._camera("E_front", mid + Vector((0, -1.0, 0.2)).normalized() * away, mid, 22),
         "back": review._camera("E_back", mid + Vector((0, 1.0, 0.2)).normalized() * away, mid, 22),
-        "game": review._camera("E_game", Vector((mid.x - 0.4, -23.0, 5.5)), Vector((mid.x - 0.4, 0.0, 1.8)), 70),
+        "game": review._camera("E_game", Vector((gx, -gd, 5.5)), Vector((gx, 0.0, 1.8)), 70),
     }
     import tempfile
     folder = os.path.splitext(out)[0] + "_views" if keep_views else tempfile.mkdtemp(prefix="eggs_views_")
@@ -1438,14 +1449,15 @@ def sheet(props, labels, out, samples=32, scale=1.0, extra=False, title="", keep
     allobs = [ob for p in props for ob in p.objects]
     close = []
     for p, label in zip(props, labels):
-        lo_p, hi_p = p.bounds()
+        lo_p, hi_p = extent(p)
         c = (lo_p + hi_p) / 2
         cam = review._camera("E_close_" + label, c + Vector((0, -1.0, 0.22)).normalized() * 9.6, c + Vector((0, 0, -0.05)), 30)
         close.append((shoot(rig, cam, os.path.join(folder, "close_%s.png" % label), (600, 600),
                             hide=[ob for ob in allobs if ob not in p.objects]), label))
     tiles.append((close, None))
     tiles.append((shoot(rig, cams["back"], os.path.join(folder, "back.png"), (W, 520)), "all six from behind"))
-    tiles.append((shoot(rig, cams["game"], os.path.join(folder, "game.png"), (W, 640)), "game distance (23 studs, FOV 70) next to the 5-stud block"))
+    tiles.append((shoot(rig, cams["game"], os.path.join(folder, "game.png"), (W, 640)),
+                  "game distance (%.0f studs, FOV 70, eye 5.5 studs up) next to the 5-stud block" % gd))
     if extra:
         tiles.append((shoot(rig, cams["front"], os.path.join(folder, "front_sil.png"), (W, 520), "silhouette"), "silhouette"))
     sz = lambda p: Image.open(p).size
