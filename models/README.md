@@ -44,7 +44,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`, `Cat_Gloss`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`).
 
 ## The pets so far
 
@@ -56,6 +56,8 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_Eyes`, `Bunny_Eyes`
 | Dragon | Big, chunky cartoon dragon with scaled skin, 7.3 studs tall | 12,766 | 5 |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
+| Penguin | Carved, hand-painted wooden toy with a bobble hat | 5,506 | 3 |
+| Turtle | Storybook turtle with a plated shell and a sprout on top | 6,562 | 2 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -84,6 +86,10 @@ Known weak points, from the last review of each:
 - Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
 - Fox: about 11,600 triangles, heavy for a pet if many are on screen.
 - Unicorn: the horn is stacked steps, not a true spiral.
+- Penguin: the wood is only half convincing. The forms are smooth like clay, with no chisel marks,
+  and on the navy the grain can read as brushed felt.
+- Turtle: only two rounds. The shell plates are smooth and pillow-like, the skin is a bright lime
+  green, and from straight in front at a distance the head merges with the shell.
 
 ## How the practice rounds work
 
