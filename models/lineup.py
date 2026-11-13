@@ -22,7 +22,7 @@ from mathutils import Vector  # noqa: E402
 from build_all import pets  # noqa: E402
 
 ORDER = ["fox", "puppy", "cat", "bunny", "penguin", "turtle", "unicorn", "dragon", "phoenix", "griffin", "golem", "wolf"]     # left to right; any other pet follows these
-TURN = {"fox": -20, "unicorn": 55, "dragon": 38}                  # degrees; long pets are turned to show their side
+TURN = {"fox": -20, "unicorn": 55, "dragon": 38, "wolf": 40}                  # degrees; long pets are turned to show their side
 GAP = 1.1
 
 
