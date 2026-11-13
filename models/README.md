@@ -70,7 +70,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Dragon | Adult obsidian fire dragon: wedge head, horn crown, raised red wings, glowing ember eyes and chest seams, 10.2 studs tall | 18,304 | 11 (6 since the redesign) |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
-| Penguin | Carved, hand-painted wooden toy with a bobble hat | 5,506 | 3 |
+| Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
 | Turtle | Storybook turtle with a plated shell and a sprout on top | 6,562 | 2 |
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
 | Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
@@ -147,8 +147,9 @@ Known weak points, from the last review of each:
 - Unicorn: under strong light the coat reads nearly flat white and the gold dapple is faint. Head-on
   the almond eyes are seen edge-on and look a little sleepy. The legs are slim and it is narrow from
   the front, so it is small at game distance.
-- Penguin: the wood is only half convincing. The forms are smooth like clay, with no chisel marks,
-  and on the navy the grain can read as brushed felt.
+- Penguin: up close some belly facets look crumpled rather than a few clean knife strokes, and the
+  grain hardly shows through the navy paint. The bead eyes look slightly owlish, and the red hat with
+  a cream cuff hints at a Santa hat.
 - Turtle: only two rounds. The shell plates are smooth and pillow-like, the skin is a bright lime
   green, and from straight in front at a distance the head merges with the shell.
 - Phoenix: the hundreds of curved feathers fill 41% of the image even re-packed, so the drawn

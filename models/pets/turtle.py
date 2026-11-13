@@ -682,7 +682,7 @@ def build_materials():
     horn = kit.material("Horn", "#4D4535", rough=0.75)
     N = Nodes(horn)
     g = N.attr()
-    col = N.gradient(g, [(0.0, "#4A4330"), (0.55, "#6A6148"), (1.0, "#8E8466")])
+    col = N.gradient(g, [(0.0, "#4C4631"), (0.55, "#69634A"), (1.0, "#857D60")])
     col = N.value(col, N.ramp(N.noise(N.co, 18.0, 3.0), 0.3, 0.7, 0.85, 1.12))
     col = N.mix(N.math('MULTIPLY', N.edge(0.015, 0.998, 0.94), 0.5), col, "#9C9070")
     col = N.mix(N.math('MULTIPLY', N.cavity(0.06, 0.97, 0.6), 0.7), col, "#17130D")
@@ -709,38 +709,138 @@ def build_materials():
     col = N.value(col, N.math('MULTIPLY_ADD', N.island(), 0.25, 0.85))
     N.out(fern, col)
     mats["fern"] = fern
-    mats["eye"] = kit.material("Eye", "#140D0A", rough=0.12, coat=1.0)
+    mats["eye"] = kit.material("Eye", "#120C09", rough=0.12, coat=1.0)
+    iris = kit.material("Iris", "#6A4018", rough=0.4)
+    N = Nodes(iris)
+    N.out(iris, N.gradient(N.attr(), [(0.0, "#6A4419"), (0.5, "#4E3113"), (1.0, "#22150A")]))
+    mats["iris"] = iris
+    mats["catch"] = kit.material("Catchlight", "#EFE9DA", rough=0.3)
     return mats
 
 
-def mouth_z(y):
-    """Height of the mouth line along the head (head space): low at the beak's tip, rising a little
-    to its corner below the eye, so the closed mouth reads calm and content, never a frown."""
-    return -0.135 - 0.032 * smooth01((-y - 0.02) / 0.38)
+MOUTH_SLOPE = 0.05
+MOUTH_CO = Vector((0.0, -0.40, -0.165))                 # the mouth line lies in this plane: low at the beak's tip,
+MOUTH_NO = Vector((0.0, -MOUTH_SLOPE, 1.0)).normalized()   # rising only a little to its corner: neutral, calm
+BEAK_CO, BEAK_NO = Vector((0.0, -0.25, -0.108)), Vector((0.0, 0.10, 0.99)).normalized()   # top edge of the horn beak
+BEAK_LOW = 0.045                       # the horn reaches this far below the mouth line
+EYE_RE = 0.068                         # eyeball radius (head space, before HEAD_SCALE)
+EYE_DEPTH = 0.034                      # how far the eye's centre sits inside the head surface
+
+
+def mouth_side(p):
+    return (Vector(p) - MOUTH_CO).dot(MOUTH_NO)
 
 
 def cranium():
-    """The head's main shape, in head space (front -Y): a blunt wedge whose top slopes to the snout;
-    its underside is pressed nearly flat up to a crisp edge, the mouth line, with a small hook at
-    the front of the upper beak and brow ridges over the eyes."""
-    cran = rounded_box((0.64, 0.80, 0.54), n=2.5, cuts=5)
+    """The head, in head space (front -Y): a blunt tortoise wedge, flat on top and sloping to the
+    snout, with a soft brow ridge over each eye. The lower jaw is the bottom of the same shape, so
+    the closed mouth is one clean groove round the snout, with a small hook at the front."""
+    cran = rounded_box((0.60, 0.80, 0.50), n=2.8, cuts=5)
     for v in cran.verts:
         x, y, z = v.co
         f = smooth01(-y / 0.40)                                     # 0 behind the middle, 1 at the snout
         v.co.x *= 1.0 - 0.26 * f
         if z > 0:
-            v.co.z *= 1.0 - 0.24 * f                                # the top slopes down to the snout
-        zb = mouth_z(y)
-        w = 1.0 - smooth01((y - 0.05) / 0.2)                        # only in front of the ears
-        if v.co.z < zb:
-            v.co.z = zb + (v.co.z - zb) * (1.0 - 0.8 * w)
-        hook = smooth01((-y - 0.28) / 0.1) * smooth01((zb + 0.02 - v.co.z) / 0.04) * max(0.0, 1 - abs(x) / 0.1) ** 2
-        v.co.z -= 0.035 * hook                                      # the upper beak dips to a small hook
-        v.co.y -= 0.01 * hook
-        for sx in (-1, 1):                                          # brow ridges over the eyes
-            d = (Vector((v.co.x, v.co.y, v.co.z)) - Vector((0.2 * sx, -0.12, 0.17))).length
-            v.co.z += 0.012 * bump(d, 0, 0.1)
+            v.co.z *= (1.0 - 0.22 * f) * 0.9                        # flat on top, sloping down to the snout
+        else:
+            v.co.z *= 1.0 - 0.14 * f                                # the chin rises a little to the beak
+        for sx in (-1, 1):                                          # a soft brow ridge over each eye
+            d = (Vector((v.co.x, v.co.y, v.co.z)) - Vector((0.22 * sx, -0.21, 0.125))).length
+            k = bump(d, 0, 0.075)
+            v.co.z += 0.016 * k
+            v.co.x += 0.012 * sx * k
+    for off in (-0.014, 0.0, 0.014):                                # three loops along the mouth line
+        kit.cut(cran, MOUTH_CO + MOUTH_NO * off, MOUTH_NO)
+    kit.cut(cran, BEAK_CO, BEAK_NO)
+    kit.cut(cran, MOUTH_CO - MOUTH_NO * BEAK_LOW, MOUTH_NO)
+    for v in cran.verts:
+        if v.co.y > 0.02:
+            continue
+        m = mouth_side(v.co)
+        fade = smooth01((-v.co.y - 0.02) / 0.12)                    # the groove fades out at the mouth's corner
+        if abs(m) < 0.004:
+            out = Vector((v.co.x, v.co.y + 0.12, 0.0))
+            if out.length > 1e-6:
+                v.co -= out.normalized() * 0.013 * fade
+        hook = max(0.0, 1 - abs(v.co.x) / 0.085) ** 2 * smooth01((-v.co.y - 0.30) / 0.08) * smooth01((0.05 - abs(m)) / 0.04)
+        v.co.z -= 0.03 * hook                                       # the mouth dips to a small hook at the front
     return cran
+
+
+def mouth_z(y):
+    """Height of the mouth line along the head (head space)."""
+    return MOUTH_CO.z + (y - MOUTH_CO.y) * MOUTH_SLOPE
+
+
+def eye_socket(bvh, C, gaze, re, outer, n=12):
+    """The skin round an eye set into the head (`bvh` is the head): an almond opening whose upper
+    lid covers about the top third of the eye and droops a touch at the outer corner. Its edge
+    rolls onto the eyeball, a soft fold of skin rises round it, and its outer rings follow the head
+    and sink into it, so the lids blend into the face instead of standing out as rings."""
+    E = seat(C, gaze)
+    R = E.to_3x3()
+    a, b_up, b_dn = 0.78 * re, 0.22 * re, 0.58 * re
+    outline = []
+    for k in range(n):
+        t = 2 * math.pi * k / n
+        x = a * math.cos(t)
+        st = math.sin(t)
+        z = b_up * st * (1.0 - 0.45 * max(0.0, outer * math.cos(t))) if st >= 0 else b_dn * st
+        outline.append((x, z))
+
+    def grow(x, z, d):
+        b = b_up if z >= 0 else b_dn
+        nx, nz = x / (a * a), z / (b * b)
+        ln = math.hypot(nx, nz) or 1.0
+        return x + nx / ln * d, z + nz / ln * d
+
+    bm = bmesh.new()
+    layer(bm)
+    rings = []
+    for d, mode, val in ((0.0, "eye", 1.008), (0.10, "eye", None), (0.45, "skin", 0.010), (0.9, "skin", 0.003), (1.45, "skin", -0.005)):
+        ring = []
+        for x, z in outline:
+            xs, zs = grow(x, z, d * re)
+            if mode == "eye":
+                r = re * (val if val else (1.16 if z > 0 else 1.07))
+                y = -math.sqrt(max(r * r - xs * xs - zs * zs, (0.25 * r) ** 2))
+                p = C + R @ Vector((xs, y, zs))
+            else:
+                hit, nrm, _, _ = bvh.ray_cast(C + R @ Vector((xs, -0.4, zs)), R @ Vector((0, 1, 0)))
+                p = (hit + nrm * val) if hit is not None else C + R @ Vector((xs, -re * 0.9, zs))
+                if (p - C).length < re * 1.13:
+                    p = C + (p - C).normalized() * re * 1.13
+            ring.append(bm.verts.new(p))
+        rings.append(ring)
+    for r0, r1 in zip(rings, rings[1:]):
+        for j in range(n):
+            bm.faces.new((r0[j], r0[(j + 1) % n], r1[(j + 1) % n], r1[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return fix_normals(bm, gaze)
+
+
+def iris_ring(C, axis, re, segs=12):
+    """A dark-amber iris lying on the eyeball round its glossy dark pupil: warm by the pupil, a
+    darker ring at its edge. It is part of the textured body; the pupil is the glossy eye itself."""
+    axis = Vector(axis).normalized()
+    u = axis.orthogonal().normalized()
+    v = axis.cross(u)
+    bm = bmesh.new()
+    g = layer(bm)
+    rings = []
+    for deg, gv in ((24.0, 0.0), (32.0, 0.5), (39.0, 1.0)):
+        t = math.radians(deg)
+        ring = []
+        for j in range(segs):
+            ph = 2 * math.pi * j / segs
+            vert = bm.verts.new(C + (axis * math.cos(t) + (u * math.cos(ph) + v * math.sin(ph)) * math.sin(t)) * re * 1.012)
+            vert[g] = gv
+            ring.append(vert)
+        rings.append(ring)
+    for r0, r1 in zip(rings, rings[1:]):
+        for j in range(segs):
+            bm.faces.new((r0[j], r0[(j + 1) % segs], r1[(j + 1) % segs], r1[j]))
+    return fix_normals(bm, axis)
 
 
 def nostril_points():
@@ -748,7 +848,7 @@ def nostril_points():
     H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE)
     out = []
     for sx in (-1, 1):
-        hit, _, _, _ = bvh.ray_cast(Vector((0.034 * sx, 0.0, 0.015)), Vector((0, -1, 0)))
+        hit, _, _, _ = bvh.ray_cast(Vector((0.032 * sx, 0.0, 0.0)), Vector((0, -1, 0)))
         out.append(H @ hit)
     return out
 
@@ -868,50 +968,36 @@ def build():
     # seated against its sides under heavy lids, big plates on top
     cran = cranium()
     face = BVHTree.FromBMesh(cran)
-    plates = [((0.0, -0.05, 0.3), 0.23, 0.21), ((-0.075, -0.25, 0.3), 0.12, 0.12), ((0.075, -0.25, 0.3), 0.12, 0.12),
-              ((-0.10, 0.17, 0.3), 0.17, 0.17), ((0.10, 0.17, 0.3), 0.17, 0.17)]
-    for (x, y, z), w, l in plates:
-        hit, nrm, _, _ = face.ray_cast(Vector((x, y, z + 0.4)), Vector((0, 0, -1)))
-        add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.018), "plate", H)
+    plates = [((0.0, -0.06), 0.21, 0.20), ((-0.068, -0.245), 0.125, 0.13), ((0.068, -0.245), 0.125, 0.13),
+              ((-0.095, 0.135), 0.17, 0.17), ((0.095, 0.135), 0.17, 0.17), ((0.0, 0.29), 0.13, 0.11),
+              ((-0.16, -0.17), 0.09, 0.12), ((0.16, -0.17), 0.09, 0.12)]
+    for (x, y), w, l in plates:
+        hit, nrm, _, _ = face.ray_cast(Vector((x, y, 0.7)), Vector((0, 0, -1)))
+        add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.016), "plate", H)
     eyes = []
-    for sx in (-1, 1):
-        gaze = Vector((0.66 * sx, -0.74, 0.08)).normalized()
-        start = Vector((0.08 * sx, -0.12, 0.06))
-        hit, _, _, _ = face.ray_cast(start, gaze)
-        eyes.append((hit - gaze * 0.03, gaze))
-    BEAK_CO, BEAK_NO = Vector((0, -0.25, -0.105)), Vector((0, 0.10, 0.99)).normalized()
-    kit.cut(cran, BEAK_CO, BEAK_NO)
-    kit.cut(cran, (0, -0.08, 0), (0, 1, 0))
-    up_beak, cran = kit.split(cran, lambda f: kit.centre(f).y < -0.08 and (kit.centre(f) - BEAK_CO).dot(BEAK_NO) < 0)
-    gb = layer(up_beak)
-    for v in up_beak.verts:
-        v[gb] = 0.55 - 0.4 * smooth01((-(v.co - BEAK_CO).dot(BEAK_NO)) / 0.07)   # darker towards the mouth: a closed line, no grin
-    add("beak", up_beak, "horn", H)
+    for sx in (-1, 1):                                              # on the front corners of the head, behind the snout
+        hit, nrm, _, _ = face.ray_cast(Vector((0.0, -0.17, 0.055)), Vector((sx, -0.28, 0.0)).normalized())
+        gaze = (nrm + Vector((0, -0.45, 0.03))).normalized()
+        eyes.append((hit - nrm * EYE_DEPTH, gaze))
+    beak, cran = kit.split(cran, lambda f: kit.centre(f).y < -0.10 and (kit.centre(f) - BEAK_CO).dot(BEAK_NO) < 0
+                           and mouth_side(kit.centre(f)) > -BEAK_LOW)
+    gb = layer(beak)
+    for v in beak.verts:
+        v[gb] = 0.42 - 0.12 * smooth01(1.0 - abs(mouth_side(v.co)) / 0.02)   # one horn, a little darker in the groove
+    add("beak", beak, "horn", H)
     add("head", cran, "headskin", H)
-    jaw = rounded_box((0.54, 0.54, 0.17), n=2.5, cuts=3)
-    for v in jaw.verts:
-        f = smooth01(-v.co.y / 0.27)
-        if v.co.z < 0:
-            v.co.z *= 1.0 - 0.6 * f                                 # the chin slopes up to a wedge at the beak
-        v.co.z += 0.02 * f
-        hit = face.ray_cast(Vector((1.0, v.co.y - 0.03, -0.16)), Vector((-1, 0, 0)))[0]
-        wc = hit.x if hit is not None else 0.03
-        v.co.x = v.co.x / 0.27 * max(0.03, wc - 0.022)              # just inside the upper beak all along
-    lo_beak, jaw = kit.split(jaw, lambda f: kit.centre(f).y < -0.19)
-    gb = layer(lo_beak)
-    for v in lo_beak.verts:
-        v[gb] = 0.08
-    J = H @ M((0, -0.03, -0.198))
-    add("jaw", jaw, "headskin", J)
-    add("beak", lo_beak, "horn", J)
 
     for c, gaze in eyes:
         E = seat(c, gaze)
-        re = 0.082
+        re = EYE_RE
         add("eyes", kit.ball((2 * re, 2 * re, 2 * re), cuts=2), "eye", H @ E)
         outer = 1.0 if (E.to_3x3() @ Vector((1, 0, 0))).y > 0 else -1.0
-        add("lids", eyelid(re, outer, upper=True), "headskin", H @ E)
-        add("lids", eyelid(re, outer, upper=False), "headskin", H @ E)
+        add("lids", eye_socket(face, c, gaze, re, outer), "headskin", H)
+        axis = (gaze + Vector((0.0, -0.25, -0.05))).normalized()     # the eyes look a little ahead
+        add("iris", iris_ring(c, axis, re), "iris", H)
+        glint = (axis + Vector((-0.12, -0.05, 0.42))).normalized()
+        add("iris", lathe([(0, 0.0012), (0.0085, 0.0006), (0.0085, -0.0006), (0, -0.0012)], segs=6), "catch",
+            H @ frame_from(c + glint * re * 1.02, Vector((0, 0, 1)).cross(glint), glint))
 
     # ---- moss on top, with mushrooms and a fern --------------------------------------------------------------
     mc = Vector((-0.06, 0.13))

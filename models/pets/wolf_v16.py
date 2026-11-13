@@ -628,12 +628,12 @@ def coat_material(name, stops, streak, strands=5.0, strand_amt=0.14, rough=0.9, 
         link(coord.outputs["Object"], mix.inputs[4])
         link(warp.outputs["Color"], mix.inputs[5])
         stretch = new("ShaderNodeMapping")
-        stretch.inputs["Scale"].default_value = (3.2, 3.2, 0.9)
+        stretch.inputs["Scale"].default_value = (4.0, 4.0, 1.0)
         link(mix.outputs[1], stretch.inputs["Vector"])
         band = new("ShaderNodeTexNoise")
         band.inputs["Scale"].default_value, band.inputs["Detail"].default_value = 1.0, 3.0
         link(stretch.outputs["Vector"], band.inputs["Vector"])
-        stroke = remap(band.outputs[0], 0.38, 0.66, 1.0 - strokes, 1.0 + 0.6 * strokes, smooth=True)
+        stroke = remap(band.outputs[0], 0.43, 0.6, 1.0 - strokes, 1.0 + 0.5 * strokes, smooth=True)
         value = op('MULTIPLY', value, op('MULTIPLY_ADD', op('SUBTRACT', stroke, 1.0), op('SUBTRACT', 1.0, f), 1.0))
     geo = new("ShaderNodeNewGeometry")
     sep = new("ShaderNodeSeparateXYZ")
@@ -744,9 +744,9 @@ def head_shell():
 
 def build():
     coat = coat_material("Coat", COAT, dict(strength=0.46, mottle=0.1, fine=7.0, length=4.5), strands=3.0, strand_amt=0.3,
-                         tip_light=0.22, strokes=0.24)
+                         tip_light=0.22, strokes=0.42)
     facem = coat_material("Face", COAT, dict(strength=0.22, mottle=0.025, fine=12.0, length=4.0), strands=3.0, strand_amt=0.22,
-                          top_light=0.06, tip_light=0.1, strokes=0.1)
+                          top_light=0.06, tip_light=0.1, strokes=0.12)
     pawm = coat_material("Paw", COAT, dict(strength=0.18, mottle=0.06, fine=20.0, length=3.0), top_light=0.04)
     claw = ramp_material("Claw", [(0.0, "#2E2E3A"), (0.6, "#17171E"), (1.0, "#0B0B10")], rough=0.45)
     nosem = ramp_material("Nose", [(0.0, "#08080C"), (0.5, "#1E202B"), (1.0, "#3A3E52")], rough=0.4)
