@@ -778,7 +778,8 @@ def bake(cat, spec, texture, size=1024):
 def made(texture):
     """Build and bake the finished cat in one call, writing its texture to this path (used by lineup.py)."""
     cat, spec = build()
-    bake(cat, spec, os.path.abspath(texture))
+    size = 512 if os.environ.get("PETS_FAST") else 1024  # kit bakes 512 under PETS_FAST; paint must match
+    bake(cat, spec, os.path.abspath(texture), size=size)
     return cat
 
 

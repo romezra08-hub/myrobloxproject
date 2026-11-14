@@ -1132,7 +1132,8 @@ def made(texture):
     eyes = make_eyes(bead)
     high, shade_pre = high_object(parts)
     pen.objects = [eyes]
-    bake(pen, os.path.abspath(texture), high, shade_pre, bead, parts)
+    size = 512 if os.environ.get("PETS_FAST") else 1024  # kit bakes 512 under PETS_FAST
+    bake(pen, os.path.abspath(texture), high, shade_pre, bead, parts, size=size)
     return pen
 
 
