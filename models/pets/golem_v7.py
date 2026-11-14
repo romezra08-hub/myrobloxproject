@@ -756,14 +756,19 @@ def build():
         rim = []
         e1 = side
         e2 = d.cross(e1).normalized()
-        reach = length * 0.42
+        reach = length * 0.55
         for k in range(14):
             a = 2 * math.pi * k / 14 + rnd.uniform(-0.12, 0.12)
             rr = reach * (1.0 if k % 2 == 0 else rnd.uniform(0.45, 0.65))
-            rim.append(surf.hit(p + (e1 * math.cos(a) + e2 * math.sin(a)) * rr + d * 1.5, -d))
+            for f in (1.0, 0.75, 0.5, 0.3):
+                try:
+                    rim.append(surf.hit(p + (e1 * math.cos(a) + e2 * math.sin(a)) * rr * f + d * 1.5, -d))
+                    break
+                except ValueError:
+                    continue
         pool = bmesh.new()
-        mid = pool.verts.new(p + nrm * 0.03)
-        ring = [pool.verts.new(q + qn * 0.018) for q, qn in rim]
+        mid = pool.verts.new(p + nrm * 0.05)
+        ring = [pool.verts.new(q + qn * 0.025) for q, qn in rim]
         for k in range(len(ring)):
             pool.faces.new((mid, ring[k], ring[(k + 1) % len(ring)]))
         bmesh.ops.recalc_face_normals(pool, faces=pool.faces[:])
