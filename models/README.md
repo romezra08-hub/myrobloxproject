@@ -112,10 +112,10 @@ Review sheet: `preview/eggs.png`.
 | Phoenix | Crimson-to-gold flame feathers swirling up to glowing tips | 3,600 |
 | Storm | White veined porcelain wrapped in navy wing blades with silver rims and glowing lightning cracks | 3,354 |
 | Crystal | Hewn slate slabs like the golem's, broken open front and back on crystals lit from inside | 3,109 |
-| Shadow | Smoky indigo with silver claw grooves, a band of violet runes and a crest of violet shards on the back | 2,966 |
+| Shadow | Wrapped in tiers of slate fur locks with silver points like the wolf's mane; violet crystals lit from inside burst through the top, cradled by a silver crescent moon | 3,786 |
 
-Weak points: Shadow is the plainest of the five glowing eggs, a smooth shell from the front with the
-shard crest only visible from behind. Phoenix's feather tips spike out of the outline so it can read
+Weak points: the Shadow egg's fur locks are flat-faceted and up close can read as artichoke leaves,
+and its upper shell has a plain dark band from the sides. Phoenix's feather tips spike out of the outline so it can read
 like a pinecone, and its painted feather lines blur. Meadow's smooth shell can still look a little
 like plastic up close, and Ember's obsidian reads charcoal more than black glass. Ember's glow part
 is a whole inner shell seen through the gaps between the scales; how its Neon looks in Studio is
