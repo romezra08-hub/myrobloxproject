@@ -101,7 +101,8 @@ def slice_off(bm, co, no):
 
 
 def hewn(size, top=(1.0, 1.0), bottom=(1.0, 1.0), shift=(0.0, 0.0), seed=0, chamfer=(0.04, 0.1),
-         corner=(0.02, 0.2), facets=3, tilt=(5.0, 12.0), rock=0, rock_depth=(0.84, 0.96), extra=()):
+         corner=(0.02, 0.2), facets=3, tilt=(5.0, 12.0), rock=0, rock_depth=(0.84, 0.96), extra=(),
+         chips=0, chip_depth=(0.16, 0.32)):
     """A carved stone block centred on the origin: a box `size` whose top is scaled by `top` and
     moved by `shift` and whose bottom is scaled by `bottom`, with every edge cut by a flat chamfer of
     a random width, every corner knocked off by a random plane (some barely, some deeply) and `facets` faces broken into two
@@ -144,6 +145,12 @@ def hewn(size, top=(1.0, 1.0), bottom=(1.0, 1.0), shift=(0.0, 0.0), seed=0, cham
         n = Vector((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 1))).normalized()
         reach = math.sqrt((sx * n.x) ** 2 + (sy * n.y) ** 2 + (sz * n.z) ** 2)
         planes.append((n * reach * rnd.uniform(*rock_depth), n))
+    corners = list(bm.verts)
+    rnd.shuffle(corners)
+    for v in corners[:chips]:                     # a few corners broken off deeply and skewed: old damage
+        n = sum((f.normal for f in v.link_faces), Vector()).normalized()
+        n = (n + Vector((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 1))) * 0.35).normalized()
+        planes.append((v.co - n * rnd.uniform(*chip_depth) * middle * 1.6, n))
     planes += [(Vector(co), Vector(n)) for co, n in extra]
     for co, n in planes:
         slice_off(bm, co, n)
@@ -192,6 +199,40 @@ def crystal(length, radius, seed=0, tip=(1.2, 2.0), sink=0.35):
     bm.faces.new(lo[::-1])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     return bm
+
+
+def lit_crystal(length, radius, seed=0, tip=(1.2, 2.0), sink=0.35, slit=0.03, core=0.74):
+    """A crystal lit from inside: its facets stand a little apart, so the glowing core inside shows
+    along every edge, and each long facet is split down its middle, where the layer "mid" is 1, so
+    the colour can be paler there, as if the light behind showed through clearer stone.
+    Returns (facets, core); the open bottom is sunk in the stone."""
+    whole = crystal(length, radius, seed, tip, sink)
+    src = whole.verts.layers.float.get("grad")
+    bm = bmesh.new()
+    lg, lm = layer(bm, "grad"), layer(bm, "mid")
+
+    def vert(co, c, g, mid):
+        d = co - c
+        v = bm.verts.new(c + d * max(0.0, 1 - slit / max(d.length, 1e-6)))
+        v[lg], v[lm] = g, mid
+        return v
+
+    for f in whole.faces:
+        vs = list(f.verts)
+        c = f.calc_center_median()
+        if len(vs) == 4:                                   # a long facet: split down its middle
+            a, b, cc, d = vs
+            p = [vert(v.co, c, v[src], 0.0) for v in vs]
+            m1 = vert((a.co + b.co) / 2, c, a[src], 1.0)
+            m2 = vert((cc.co + d.co) / 2, c, cc[src], 1.0)
+            bm.faces.new((p[0], m1, m2, p[3]))
+            bm.faces.new((m1, p[1], p[2], m2))
+        elif len(vs) == 3:
+            bm.faces.new([vert(v.co, c, v[src], 0.6 if v[src] > 0.95 else 0.0) for v in vs])
+    for e in bm.edges:
+        e.smooth = False
+    whole.free()
+    return bm, crystal(length * 0.95, radius * core, seed, tip, sink)
 
 
 def ribbon(points, normals, width, lift, sink=0.012, closed=False):
@@ -295,7 +336,8 @@ class Nodes:
 
 
 def stone(name, base="#3C3F43", warm="#54493E", edge="#9A958A", crack="#141516", moss="#34452A",
-          moss_amount=0.0, wear=0.7, cracks=0.75, rough=0.92, vary=0.34):
+          moss_amount=0.0, wear=0.7, cracks=0.75, rough=0.92, vary=0.34, weather=0.0, pale="#8D8A7E",
+          under=0.0, moss_light="#6F8F3A"):
     """Weathered slate: every block its own shade (`vary`), warm and cool patches, faint strata, a
     mottle of mineral grains, fine speckle, cracks, paler chipped edges and, on surfaces that face
     up, patches of dark moss. Worked out in 3D, so it has no seams; bake_texture bakes it into the
@@ -344,11 +386,23 @@ def stone(name, base="#3C3F43", warm="#54493E", edge="#9A958A", crack="#141516",
     # worn, paler edges, unevenly
     worn = N.ramp(N.noise(co, 5.0, 4.0, 0.65).outputs["Fac"], 0.32, 0.6, 0.25, 1.0)
     col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', N.edge(), worn), wear), col, edge)
-    # moss on top surfaces, sparingly
+    # sun- and rain-bleached tops: paler stone on surfaces facing up, in broad uneven patches
+    if weather:
+        bleach = N.ramp(N.noise(co, 0.9, 3.0, 0.55).outputs["Fac"], 0.36, 0.6, 0.35, 1.0)
+        col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', N.up(0.15, 0.85), bleach), weather), col, pale)
+    # undersides in shadow and grime, darker
+    if under:
+        geo = N.new("ShaderNodeNewGeometry")
+        sep = N.new("ShaderNodeSeparateXYZ")
+        N.link(geo.outputs["Normal"], sep.inputs[0])
+        col = N.mix(N.math('MULTIPLY', N.ramp(sep.outputs[2], -0.1, -0.85), under), col, "#16171A")
+    # moss on top surfaces: broad patches, darker in the middle and fresher green at the edges
     if moss_amount:
-        patch = N.ramp(N.noise(co, 1.2, 4.0, 0.6).outputs["Fac"], 0.47, 0.55)
-        mo = N.math('MULTIPLY', N.math('MULTIPLY', N.up(0.42, 0.78), patch), moss_amount)
-        mossy = N.value(N.mix(0.0, moss, moss), N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.7, 0.65))
+        mn = N.noise(co, 1.2, 4.0, 0.6).outputs["Fac"]
+        patch = N.ramp(mn, 0.45, 0.52)
+        mo = N.math('MULTIPLY', N.math('MULTIPLY', N.up(0.3, 0.72), patch), moss_amount)
+        tone_m = N.mix(N.ramp(mn, 0.52, 0.66), moss_light, moss)
+        mossy = N.value(tone_m, N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.7, 0.65))
         col = N.mix(mo, col, mossy)
     N.link(col, b.inputs["Base Color"])
     b.inputs["Roughness"].default_value = rough
@@ -379,6 +433,11 @@ def crystal_material(name):
     dot.inputs[1].default_value = (-0.45, -0.55, 0.7)
     facet = N.math('MULTIPLY_ADD', dot.outputs["Value"], 0.4, 1.0)
     col = N.value(ramp.outputs["Color"], facet)
+    # the core seen through the clearer middle of each facet: a bright streak, strongest low down
+    md = N.new("ShaderNodeAttribute")
+    md.attribute_type, md.attribute_name = 'GEOMETRY', "mid"
+    glowpath = N.math('MULTIPLY', N.ramp(md.outputs["Fac"], 0.25, 1.0), N.ramp(a.outputs["Fac"], 0.0, 0.85, 1.0, 0.55))
+    col = N.mix(N.math('MULTIPLY', glowpath, 0.85), col, "#38E08A")
     col = N.mix(N.math('MULTIPLY', N.edge(0.025, 0.995, 0.9), 0.32), col, "#A8EBC8")
     N.link(col, b.inputs["Base Color"])
     return m
@@ -387,8 +446,10 @@ def crystal_material(name):
 # ---- the golem ------------------------------------------------------------------------------------------
 
 def build():
-    rock = stone("Stone", moss_amount=0.85)
-    core = stone("CoreStone", base="#2C2D30", warm="#352F2A", edge="#55534E", wear=0.3, cracks=0.4)
+    rock = stone("Stone", base="#4A4C4F", warm="#63554A", moss_amount=1.0, vary=0.46, weather=0.75, under=0.55)
+    core = stone("CoreStone", base="#2C2D30", warm="#352F2A", edge="#55534E", wear=0.3, cracks=0.4, under=0.4)
+    mossmat = stone("Moss", base="#3E5A24", warm="#56742C", edge="#86A44C", crack="#1F2A14", wear=0.6, cracks=0.0, vary=0.35)
+    rootmat = stone("Root", base="#4A3B2B", warm="#5E4A34", edge="#8A7656", crack="#1E1710", wear=0.5, cracks=0.3, vary=0.25)
     scorch = stone("Scorch", base="#161716", warm="#1C1A17", edge="#2A2A28", wear=0.2, cracks=0.0)
     carved = stone("Carved", base="#1D1E20", warm="#221F1C", edge="#3A3936", wear=0.3, cracks=0.0, vary=0.1)
     gem = crystal_material("Crystal")
@@ -400,6 +461,7 @@ def build():
 
     def add(part, bm, mat, at=None, crease=1.0, keep=False):
         layer(bm, "grad")
+        layer(bm, "mid")
         if at is not None:
             bm.transform(at)
         for v in bm.verts:
@@ -420,21 +482,92 @@ def build():
     def lean(p):
         return L @ Vector(p)
 
-    # ---- legs: short, thick pillars on broad feet, the left foot a little forward -------------------
-    shins = []
+    def slab(part, size, at, mat=None, keep=False, **kw):
+        """A hewn block with its own character: chamfer widths, corner knocks, broken facets and a
+        few deep chips all drawn per block, so no two limb stones look alike."""
+        seed = next(seeds) * 7 + 3
+        r = random.Random(seed * 13 + 5)
+        kw.setdefault("chamfer", (r.uniform(0.02, 0.05), r.uniform(0.07, 0.15)))
+        kw.setdefault("corner", (0.02, r.uniform(0.14, 0.34)))
+        kw.setdefault("facets", r.randint(1, 4))
+        kw.setdefault("tilt", (4.0, r.uniform(9.0, 17.0)))
+        kw.setdefault("chips", r.randint(1, 3))
+        return add(part, hewn(size, seed=seed, **kw), mat or rock, at, keep=keep)
+
+    def moss_tuft(centre, size, seed, up=(0, 0, 1)):
+        """A cushion of moss: two or three squashed lumps."""
+        r = random.Random(seed)
+        U = Vector(up).normalized()
+        for k in range(r.randint(2, 3)):
+            w = size * r.uniform(0.55, 1.0)
+            bm = kit.ball((w, w * r.uniform(0.6, 0.9), w * 0.42), cuts=1)
+            kit.lumpy(bm, 0.03, 4.0, seed + k)
+            off = Vector((r.uniform(-1, 1), r.uniform(-1, 1), 0)) * size * 0.35
+            add("moss", bm, mossmat, aim(Vector(centre) + off, U, r.uniform(0, 180)), crease=None)
+
+    def root(points, r0=0.08, r1=0.025):
+        n = len(points)
+        radii = [r0 + (r1 - r0) * (i / (n - 1)) ** 0.8 for i in range(n)]
+        add("roots", kit.tube(points, radii, segs=5, rings=(n - 1) * 3), rootmat, crease=None)
+
+    # ---- legs: a heavy stone giant's: tapering thigh and shin masses dressed with fitted, broken slabs, a big
+    # knee boulder, broad splayed feet whose toe stones grip the ground, moss and roots in the joints ----------
+    legs = []
     for sx in (-1, 1):
         fy = -0.35 if sx < 0 else 0.1
         x = 1.2 * sx
-        F = M((x, fy, 0.0), rot=(0, 0, 13 * sx))
-        block("feet", (1.45, 1.9, 0.75), F @ M((0, 0.08, 0.32)), top=(0.8, 0.7), shift=(0, 0.2))
-        for k, (w, ln, h) in zip((-1, 0, 1), ((0.46, 0.52, 0.38), (0.5, 0.6, 0.42), (0.46, 0.52, 0.37))):
-            block("toes", (w, ln, h), F @ M((0.45 * k, -0.95 + 0.06 * abs(k), 0.15), rot=(0, 0, 4 * k)),
-                  top=(0.92, 0.72), shift=(0, 0.08), corner=(0.05, 0.25))
-        block("joints", (0.95, 0.95, 0.55), M((x, fy + 0.08, 0.78)), core, rock=8)
-        shins.append((block("shins", (1.42, 1.48, 1.4), M((x * 1.02, fy + 0.04, 1.36), rot=(5, 0, -3 * sx)), top=(0.92, 0.9), bottom=(1.0, 1.0), rock=6, rock_depth=(0.88, 0.98), extra=ridge((0, -1, 0), 0.7, (0, 0, 1), 14), keep=True), x * 1.02, sx))
-        block("joints", (0.95, 0.95, 0.7), M((x * 1.02, fy, 2.12)), core, rock=8)
-        block("knees", (0.7, 0.42, 0.5), M((x * 1.02, fy - 0.55, 2.12), rot=(14, 0, -6 * sx)), top=(0.8, 0.7), shift=(0, 0.06), rock=5)
-        block("thighs", (1.3, 1.4, 1.25), M((x * 0.95, fy * 0.5 + 0.1, 2.78), rot=(-10, 0, 4 * sx)), top=(1.08, 1.06), bottom=(0.86, 0.9), rock=5, rock_depth=(0.88, 0.98))
+        F = M((x, fy, 0.0), rot=(0, 0, 15 * sx))
+        # the foot: a sole slab, an instep slab sloping down to the toes, a heel stone, four splayed toes
+        slab("feet", (1.5, 1.35, 0.52), F @ M((0, 0.18, 0.26)), top=(0.86, 0.82), shift=(0, 0.06))
+        slab("feet", (1.1, 0.95, 0.42), F @ M((0.04 * sx, -0.12, 0.66), rot=(14, 0, 3 * sx)), top=(0.8, 0.72), bottom=(1.0, 1.0))
+        slab("feet", (0.8, 0.5, 0.42), F @ M((0.1 * sx, 0.86, 0.2), rot=(-10, 0, -8 * sx)), top=(0.8, 0.7))
+        tr = random.Random(40 + sx)
+        for k, ang in enumerate((-31, -10, 10, 31)):
+            a = math.radians(ang + tr.uniform(-4, 4))
+            w = (0.42, 0.48, 0.46, 0.38)[k] * tr.uniform(0.92, 1.08)
+            ln = (0.6, 0.74, 0.7, 0.55)[k] * tr.uniform(0.92, 1.08)
+            h = (0.4, 0.46, 0.44, 0.36)[k]
+            base = Vector((0.18 * math.sin(a) * 2, -0.42, 0.0))
+            tip_dir = Vector((math.sin(a), -math.cos(a), 0.0))
+            c = base + tip_dir * ln * 0.55
+            T = F @ Matrix.Translation((c.x, c.y, h * 0.42)) @ Matrix.Rotation(a, 4, 'Z') @ M(rot=(97, 0, 0))
+            slab("toes", (w, h, ln), T, top=(0.72, 0.62), shift=(0, -0.06), chips=1)
+        slab("joints", (0.92, 0.92, 0.6), M((x, fy + 0.1, 0.86)), core, rock=8, chips=0)
+        # the shin: a calf mass wide under the knee, narrowing to the ankle, with two broken front plates and
+        # an outer slab; a rune band glows in the gap between the plates
+        S = M((x * 1.02, fy + 0.06, 1.42), rot=(4, 0, -3 * sx))
+        shin = slab("shins", (1.04, 1.06, 1.3), S, top=(1.3, 1.26), rock=4, rock_depth=(0.9, 0.98), chips=1, keep=True)
+        slab("shins", (0.96, 0.3, 0.62), S @ M((0.04 * sx, -0.66, 0.33), rot=(-9, 4 * sx, 5 * sx)), top=(1.0, 0.8), bottom=(0.84, 1.0))
+        slab("shins", (0.74, 0.28, 0.42), S @ M((-0.03 * sx, -0.54, -0.44), rot=(7, -5 * sx, -6 * sx)), top=(0.86, 0.9))
+        slab("shins", (0.3, 0.92, 0.7), S @ M((0.66 * sx, 0.05, 0.36), rot=(0, 9 * sx, 0)), top=(0.8, 0.85))
+        slab("joints", (0.95, 0.95, 0.66), M((x * 1.02, fy, 2.14)), core, rock=8, chips=0)
+        # the knee: a big faceted boulder
+        slab("knees", (0.92, 0.66, 0.82), M((x * 1.03, fy - 0.56, 2.12), rot=(12, 0, -8 * sx)), rock=12,
+             rock_depth=(0.8, 0.95), chips=1)
+        # the thigh: a mass broad at the hip and tapering to the knee, an outer slab and a front slab
+        Th = M((x * 0.96, fy * 0.5 + 0.08, 2.9), rot=(-9, 0, 4 * sx))
+        thigh = slab("thighs", (1.0, 1.04, 1.25), Th, top=(1.38, 1.3), rock=4, rock_depth=(0.9, 0.98), chips=1, keep=True)
+        slab("thighs", (0.34, 1.12, 0.9), Th @ M((0.72 * sx, 0.05, 0.2), rot=(0, -12 * sx, 4)), top=(0.75, 0.86), bottom=(1.0, 0.9))
+        slab("thighs", (0.98, 0.32, 0.72), Th @ M((-0.06 * sx, -0.72, 0.18), rot=(-11, 0, -4 * sx)), top=(1.0, 0.85), bottom=(0.78, 1.0))
+        legs.append((shin, S, -0.1, thigh, Th, -0.42, x, fy, sx))
+        # roots: one winds round the ankle into the ground, one hangs over the outside of the knee
+        a0 = math.radians(-60 if sx < 0 else 240)
+        pts = []
+        for i in range(7):
+            t = i / 6
+            ang = a0 + sx * t * 4.4
+            rad = 0.47 + 0.18 * t
+            pts.append(Vector((x + math.cos(ang) * rad, fy + 0.1 + math.sin(ang) * rad, 1.12 - 0.6 * t)))
+        pts.append(pts[-1] + Vector((math.cos(ang), math.sin(ang), 0)) * 0.35 + Vector((0, 0, -0.45)))
+        pts[-1].z = 0.02
+        root(pts, 0.085, 0.03)
+        root([Vector((x + 0.5 * sx, fy - 0.15, 2.62)), Vector((x + 0.68 * sx, fy - 0.3, 2.3)),
+              Vector((x + 0.66 * sx, fy - 0.42, 2.0)), Vector((x + 0.58 * sx, fy - 0.38, 1.78))], 0.07, 0.02)
+        # moss cushions in the joints
+        moss_tuft((x + 0.05 * sx, fy - 0.3, 0.8), 0.42, 60 + sx, up=(0, -0.4, 1))
+        moss_tuft((x - 0.3 * sx, fy - 0.25, 2.42), 0.36, 64 + sx, up=(0, -0.5, 1))
+        moss_tuft((x + 0.55 * sx, fy + 0.05, 2.18), 0.3, 68 + sx, up=(sx, 0, 0.6))
+        moss_tuft((x + 0.4 * sx, fy + 0.1, 3.45), 0.34, 72 + sx)
 
     # ---- hips and waist: a heavy pelvis, a narrow dark core with one belly stone in front ------------------
     pelvis = block("pelvis", (2.1, 1.5, 0.85), M((0, 0.12, 3.6)), bottom=(0.78, 0.86), keep=True)
@@ -543,21 +676,42 @@ def build():
             nrms.append(nn)
         add("carvings", ribbon(pts, nrms, width, 0.014, closed=True), carved, crease=None)
 
+    def rune_band(surf, m, h, width=0.15, n=40, glyphs=9, seed=0):
+        """A broad dark band carved round a limb with a row of runes in it glowing faintly emerald:
+        slanted strokes and short upright ticks, so it reads as a lit ring from far away."""
+        r = random.Random(seed)
+        axis = m @ Vector((0, 0, h))
+
+        def on(a, dh):
+            o = m @ Vector((3.0 * math.cos(a), 3.0 * math.sin(a), h + dh))
+            return surf.hit(o, (m @ Vector((0, 0, h + dh))) - o)
+
+        pts, nrms = zip(*(on(2 * math.pi * k / n, 0.0) for k in range(n)))
+        add("carvings", ribbon(pts, nrms, width, 0.012, closed=True), carved, crease=None)
+        step = 2 * math.pi / glyphs
+        a_off = r.uniform(0, step)
+        for g_ in range(glyphs):
+            a0 = a_off + g_ * step
+            sl = r.choice((-1, 1)) * width * 0.22
+            stroke = [on(a0 + step * t, sl * (2 * t / 0.5 - 1)) for t in (0.0, 0.25, 0.5)]
+            add("runes", ribbon([p for p, _ in stroke], [q for _, q in stroke], 0.045, 0.026, sink=0.004), glow, crease=None)
+            tick = [on(a0 + step * 0.74, dh) for dh in (-width * 0.3, 0.0, width * 0.3)]
+            add("runes", ribbon([p for p, _ in tick], [q for _, q in tick], 0.04, 0.026, sink=0.004), glow, crease=None)
+
     for surf, m, ln, sx in forearms:
-        band(surf, m, -ln / 2 + 0.17)
-        band(surf, m, -ln / 2 + 0.3, width=0.04)
+        rune_band(surf, m, -ln / 2 + 0.24, seed=3 + sx)
     for surf, m, ln, sx in uppers:
         out = m.to_3x3() @ Vector((1, 0, 0))
         for dv in (0.12, -0.12):
             carve(surf, [(-0.32, dv + 0.18), (0.0, dv - 0.06), (0.32, dv + 0.18)], lambda u, v, m=m: m @ Vector((3.0, u, v)), -out)
-    for surf, x, sx in shins:
-        for z in (1.62, 1.36):
-            carve(surf, [(x - 0.36, z + 0.16), (x, z - 0.06), (x + 0.36, z + 0.16)], lambda u, v: Vector((u, -3.0, v)), (0, 1, 0), width=0.045)
+    for shin, S, hs, thigh, Th, ht, x, fy, sx in legs:
+        rune_band(shin, S, hs, width=0.14, seed=7 + sx)
+        rune_band(thigh, Th, ht, width=0.14, seed=9 + sx)
     zig = [(-0.75 + 0.15 * k, 3.62 + (0.07 if k % 2 else -0.07)) for k in range(11)]
     carve(pelvis, zig, lambda u, v: Vector((u, -3.0, v)), (0, 1, 0), width=0.045)
 
     # ---- emerald crystals: clusters on the shoulders, the back and the left forearm --------------------------
-    def cluster(surf, centre, direction, length, count, seed, spread=30.0):
+    def cluster(surf, centre, direction, length, count, seed, spread=30.0, leaks=3):
         """Crystals growing out of the shape `surf` where a ray from inside it at `centre` along
         `direction` comes out: one long one and the rest shorter and splayed round it."""
         rnd = random.Random(seed)
@@ -580,11 +734,44 @@ def build():
                 except ValueError:
                     continue
             r = ln * rnd.uniform(0.15, 0.19)
-            add("crystals", crystal(ln, r, seed=seed * 31 + k), gem, aim(q, axis, rnd.uniform(0, 60)))
-        # the glowing heart of the cluster: a slimmer crystal in the middle of the others
-        q, qn = surf.hit(p - side * length * 0.06 + d * 1.5, -d)
-        add("crystal cores", crystal(length * 0.78, length * 0.105, seed=seed + 99, tip=(1.6, 2.2)), glow,
-            aim(q, Matrix.Rotation(math.radians(8), 3, side) @ d, 10))
+            at = aim(q, axis, rnd.uniform(0, 60))
+            if ln > 0.32:
+                facets, heart = lit_crystal(ln, r, seed=seed * 31 + k, slit=max(0.02, r * 0.1))
+                add("crystals", facets, gem, at, crease=None)
+                add("crystal cores", heart, glow, at)
+            else:
+                add("crystals", crystal(ln, r, seed=seed * 31 + k), gem, at)
+        # light leaking out of the stone round the foot of the cluster: a jagged glowing fissure, and a few
+        # glowing cracks running out from it
+        rim = []
+        e1 = side
+        e2 = d.cross(e1).normalized()
+        reach = length * 0.42
+        for k in range(14):
+            a = 2 * math.pi * k / 14 + rnd.uniform(-0.12, 0.12)
+            rr = reach * (1.0 if k % 2 == 0 else rnd.uniform(0.45, 0.65))
+            rim.append(surf.hit(p + (e1 * math.cos(a) + e2 * math.sin(a)) * rr + d * 1.5, -d))
+        pool = bmesh.new()
+        mid = pool.verts.new(p + nrm * 0.03)
+        ring = [pool.verts.new(q + qn * 0.018) for q, qn in rim]
+        for k in range(len(ring)):
+            pool.faces.new((mid, ring[k], ring[(k + 1) % len(ring)]))
+        bmesh.ops.recalc_face_normals(pool, faces=pool.faces[:])
+        pool.normal_update()
+        if sum((f.normal for f in pool.faces), Vector()).dot(nrm) < 0:
+            bmesh.ops.reverse_faces(pool, faces=pool.faces[:])
+        add("crystal glow", pool, glow, crease=None)
+        for k in range(leaks):
+            a = 2 * math.pi * (k + rnd.uniform(-0.2, 0.2)) / leaks
+            dirv = e1 * math.cos(a) + e2 * math.sin(a)
+            perp = d.cross(dirv).normalized()
+            path = [p + dirv * reach * t + perp * rnd.uniform(-0.08, 0.08) * t + d * 1.5 for t in (0.8, 1.3, 1.8, 2.3)]
+            try:
+                hits = [surf.hit(o, -d) for o in path]
+            except ValueError:
+                continue
+            add("rune rims", ribbon([h_[0] for h_ in hits], [h_[1] for h_ in hits], 0.11, 0.008), scorch, crease=None)
+            add("runes", ribbon([h_[0] for h_ in hits], [h_[1] for h_ in hits], 0.04, 0.022), glow, crease=None)
 
     for sx, surf, ln, n in ((-1, boulders[0], 2.15, 6), (1, boulders[1], 1.6, 5)):
         cluster(surf, lean((2.22 * sx, 0.15, 7.3)), (0.62 * sx, 0.22, 1.0), ln, n, 11 + sx)
@@ -592,7 +779,7 @@ def build():
     cluster(hump, hc + Vector((-0.35, 0.0, 0.0)), (-0.2, 1.05, 1.0), 1.85, 6, 21)
     cluster(hump, hc + Vector((0.75, 0.0, -0.2)), (0.7, 1.0, 0.45), 1.15, 4, 23)
     surf, m, ln, sx = forearms[0]
-    cluster(surf, m @ Vector((0, 0, 0.1 * ln)), (-1.0, 0.75, 0.35), 0.72, 3, 31, spread=25)
+    cluster(surf, m @ Vector((0, 0, 0.1 * ln)), (-1.0, 0.75, 0.35), 0.72, 3, 31, spread=25, leaks=0)
 
     g.build()
     for ob in g.objects:
@@ -652,6 +839,8 @@ def main():
         rig = review.Rig(golem, samples=samples, focus=(head.x, head.y + 0.4, head.z - 1.0))
         rig.cams["face"] = review._camera("C_face", head + Vector((-0.55, -1.0, 0.18)).normalized() * 9.0,
                                           head + Vector((0, 0.3, -0.35)), 30)
+        rig.cams["legs"] = review._camera("C_legs", Vector((0, 0, 1.6)) + Vector((-0.6, -1.0, 0.22)).normalized() * 9.5,
+                                          Vector((0, 0, 1.6)), 34)
         return rig, review
 
     if a.peek:
