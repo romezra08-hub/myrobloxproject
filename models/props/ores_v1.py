@@ -264,7 +264,7 @@ def nugget(rnd, size, n=10, squash=(1.0, 0.9, 0.75), chamfer=0.2, flat=8.0, angl
 
 def lump(rnd, size, squash=(1.0, 0.92, 0.72), seed=0.0):
     """A rounded, knobbly lump (rust): a low ball pushed in and out by noise."""
-    bm = kit.ball((2 * size * squash[0], 2 * size * squash[1], 2 * size * squash[2]), cuts=2)
+    bm = kit.ball((2 * size * squash[0], 2 * size * squash[1], 2 * size * squash[2]), cuts=1)
     off = Vector((seed * 3.1, seed * 1.7, seed * 2.3))
     for v in bm.verts:
         v.co *= 1.0 + 0.22 * noise.noise(v.co * (2.2 / size) + off)
@@ -1132,7 +1132,7 @@ def ember_ore():
     for g in glows:
         b.add("crack glow", g, glow)
     for k, ctrl in enumerate([[(-12, 0.35), (-4, 1.1), (-14, 1.8), (-2, 2.6)], [(-4, 1.1), (14, 1.55), (24, 2.0)],
-                              [(-48, 0.6), (-40, 1.3), (-52, 2.1)], [(160, 0.5), (172, 1.4), (160, 2.3)]]):
+                              [(-48, 0.6), (-40, 1.3), (-52, 2.1)], [(176, 0.5), (186, 1.4), (178, 2.3)]]):
         path = surf.path(ctrl, 0.18)
         b.add("crack lips", ridge(path, 0.11, 0.035, CRACK, seed=k, wobble=0.2), crust)
         b.add("molten cracks", ridge(path, 0.045, 0.05, CRACK, seed=k), glow)

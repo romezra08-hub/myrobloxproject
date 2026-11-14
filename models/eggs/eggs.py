@@ -20,10 +20,11 @@ Styles, one per family:
                             lightning cracks striking down the front and back, streaks on the tallest blades
   Crystal (crystal golem)   hewn slate slabs with dark cracks, broken open at the front and the back, emerald
                             crystals lit from inside pushing out of a green-lit hollow
-  Shadow  (shadow wolf)     smoky indigo shell, three silver claw grooves, a seal of violet runes between pewter
-                            rings, a crest of violet-lit shards up the back
+  Shadow  (shadow wolf)     a ruff of raised slate fur locks with silver points sweeping up the lower shell and
+                            rising like a mane behind, violet-black crystals lit from inside bursting through broken
+                            shell at the front, cradled by a silver crescent moon, a crest of them up the back
 
-Practice rounds (eggs_v1.py ... eggs_v6.py beside this file):
+Practice rounds (eggs_v1.py ... eggs_v17.py beside this file):
   1  all six built. The flat bottom was 2 studs wide (bullet shapes), Ember glowed in big triangles, Storm's
      wings were stray fins, Crystal's crater was capped by the old faces, Shadow had zebra stripes.
   2  a true egg outline (flat bottom about 0.9 studs across), crater fixed, Storm as a crown of navy blades,
@@ -36,6 +37,10 @@ Practice rounds (eggs_v1.py ... eggs_v6.py beside this file):
      tallest blades, a second break with crystals round Crystal's back, a shard crest up Shadow's back, a
      natural crack and softer contact shading on Meadow, an unwrap angle chosen per egg.
   6  Shadow's rings in thinner, darker pewter so the runes lead; the 5-stud block stands in line with the row.
+  7-17  Shadow remade, the other five untouched: three staggered tiers of two-strand fur locks with silver
+     points, curling back and longer behind like a mane; a shorter shell so the front crystals crown it; light
+     spilling between pushed-up shell shards; a slim silver crescent with a violet gem; an edge mask that no
+     longer lights whole smooth faces. Night-sky stars (14, 15) and smaller glow pads (17) did not help: 16 kept.
 """
 import argparse
 import bisect
@@ -919,25 +924,95 @@ def crystal_material(name):
     return N.finish(m, col, 0.3)
 
 
-def shadow_shell(name):
-    """Smoky indigo, nearly black: slow wisps of paler violet-grey drifting round it, a fine grain, a
-    cold silver frost where it faces up, and bright scratched silver on groove floors (tag 1)."""
-    m = kit.material(name, "#16142A", rough=0.7)
+def crease_edge(N, radius=0.02, lo=0.995, hi=0.93):
+    """1 along the crisp (sharp-marked) edges of a smooth-shaded shape, 0 elsewhere. Nodes.edge() measures
+    against the flat face normal, so on coarse smooth-shaded faces it lights whole faces; this measures the
+    rounded bevel normal against the shading normal instead."""
+    bev = N.new("ShaderNodeBevel")
+    bev.samples = 4
+    bev.inputs["Radius"].default_value = radius
+    geo = N.new("ShaderNodeNewGeometry")
+    dot = N.new("ShaderNodeVectorMath")
+    dot.operation = 'DOT_PRODUCT'
+    N.link(bev.outputs["Normal"], dot.inputs[0])
+    N.link(geo.outputs["Normal"], dot.inputs[1])
+    return N.ramp(dot.outputs["Value"], lo, hi)
+
+
+def shadow_shell(name, glow_at=None):
+    """Dark slate-indigo, matte: slow smoky wisps of paler slate drifting round it, a fine grain, a cold
+    silver frost where it faces up, paler worn edges, and a violet bloom painted round `glow_at`
+    (a list of (point, reach)), where the light from inside spills out of the cracks."""
+    m = kit.material(name, "#1C1E36", rough=0.72)
     N = Nodes(m)
     co = N.coord()
     warped = N.warp(N.warp(co, 0.55, 1.1), 1.3, 0.35)
     fil = N.noise(warped, 0.9, 5.0, 0.6)
     ridge = N.math('ABSOLUTE', N.math('SUBTRACT', fil.outputs["Fac"], 0.5))
-    smoke = N.ramp(ridge, 0.07, 0.0)                    # thin smoky filaments
+    smoke = N.ramp(ridge, 0.07, 0.0)
     haze = N.ramp(N.noise(warped, 0.7, 3.0).outputs["Fac"], 0.45, 0.7)
-    col = N.mix(N.math('MULTIPLY', haze, 0.5), "#110F21", "#1D1936")
-    col = N.mix(N.math('MULTIPLY', smoke, 0.35), col, "#3A3264")
+    col = N.mix(N.math('MULTIPLY', haze, 0.55), "#181A31", "#232744")
+    col = N.mix(N.math('MULTIPLY', smoke, 0.2), col, "#363C64")
     col = N.value(col, N.math('MULTIPLY_ADD', N.noise(co, 30.0, 3.0).outputs["Fac"], 0.2, 0.9))
-    col = N.mix(N.math('MULTIPLY', N.up(0.3, 0.95), 0.3), col, "#4D5383")
-    scratched = N.math('MULTIPLY_ADD', N.noise(co, 50.0, 2.0).outputs["Fac"], 0.3, 0.85)
-    silver = N.value(N.mix(N.up(-0.4, 0.8), "#7F86A2", "#D9DCE8"), scratched)
-    col = N.mix(N.math('GREATER_THAN', N.attr("tag"), 0.5), col, silver)
-    return N.finish(m, col, 0.68)
+    col = N.mix(N.math('MULTIPLY', N.up(0.35, 0.95), 0.3), col, "#566089")
+    col = N.mix(N.math('MULTIPLY', crease_edge(N, 0.02), 0.5), col, "#7C84A8")
+    for at, reach in (glow_at or ()):
+        dist = N.new("ShaderNodeVectorMath")
+        dist.operation = 'DISTANCE'
+        N.link(co, dist.inputs[0])
+        dist.inputs[1].default_value = tuple(at)
+        col = N.mix(N.math('MULTIPLY', N.ramp(dist.outputs["Value"], reach, reach * 0.2), 0.55), col, "#43297F")
+    return N.finish(m, col, 0.72)
+
+
+def shadow_fur(name):
+    """Fur locks like the wolf's ruff: near black slate-indigo at the root, slate blue-grey up the lock
+    and a ragged silver-white tip; painted strands running along each lock, every lock its own shade,
+    paler crisp edges, and deep shade at the foot of its walls (f 1)."""
+    m = kit.material(name, "#3A4366", rough=0.75)
+    N = Nodes(m)
+    co = N.coord()
+    g, xn = N.attr("grad"), N.attr("xn")
+    strands = N.math('SINE', N.math('MULTIPLY', xn, 4.0 * math.pi))
+    jag = N.math('MULTIPLY_ADD', N.noise(co, 9.0, 2.0).outputs["Fac"], 0.1, -0.05)
+    tipline = N.math('ADD', N.math('MULTIPLY_ADD', strands, 0.035, g), jag)
+    col = N.colours(tipline, [(0.0, "#0E1120"), (0.38, "#232A45"), (0.62, "#384364"), (0.78, "#56628A"),
+                              (0.86, "#B0B9CF"), (0.94, "#E6EAF2"), (1.0, "#F6F8FB")])
+    lines = N.ramp(N.math('ABSOLUTE', N.math('SINE', N.math('MULTIPLY', xn, 6.0 * math.pi))), 0.25, 0.0)
+    shade = N.math('MULTIPLY_ADD', N.attr("pal"), 0.24, 0.86)
+    grain = N.math('MULTIPLY_ADD', N.noise(co, 34.0, 2.0).outputs["Fac"], 0.14, 0.93)
+    col = N.value(col, N.math('MULTIPLY', N.math('MULTIPLY', shade, grain), N.math('MULTIPLY_ADD', lines, -0.22, 1.0)))
+    col = N.mix(N.math('MULTIPLY', N.ramp(N.math('ABSOLUTE', xn), 0.16, 0.0), 0.45), col, "#0A0B16")
+    col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', crease_edge(N, 0.018), N.ramp(g, 0.3, 0.9)), 0.5), col, "#B7C0D8")
+    col = N.mix(N.math('MULTIPLY', N.ramp(N.attr("f"), 0.2, 1.0), 0.8), col, "#07080F")
+    return N.finish(m, col, 0.75)
+
+
+def shadow_crystal(name):
+    """Violet-black crystal: nearly black at the foot, deep violet in the body, pale lilac at the tip,
+    each facet lighter or darker by the way it faces, its edges catching the light."""
+    m = kit.material(name, "#1D1438", rough=0.3)
+    N = Nodes(m)
+    col = N.colours(N.attr("grad"), [(0.0, "#050409"), (0.45, "#140E2A"), (0.8, "#2C1F5A"), (1.0, "#9A84E0")])
+    geo = N.new("ShaderNodeNewGeometry")
+    dot = N.new("ShaderNodeVectorMath")
+    dot.operation = 'DOT_PRODUCT'
+    N.link(geo.outputs["True Normal"], dot.inputs[0])
+    dot.inputs[1].default_value = (-0.45, -0.55, 0.7)
+    col = N.value(col, N.math('MULTIPLY_ADD', dot.outputs["Value"], 0.45, 1.0))
+    col = N.mix(N.math('MULTIPLY', N.edge(0.025, 0.995, 0.9), 0.4), col, "#B9A6F2")
+    return N.finish(m, col, 0.3)
+
+
+def shadow_silver(name):
+    """Brushed silver for the crescent seal: bright where it faces up, darker beneath, a fine brushed grain."""
+    m = kit.material(name, "#C9CFDB", rough=0.4)
+    N = Nodes(m)
+    co = N.coord()
+    brushed = N.math('MULTIPLY_ADD', N.noise(co, 60.0, 2.0).outputs["Fac"], 0.22, 0.89)
+    col = N.value(N.mix(N.up(-0.2, 0.9), "#5E6578", "#C4CAD8"), brushed)
+    col = N.mix(N.math('MULTIPLY', crease_edge(N, 0.015), 0.75), col, "#F4F6FA")
+    return N.finish(m, col, 0.4)
 
 
 def flat(name, hexcode, rough=0.7, grain=24.0):
@@ -1249,64 +1324,200 @@ def crystal_egg():
     return b.done()
 
 
-GLYPHS = [
-    [[(0, -0.2), (0, 0.2)], [(0, 0.04), (-0.13, 0.19)], [(0, 0.04), (0.13, 0.19)]],
-    [[(-0.08, -0.2), (-0.08, 0.2), (0.08, 0.09), (-0.08, -0.01), (0.09, -0.2)]],
-    [[(-0.12, -0.2), (0.1, 0.03), (0.0, 0.18), (-0.1, 0.03), (0.12, -0.2)]],
-    [[(-0.1, -0.18), (-0.1, 0.18), (0.1, -0.18), (0.1, 0.18), (-0.1, -0.18)]],
-    [[(-0.06, -0.2), (-0.06, 0.2)], [(-0.06, 0.13), (0.09, 0.0), (-0.06, -0.12)]],
-    [[(-0.1, 0.2), (0.0, 0.08), (0.1, 0.2)], [(0.0, 0.08), (0.0, -0.2)], [(-0.09, -0.06), (0.09, -0.06)]],
-    [[(0.08, 0.2), (-0.08, 0.06), (0.08, -0.06), (-0.08, -0.2)]],
-]
+def fur_lock(egg, s0, th0, length, n, bend=0.0, lift=(-0.05, 0.07), flare=0.07, keel=0.05, sink=0.07, extra=0.0,
+             fill=0.98, rows=4, tips=(0.5, 0.8, 0.62, 1.0, 0.56), ridge=(0.0, 1.0, 0.45, 1.0, 0.0), shade=0.5):
+    """One upward-sweeping lock of fur lying on the egg, like the locks of the wolf's ruff: its root at
+    (s0, th0), buried in the shell, runs `length` studs up the shell, curling `bend` studs round it on the
+    way (towards larger th), more and more towards its tip. It is as wide as one of `n` locks side by
+    side round the egg (times `fill`), a little fuller in the middle, and split into two strands: a
+    groove runs up the middle between two ridges, and it ends in two points, the longer one on the side
+    it curls to (`tips` is how far up each of its five columns runs, `ridge` their heights). Its top
+    rises from the root to stand `extra` + lift[1] proud, its points flaring out by `flare`; its sides and
+    points drop in walls to `sink` below the shell, so it has real thickness and shades the lock behind.
+    "grad" runs 0 at the root to 1 at the longest point, "xn" is the place across (-1 to 1), "f" is 1 at
+    the foot of the walls and "pal" is the lock's own shade."""
+    bm = bmesh.new()
+    lay = layers(bm)
+    qs = (-1.0, -0.5, 0.0, 0.5, 1.0)
+    if bend < 0:
+        tips, ridge = tips[::-1], ridge[::-1]
+    grid, where = [], {}
+    for r in range(rows + 1):
+        line = []
+        for q, top, rg in zip(qs, tips, ridge):
+            v = top * r / rows
+            a, c = length * v, bend * v ** 2.2
+            d = Vector((length, 2.2 * bend * v ** 1.2)).normalized()
+            hw = fill * math.pi * egg.radius_at(s0 + a / egg.L) / n * (1.0 + 0.12 * math.sin(math.pi * v)) * (1 - 0.25 * v)
+            w = q * hw
+            s, th = egg.walk(s0, th0, a - d.y * w, c + d.x * w)
+            h = lift[0] + (lift[1] + extra - lift[0]) * v ** 0.8 + flare * v ** 3 + keel * rg * min(1.0, 2.5 * v + 0.3)
+            vert = bm.verts.new(egg.point(s, th, h))
+            vert[lay["grad"]], vert[lay["xn"]], vert[lay["pal"]] = v, q, shade
+            where[vert] = (s, th)
+            line.append(vert)
+        grid.append(line)
+    m = len(qs)
+    for a, b in zip(grid, grid[1:]):
+        for j in range(m - 1):
+            bm.faces.new((a[j], a[j + 1], b[j + 1], b[j]))
+        for j in (1, 2, 3):
+            bm.edges.get((a[j], b[j])).smooth = False
+    rim = [grid[r][-1] for r in range(rows + 1)] + grid[-1][-2::-1] + [grid[r][0] for r in range(rows - 1, -1, -1)]
+    low = []
+    for v in rim:
+        s, th = where[v]
+        lo = bm.verts.new(egg.point(s, th, -sink))
+        lo[lay["grad"]], lo[lay["xn"]], lo[lay["pal"]], lo[lay["f"]] = v[lay["grad"]], v[lay["xn"]], shade, 1.0
+        low.append(lo)
+    for i in range(len(rim) - 1):
+        bm.faces.new((rim[i], rim[i + 1], low[i + 1], low[i]))
+    return flip_out(bm, egg.outward)
+
+
+def disc_point(egg, s, th, rho, ang):
+    """The point `rho` studs from (s, th) on the shell, `ang` radians round from straight across."""
+    return egg.walk(s, th, rho * math.sin(ang), rho * math.cos(ang))
+
+
+def crater(b, egg, s, th, r0, r1, n, mat, rnd, lean=0.3, h=0.08, gap=0.02, chamfer=0.025):
+    """A ring of `n` broken shell pieces round (s, th), from r0 to r1 studs out, their inner edges pushed
+    up and out as if something broke through from inside."""
+    P = egg.point(s, th)
+    cuts = [2 * math.pi * k / n + rnd.uniform(-0.18, 0.18) for k in range(n)]
+    cuts.append(cuts[0] + 2 * math.pi)
+    for k in range(n):
+        a0, a1 = cuts[k], cuts[k + 1]
+        am = (a0 + a1) / 2
+        ring = [(r0 * rnd.uniform(0.9, 1.15), a0), (r1 * rnd.uniform(0.8, 0.95), a0 + 0.08),
+                (r1 * rnd.uniform(1.0, 1.15), am + rnd.uniform(-0.15, 0.15)), (r1 * rnd.uniform(0.8, 0.95), a1 - 0.08),
+                (r0 * rnd.uniform(0.9, 1.15), a1)]
+        corners = [egg.point(*disc_point(egg, s, th, rho, a)) for rho, a in ring]
+        C = egg.point(*disc_point(egg, s, th, (r0 + r1) / 2, am))
+        b.add("shell shards", stone_plate(egg, C, corners, rnd, gap=gap, chamfer=chamfer, h=h, sink=0.05, tilt=0.05,
+                                          away=P, lean=lean), mat)
+
+
+def pool(egg, s, th, radius, h=0.03, k=12):
+    """A flat pool of light lying on the shell under broken pieces: level at `h` out to `radius` (clear of
+    the shell's flat facets), then dropping just under the shell."""
+    bm = bmesh.new()
+    layers(bm)
+    c = bm.verts.new(egg.point(s, th, h))
+    rings = []
+    for rho, hh in ((0.5, h), (1.0, h), (1.12, -0.015)):
+        rings.append([bm.verts.new(egg.point(*disc_point(egg, s, th, radius * rho, 2 * math.pi * j / k), hh)) for j in range(k)])
+    for j in range(k):
+        jj = (j + 1) % k
+        bm.faces.new((c, rings[0][j], rings[0][jj]))
+        for a, b in zip(rings, rings[1:]):
+            bm.faces.new((a[j], b[j], b[jj], a[jj]))
+    return flip_out(bm, egg.outward)
+
+
+def burst(b, egg, s, th, spec, gem, glow, rnd, seed, out=0.8, lit=1, sunk=0.1, spin=0.4):
+    """Crystals bursting out of the shell at (s, th), aimed up and out: spec is ((length, degrees off the
+    main axis, foot offset, radius), ...), the first one along the main axis; the first `lit` of them are
+    lit from inside."""
+    nrm = egg.normal(s, th)
+    up = Vector((0, 0, 1))
+    d0 = (nrm * out + up).normalized()
+    F = egg.point(s, th) - nrm * sunk
+    side = d0.cross(up).normalized()
+    others = max(len(spec) - 1, 1)
+    for k, (ln, ang, off, rad) in enumerate(spec):
+        if k == 0:
+            axis, foot = d0, F
+        else:
+            o = Matrix.Rotation(2 * math.pi * (k - 1) / others + spin, 3, d0) @ side
+            axis = (Matrix.Rotation(math.radians(ang), 3, d0.cross(o).normalized()) @ d0).normalized()
+            foot = F + o * off
+        at = aim(foot, axis, rnd.uniform(0, 60))
+        if k < lit:
+            facets, core = lit_crystal(ln, rad, seed=seed + k, slit=0.018)
+            b.add("crystals", facets, gem, at)
+            b.add("crystal cores", core, glow, at)
+        else:
+            b.add("crystals", crystal(ln, rad, seed=seed + k), gem, at, crease=25)
+
+
+CRACK_RIM = [(-1, -0.012, 0), (-0.45, 0.008, 0), (0.45, 0.008, 0), (1, -0.012, 0)]
+CRACK_CORE = [(-1, -0.004, 0), (0, 0.02, 0), (1, -0.004, 0)]
+
+
+def glow_crack(b, egg, s, th, heading, length, seed, crack_m, glow, wide=0.06):
+    """A thin crack in the shell, glowing faintly from inside."""
+    path = crack_path(egg, s, th, heading, length, seed)
+    n = len(path)
+    taper = [0.5] + [1.0] * max(n - 3, 0) + [0.6, 0.15]
+    taper = taper[:n]
+    b.add("cracks", strip(egg, path, [wide * t for t in taper], CRACK_RIM, smooth=False), crack_m)
+    b.add("crack glow", strip(egg, path, [wide * 0.36 * t for t in taper], CRACK_CORE, smooth=False), glow)
+
+
+SHADOW_SHELL = dict(height=4.3, radius=1.48)
+SHADOW_FRONT = (0.735, -12.0)       # where the crystals burst out of the front
 
 
 def shadow():
-    egg = Egg(height=4.46, radius=1.62)
-    shell_m = shadow_shell("ShadowShell")
-    rim_m = flat("ShadowRuneRim", "#0A0914", rough=0.6)
-    glow = glow_material("ShadowEgg", "#7A3CFF", 2.6)
-    b = Build("ShadowEgg", egg)
-    b.add("shell", egg.mesh(segs=32, rings=24), shell_m)
-    # three claw grooves raked across the front, raised torn lips and a bright silver floor
-    sec = [(-1, -0.025, 0), (-0.62, 0.05, 0), (-0.32, 0.004, 0), (-0.32, 0.004, 1), (0.32, 0.004, 1), (0.32, 0.004, 0),
-           (0.62, 0.05, 0), (1, -0.025, 0)]
-    cs, cth = 0.57, -6.0
-    da = Vector((-0.72, 0.69)).normalized()
-    pa = Vector((da.y, -da.x))
-    if pa.x < 0:
-        pa = -pa
-    for i, (ln, wd) in zip((-1, 0, 1), ((1.65, 0.12), (2.05, 0.145), (1.6, 0.12))):
-        path, widths = [], []
-        for k in range(11):
-            t = k / 10
-            along = da * (t - 0.5) * ln + pa * (i * 0.36 + 0.09 * math.sin(math.pi * t))
-            path.append(egg.walk(cs, cth, along.x, along.y))
-            widths.append(wd * max(math.sin(math.pi * t), 0.0) ** 0.6 + 0.004)
-        b.add("claw grooves", strip(egg, path, widths, sec, smooth=True, steps=20, sharp_cols=(1, 6)), shell_m, crease=40)
-    # dark crystal shards up the back, lit violet from inside, as on the wolf's spine
-    shard_m, _ = ramp_mat("ShadowShard", [(0.0, "#0A0912"), (0.6, "#1C1834"), (1.0, "#3A2F6A")], attr="grad", rough=0.4)
+    egg = Egg(**SHADOW_SHELL)
     up = Vector((0, 0, 1))
-    for (s, th, ln, rad, lean) in ((0.47, 175.0, 0.7, 0.16, 1.5), (0.59, 185.0, 0.84, 0.18, 1.8), (0.71, 177.0, 0.64, 0.15, 2.4)):
+    F_s, F_th = SHADOW_FRONT
+    backs = ((0.6, 182.0, 0.62), (0.7, 175.0, 0.72), (0.8, 183.0, 0.56))
+    sides = ((0.6, 106.0), (0.63, -114.0))
+    glow_at = [(egg.point(F_s, F_th), 0.8)] + [(egg.point(s, th), 0.42) for s, th, _ in backs] + [(egg.point(s, th), 0.42) for s, th in sides]
+    shell_m = shadow_shell("ShadowShell", glow_at)
+    fur_m = shadow_fur("ShadowFur")
+    gem_m = shadow_crystal("ShadowCrystal")
+    silver_m = shadow_silver("ShadowSilver")
+    crack_m = flat("ShadowCrack", "#0B0918", rough=0.6)
+    glow = glow_material("ShadowEgg", "#6A3CFF", 2.3)
+    b = Build("ShadowEgg", egg)
+    rnd = random.Random(23)
+    b.add("shell", egg.mesh(segs=24, rings=16), shell_m)
+    # the ruff: three staggered tiers of fur locks sweeping up the lower egg, the lowest tier standing proudest
+    for k, (s0, ln, n, off, extra, fl, mane) in enumerate(((0.085, 1.5, 9, 0.0, 0.07, 0.15, 0.06), (0.17, 1.62, 9, 20.0, 0.04, 0.11, 0.14),
+                                                           (0.275, 1.66, 9, 0.0, 0.01, 0.07, 0.3))):
+        for j in range(n):
+            thc = off + 360.0 * j / n + rnd.uniform(-3.0, 3.0)
+            sn = math.sin(math.radians(thc))
+            sweep = 0.95 * math.copysign(max(abs(sn), 0.3) ** 0.6, sn if abs(thc) > 2 else 1.0) + rnd.uniform(-0.14, 0.14)
+            rise = 1.0 + mane * (1 - math.cos(math.radians(thc))) / 2            # longer towards the back
+            b.add("fur", fur_lock(egg, s0, thc, ln * rise * rnd.uniform(0.86, 1.1), n, bend=sweep * rise, extra=extra, flare=fl,
+                                  shade=rnd.random()), fur_m, crease=32)
+    # the front: violet-black crystals bursting out through broken shell, cradled by a silver crescent
+    b.add("crack glow", pool(egg, F_s, F_th, 0.55, 0.03, k=12), glow)
+    crater(b, egg, F_s, F_th, 0.17, 0.64, 6, shell_m, rnd, lean=0.6, h=0.065)
+    burst(b, egg, F_s, F_th, ((1.36, 0, 0.0, 0.21), (0.9, 30, 0.2, 0.15), (0.8, 30, 0.2, 0.14), (0.62, 40, 0.2, 0.12),
+                              (0.52, 44, 0.19, 0.11), (0.44, 52, 0.22, 0.1)), gem_m, glow, rnd, 40, out=0.55, lit=3)
+    for hd, ln, seed in (((0.85, -0.5), 0.7, 3), ((0.9, 0.6), 0.65, 5), ((0.05, 1.0), 0.55, 7)):
+        hv = Vector(hd).normalized()
+        s1, th1 = egg.walk(F_s, F_th, hv.x * 0.6, hv.y * 0.6)
+        glow_crack(b, egg, s1, th1, hd, ln, seed, crack_m, glow)
+    R, path, widths = 0.76, [], []
+    for i in range(11):
+        t = i / 10
+        phi = math.radians(172 + 196 * t)
+        path.append(egg.walk(F_s - 0.01, F_th, R * math.sin(phi), R * math.cos(phi)))
+        widths.append(0.085 * math.sin(math.pi * t) ** 1.7 + 0.004)
+    moon = [(-1, -0.02, 0), (-0.7, 0.045, 0), (-0.12, 0.06, 0), (0.0, 0.045, 0), (0.12, 0.06, 0), (0.7, 0.045, 0), (1, -0.02, 0)]
+    b.add("crescent", strip(egg, path, widths, moon, steps=20, sharp_cols=(1, 2, 4, 5)), silver_m, crease=35)
+    b.add("crack glow", dab(egg, *path[5], 0.058, 0.11, k=8), glow)          # a violet gem set where the moon is widest
+    # a crest of lit crystals up the back, as on the wolf's spine, and a small burst on each side
+    for k, (s, th, ln) in enumerate(backs):
         nn = egg.normal(s, th)
-        at = aim(egg.point(s, th, -0.13), (nn + egg.frame(s, th)[0] * lean).normalized(), 15.0)
-        facets, lit = lit_crystal(ln, rad, seed=int(s * 100), slit=0.018)
-        b.add("shards", facets, shard_m, at)
-        b.add("shard cores", lit, glow, at)
-    # violet runes round the lower half, cut into dark rims
-    rim = [(-1, -0.012, 0), (-0.45, 0.008, 0), (0.45, 0.008, 0), (1, -0.012, 0)]
-    core = [(-1, 0.0, 0), (0, 0.022, 0), (1, 0.0, 0)]
-    pewter = flat("ShadowPewter", "#666B86", rough=0.5, grain=40.0)
-    band = [(-1, -0.02, 0), (0, 0.026, 0), (1, -0.02, 0)]
-    for sr in (0.215, 0.385):
-        ring = [(sr, th) for th in range(0, 361, 10)]
-        b.add("pewter rings", strip(egg, ring, [0.022] * len(ring), band, steps=48, sharp_cols=(1,)), pewter)
-    for k, glyph in enumerate(GLYPHS):
-        th0 = 360.0 / len(GLYPHS) * k
-        for stroke in glyph:
-            path = [egg.walk(0.3, th0, y * 1.4, x * 1.4) for x, y in stroke]
-            n = len(path)
-            b.add("rune rims", strip(egg, path, [0.062] * n, rim, smooth=False), rim_m)
-            b.add("runes", strip(egg, path, [0.025] * n, core, smooth=False), glow)
+        at = aim(egg.point(s, th, -0.12), (nn + egg.frame(s, th)[0] * 1.5).normalized(), 15.0)
+        facets, core = lit_crystal(ln, 0.15, seed=60 + k, slit=0.018)
+        b.add("crystals", facets, gem_m, at)
+        b.add("crystal cores", core, glow, at)
+        b.add("crack glow", dab(egg, s, th, 0.2, 0.01, k=8), glow)
+        sd = 1 if k % 2 == 0 else -1
+        glow_crack(b, egg, *egg.walk(s, th, 0.0, 0.16 * sd), (0.3, sd), 0.5, 70 + k, crack_m, glow, wide=0.05)
+    for k, (s, th) in enumerate(sides):
+        b.add("crack glow", dab(egg, s, th, 0.22, 0.01, k=8), glow)
+        burst(b, egg, s, th, ((0.74, 0, 0.0, 0.15), (0.5, 34, 0.13, 0.11), (0.4, 40, 0.13, 0.095)), gem_m, glow, rnd, 90 + 10 * k,
+              out=1.1, lit=1)
+        glow_crack(b, egg, *egg.walk(s, th, 0.18, 0.05), (1.0, 0.2 * (1 - 2 * k)), 0.55, 95 + k, crack_m, glow, wide=0.05)
     return b.done()
 
 
@@ -1316,7 +1527,7 @@ EGGS = {  # key: (name, builder, bake settings); the unwrap angle is whichever u
     "phoenix": ("PhoenixEgg", phoenix, dict(samples=32, shade=0.6, soften=2, rough=0.78, uv_angle=85.0)),
     "storm": ("StormEgg", storm, dict(samples=32, shade=0.5, soften=2, rough=0.55, uv_angle=75.0)),
     "crystal": ("CrystalEgg", crystal_egg, dict(samples=32, shade=0.7, soften=2, rough=0.88, uv_angle=70.0)),
-    "shadow": ("ShadowEgg", shadow, dict(samples=32, shade=0.55, soften=2, rough=0.68, uv_angle=85.0)),
+    "shadow": ("ShadowEgg", shadow, dict(samples=32, shade=0.55, soften=2, rough=0.7, uv_angle=74.0)),
 }
 
 

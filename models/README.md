@@ -71,7 +71,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
 | Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
-| Turtle | Storybook turtle with a plated shell and a sprout on top | 6,562 | 2 |
+| Turtle | Old forest tortoise in a naturalist storybook style: high domed shell with ridged growth rings, moss with mushrooms and a fern on top, olive scaly skin, calm amber eyes | 8,960 | 13 (11 since the remake) |
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
 | Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
 | Golem | Ancient crystal golem: carved slate blocks with moss, emerald crystal clusters, glowing eye slots and rune cracks, 9.9 studs tall | 7,314 | 6 |
@@ -150,8 +150,9 @@ Known weak points, from the last review of each:
 - Penguin: up close some belly facets look crumpled rather than a few clean knife strokes, and the
   grain hardly shows through the navy paint. The bead eyes look slightly owlish, and the red hat with
   a cream cuff hints at a Santa hat.
-- Turtle: only two rounds. The shell plates are smooth and pillow-like, the skin is a bright lime
-  green, and from straight in front at a distance the head merges with the shell.
+- Turtle: at game distance the shell detail collapses into a brown dome, and from the front the rim
+  reads as a separate frilly band. The skin reads as smooth olive at mid range; scales and wrinkles
+  only show up close. A soft rim shows round each eye socket close up, and the nostrils are smudges.
 - Phoenix: the hundreds of curved feathers fill 41% of the image even re-packed, so the drawn
   feather shafts blur away. Up close the head is a rounded, slightly boxy shape, the
   backs of the wings are plain with the wing arm reading as a dark rod, and the rows of chest

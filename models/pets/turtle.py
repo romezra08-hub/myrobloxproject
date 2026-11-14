@@ -776,7 +776,8 @@ def eye_socket(bvh, C, gaze, re, outer, n=12):
     """The skin round an eye set into the head (`bvh` is the head): an almond opening whose upper
     lid covers about the top third of the eye and droops a touch at the outer corner. Its edge
     rolls onto the eyeball, a soft fold of skin rises round it, and its outer rings follow the head
-    and sink into it, so the lids blend into the face instead of standing out as rings."""
+    and sink gently into it close round the eye, so the lids blend into the face instead of standing
+    out as rings."""
     E = seat(C, gaze)
     R = E.to_3x3()
     a, b_up, b_dn = 0.78 * re, 0.22 * re, 0.58 * re
@@ -797,7 +798,7 @@ def eye_socket(bvh, C, gaze, re, outer, n=12):
     bm = bmesh.new()
     layer(bm)
     rings = []
-    for d, mode, val in ((0.0, "eye", 1.008), (0.10, "eye", None), (0.45, "skin", 0.010), (0.9, "skin", 0.003), (1.45, "skin", -0.005)):
+    for d, mode, val in ((0.0, "eye", 1.008), (0.10, "eye", None), (0.42, "skin", 0.009), (0.8, "skin", 0.003), (1.2, "skin", -0.004)):
         ring = []
         for x, z in outline:
             xs, zs = grow(x, z, d * re)
