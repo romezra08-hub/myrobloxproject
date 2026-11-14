@@ -48,7 +48,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`, `Driller_GLOW`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Cat_GLOW`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`, `Driller_GLOW`).
 
 ## Put a pickaxe into Roblox Studio
 
@@ -70,7 +70,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Unicorn | Moonlight unicorn as a faceted low-poly sculpture: prancing horse, pearl-silver coat, sapphire-to-violet mane and tail, twisted glowing crystal horn, gold hooves | 5,864 | 15 (7 since the remake) |
 | Dragon | Adult obsidian fire dragon: wedge head, horn crown, raised red wings, glowing ember eyes and chest seams, 10.2 studs tall | 18,304 | 11 (6 since the redesign) |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
-| Cat | Needle-felted grey tabby with a collar and bell | 9,996 | 5 |
+| Cat | Needle-felted oatmeal tabby with roving-style stripes, a halo of stray wool fibres and a tiny felt miner's hat with a glowing lamp | 9,482 | 13 (8 since the remake) |
 | Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
 | Turtle | Old forest tortoise in a naturalist storybook style: high domed shell with ridged growth rings, moss with mushrooms and a fern on top, olive scaly skin, calm amber eyes | 8,960 | 13 (11 since the remake) |
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
@@ -166,7 +166,9 @@ Known weak points, from the last review of each:
   mid range. The body barrel and thighs are smooth masses, the horns read grey-brown rather than black
   with bone tips, and at game distance the small head loses its face detail apart from the eyes.
 - Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
-- Cat: leg and tail stripes are evenly spaced bands, and the outline is smooth.
+- Cat: the forms under the wool are fairly smooth, so the felt look comes mostly from the texture,
+  a fabric sheen Roblox does not have and stray hairs that will be tiny in game. The outline is a
+  simple round head on an egg body with tube front legs, and the M and leg bars look a little drawn on.
 - Fox: about 11,600 triangles, heavy for a pet if many are on screen.
 - Unicorn: under strong light the coat reads nearly flat white and the gold dapple is faint. Head-on
   the almond eyes are seen edge-on and look a little sleepy. The legs are slim and it is narrow from
