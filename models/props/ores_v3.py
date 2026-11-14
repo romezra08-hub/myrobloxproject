@@ -719,12 +719,12 @@ def rock_colour(N, base, warm, edge, crack, dirt, top=None, vary=0.3, wear=0.75,
     if lichen:
         vor = N.voronoi(N.warp(co, 3.0, 0.07), 2.4)
         r, g, b = N.rgb(vor.outputs["Color"])[:3]
-        size = N.math('MULTIPLY_ADD', b, 0.13, 0.1)
+        size = N.math('MULTIPLY_ADD', b, 0.16, 0.13)
         spot = N.ramp(N.math('SUBTRACT', vor.outputs["Distance"], size), 0.0, -0.03)
-        keep = N.math('GREATER_THAN', r, 0.42)
-        paint = N.colours(g, [(0.0, "#A3AE84"), (0.62, "#A3AE84"), (0.64, "#C7A24C"), (0.8, "#C7A24C"), (0.82, "#C9C7B6"), (1.0, "#C9C7B6")], constant=True)
+        keep = N.math('GREATER_THAN', r, 0.36)
+        paint = N.colours(g, [(0.0, "#9DB07A"), (0.6, "#9DB07A"), (0.62, "#D09A3C"), (0.8, "#D09A3C"), (0.82, "#D2D0C0"), (1.0, "#D2D0C0")], constant=True)
         paint = N.value(paint, N.math('MULTIPLY_ADD', N.noise(co, 30.0, 2.0).outputs["Fac"], 0.3, 0.85))
-        col = N.mix(N.mul(spot, keep, N.up(0.1, 0.55), lichen), col, paint)
+        col = N.mix(N.mul(spot, keep, N.up(-0.1, 0.45), lichen), col, paint)
     if flecks:
         vor = N.voronoi(co, 7.0)
         r = N.rgb(vor.outputs["Color"])[0]
@@ -828,13 +828,13 @@ def gem_material(name, stops, edge, inner, rough=0.32):
 def obsidian_material(name, tints=()):
     """Volcanic glass: black, a cold sheen on the facets facing the light, faint conchoidal ripples, thin
     bright chipped edges; tints redden it near the molten cracks."""
-    m = kit.material(name, "#0B0B0E", rough=0.4)
-    m["rgh"] = 0.4
+    m = kit.material(name, "#08080A", rough=0.32)
+    m["rgh"] = 0.32
     N = Nodes(m)
     co = N.coord()
     f = N.facing(LIGHT)
-    col = N.mix(N.ramp(f, -0.3, 0.85), "#050507", "#17171E")
-    col = N.mix(N.math('MULTIPLY', N.ramp(f, 0.78, 0.97), 0.8), col, "#5E6272")
+    col = N.mix(N.ramp(f, -0.3, 0.85), "#030304", "#0E0E13")
+    col = N.mix(N.math('MULTIPLY', N.ramp(f, 0.85, 0.98), 0.6), col, "#4A4E5C")
     rip = N.new("ShaderNodeTexWave")
     rip.wave_type, rip.rings_direction = 'RINGS', 'SPHERICAL'
     rip.inputs["Scale"].default_value, rip.inputs["Distortion"].default_value = 3.0, 3.0
@@ -842,8 +842,8 @@ def obsidian_material(name, tints=()):
     col = N.value(col, N.math('MULTIPLY_ADD', rip.outputs["Fac"], 0.35, 0.82))
     island = N.new("ShaderNodeNewGeometry").outputs["Random Per Island"]
     col = N.value(col, N.math('MULTIPLY_ADD', island, 0.3, 0.85))
-    col = N.mix(N.math('MULTIPLY', N.edge(0.02), 0.65), col, "#8E92A4")
-    N.out(tinted(N, co, col, tints), 0.4)
+    col = N.mix(N.math('MULTIPLY', N.edge(0.02), 0.55), col, "#7E8294")
+    N.out(tinted(N, co, col, tints), 0.32)
     return m
 
 
@@ -984,7 +984,7 @@ def stone_ore():
         for j in range(cnt):
             a2 = jitter(rnd, ax, 0.35) if j else ax
             off = (e1 * rnd.uniform(-1, 1) + e2 * rnd.uniform(-1, 1)) * 0.08 * (j > 0)
-            b.add("quartz", crystal(rnd.uniform(0.24, 0.38) * (1 - 0.25 * j), rnd.uniform(0.06, 0.085), seed=100 + k * 3 + j, sides=5),
+            b.add("quartz", crystal(rnd.uniform(0.3, 0.45) * (1 - 0.25 * j), rnd.uniform(0.07, 0.1), seed=100 + k * 3 + j, sides=5),
                   quartz, aim(p - n * 0.03 + off, a2, rnd.uniform(0, 60)), flat=True)
     return b.done()
 
@@ -1025,25 +1025,25 @@ def iron_ore():
     surf = Surface(pieces)
     rust, iron = rust_material("IronRust"), iron_material("IronMetal")
     lumps, nuggets = [], []
-    for th, z, count in [(-32, 1.25, 4), (-72, 0.75, 2), (6, 2.3, 3), (42, 0.95, 2), (165, 1.5, 3), (105, 2.5, 1)]:
+    for th, z, count in [(-35, 1.2, 4), (-75, 0.7, 2), (0, 2.25, 3), (38, 1.0, 2), (-58, 2.4, 2), (165, 1.5, 3), (110, 2.3, 1)]:
         p, n = surf.at(th, z)
-        lumps.append((p, n, rnd.uniform(0.42, 0.5)))
+        lumps.append((p, n, rnd.uniform(0.5, 0.58)))
         for j in range(count - 1):
             a = TAU * j / max(count - 1, 1) + rnd.uniform(-0.4, 0.4)
-            lumps.append(surf.at(th + 13 * math.cos(a), z + 0.38 * math.sin(a)) + (rnd.uniform(0.28, 0.38),))
+            lumps.append(surf.at(th + 15 * math.cos(a), z + 0.42 * math.sin(a)) + (rnd.uniform(0.32, 0.42),))
         a = rnd.uniform(0, TAU)
-        nuggets.append(surf.at(th + 16 * math.cos(a), z + 0.45 * math.sin(a)) + (rnd.uniform(0.26, 0.32),))
+        nuggets.append(surf.at(th + 18 * math.cos(a), z + 0.5 * math.sin(a)) + (rnd.uniform(0.3, 0.36),))
     rock = rock_material("IronRock", base="#6B635B", warm="#7C624C", edge="#B9AD9C", crack="#2A2420", dirt="#3E3530",
                          top=("#857C72", 0.25), vary=0.28, tints=[("pts", [p for p, _, _ in lumps], 0.7, "#7B4524", 0.6)])
     b = Build("IronOre")
     for p in pieces:
         b.add("rock", p, rock)
     for p, n, s in lumps:
-        b.add("rust lumps", nugget(rnd, s, n=11, squash=(1.1, 1.0, 0.72), chamfer=0.32), rust,
-              aim(p - n * s * 0.3, jitter(rnd, n, 0.2), rnd.uniform(0, 360)))
+        b.add("rust lumps", nugget(rnd, s, n=9, squash=(1.1, 1.0, 0.8), chamfer=0.3), rust,
+              aim(p - n * s * 0.22, jitter(rnd, n, 0.2), rnd.uniform(0, 360)))
     for p, n, s in nuggets:
-        b.add("iron nuggets", nugget(rnd, s, n=9, squash=(1.2, 1.0, 0.62), chamfer=0.14), iron,
-              aim(p - n * s * 0.12, jitter(rnd, n, 0.2), rnd.uniform(0, 360)))
+        b.add("iron nuggets", nugget(rnd, s, n=8, squash=(1.2, 1.0, 0.7), chamfer=0.14), iron,
+              aim(p - n * s * 0.1, jitter(rnd, n, 0.2), rnd.uniform(0, 360)))
     pebbles(b, sh, rnd, rock, [(-50, 0.2, 0.32), (35, 0.3, 0.26), (190, 0.2, 0.3)])
     pebbles(b, sh, rnd, rust, [(-15, 0.3, 0.24)], part="rust lumps", chamfer=0.3, n=10)
     pebbles(b, sh, rnd, iron, [(15, 0.45, 0.18)], part="iron nuggets", chamfer=0.12, n=8)
@@ -1063,8 +1063,8 @@ def gold_ore():
         [(-4, 2.8), (12, 2.55), (28, 2.62), (46, 2.35), (62, 2.4)],
         [(140, 0.35), (150, 0.9), (165, 1.15), (178, 1.7), (195, 1.9), (205, 2.5)],
     ]
-    nug_at = [(-44, 1.35, 0, 0.48), (-4, 2.8, 0, 0.5), (10, 3.2, 1.0, 0.52), (26, 0.85, 0, 0.4), (-62, 0.7, 0, 0.36),
-              (178, 1.7, 0, 0.42), (62, 2.4, 0, 0.34)]
+    nug_at = [(-44, 1.35, 0, 0.56), (-4, 2.8, 0, 0.55), (10, 3.2, 1.0, 0.55), (26, 0.85, 0, 0.48), (-62, 0.7, 0, 0.42),
+              (178, 1.7, 0, 0.46), (62, 2.4, 0, 0.4), (-22, 2.05, 0, 0.36)]
     hits = [surf.at(th, z, d) for th, z, d, _ in nug_at]
     rock = rock_material("GoldRock", base="#B49B74", warm="#AA8458", edge="#E6D7B5", crack="#4A3826", dirt="#6B5238",
                          top=("#CDB894", 0.3), vary=0.22, strata=0.12, flecks=0.6, fleck_colour="#F0C850",
@@ -1075,8 +1075,8 @@ def gold_ore():
     for k, ctrl in enumerate(veins):
         b.add("veins", ridge(surf.path(ctrl, 0.2, smooth=False), 0.19, 0.1, seed=k, wobble=0.3, sharp=(1, 4)), gold)
     for (p, n), (_, _, _, s) in zip(hits, nug_at):
-        b.add("nuggets", nugget(rnd, s, n=13, squash=(1.1, 0.95, 0.78), chamfer=0.18), gold,
-              aim(p - n * s * 0.3, jitter(rnd, n, 0.15), rnd.uniform(0, 360)))
+        b.add("nuggets", nugget(rnd, s, n=12, squash=(1.1, 0.95, 0.8), chamfer=0.18), gold,
+              aim(p - n * s * 0.2, jitter(rnd, n, 0.15), rnd.uniform(0, 360)))
     pebbles(b, sh, rnd, rock, [(-60, 0.2, 0.32), (35, 0.3, 0.27), (195, 0.2, 0.3)])
     pebbles(b, sh, rnd, gold, [(-20, 0.35, 0.22)], part="nuggets", chamfer=0.18, n=11)
     return b.done()
@@ -1097,7 +1097,7 @@ def emerald_ore():
     F = Vector((0.12, -0.25, sh.h * 0.62))
     side = no.cross(UP).normalized()
     spec = [(2.3, 0, 0.0, 0.34), (1.6, 30, 0.34, 0.25), (1.4, 28, 0.32, 0.23), (1.15, 38, 0.33, 0.2), (0.95, 40, 0.3, 0.18),
-            (1.05, 50, 0.3, 0.19), (0.7, 58, 0.36, 0.14)]
+            (1.05, 50, 0.3, 0.19), (0.7, 58, 0.36, 0.14), (0.85, 45, 0.36, 0.16), (0.6, 62, 0.3, 0.12)]
     d0 = Vector((0.04, -0.28, 1.0)).normalized()
     gem = gem_material("EmeraldGem", [(0.0, "#021A0F"), (0.4, "#06452A"), (0.8, "#109A5B"), (1.0, "#8CF0BC")], "#D2FFE8", "#4CF0A2")
     glow = glow_material("EmeraldOre", "#1FD47A", 3.2)
@@ -1107,7 +1107,7 @@ def emerald_ore():
         if k == 0:
             axis, foot = d0, F
         else:
-            o = Matrix.Rotation(TAU * k / 6 + 0.5, 3, d0) @ side
+            o = Matrix.Rotation(TAU * k / 8 + 0.5, 3, d0) @ side
             axis = (Matrix.Rotation(math.radians(ang), 3, d0.cross(o).normalized()) @ d0).normalized()
             foot = F + o * off - UP * 0.1
         at = aim(foot, axis, rnd.uniform(0, 60))
@@ -1144,7 +1144,7 @@ def ember_ore():
     whole = hull(pts)
     cuts = [(Vector((0.55, 0.0, 0.0)), Vector((0.88, -0.38, 0.28)).normalized()),
             (Vector((-0.6, 0.0, 0.0)), Vector((-0.85, -0.45, 0.25)).normalized())]
-    glows = [plate(section(whole, co, no), no, thick=0.04, shrink=0.42) for co, no in cuts]
+    glows = [plate(section(whole, co, no), no, thick=0.04, shrink=0.5) for co, no in cuts]
     left, right = split(whole, cuts[0][0], cuts[0][1], gap=0.1, turn=1.5)
     mid, far_left = split(left, cuts[1][0] - cuts[0][1] * 0.08, cuts[1][1], gap=0.1, turn=1.5)
     pieces = [chisel(p, 0.07, angle=12) for p in (right, mid, far_left)]
@@ -1163,11 +1163,11 @@ def ember_ore():
                               [(-16, 0.95), (2, 1.1), (6, 1.5), (22, 1.62)],
                               [(-54, 0.45), (-40, 0.9), (-54, 1.35), (-42, 1.95)],
                               [(176, 0.45), (190, 0.95), (178, 1.5), (190, 2.1)]]):
-        path = surf.path(ctrl, 0.16, smooth=False)
+        path = surf.path(ctrl, 0.22, smooth=False)
         b.add("crack lips", ridge(path, 0.11, 0.05, LIPS, seed=k, wobble=0.2), crust)
         b.add("molten cracks", ridge(path, 0.035, 0.05, CORE, seed=k), glow)
-    for (th, z, d), spec in [((70, 2.8, 0.8), [(1.3, 0, 0.25), (0.95, 30, 0.19), (0.8, 35, 0.17), (0.65, 40, 0.15)]),
-                             ((-75, 1.0, 0.0), [(0.85, 0, 0.18), (0.6, 35, 0.14)]),
+    for (th, z, d), spec in [((70, 2.7, 0.8), [(1.35, 0, 0.27), (1.05, 30, 0.2), (0.9, 35, 0.18), (0.75, 40, 0.16)]),
+                             ((-75, 1.0, 0.0), [(1.0, 0, 0.2), (0.7, 35, 0.15), (0.55, 40, 0.13)]),
                              ((200, 2.3, 0.5), [(1.0, 0, 0.2), (0.65, 30, 0.15)])]:
         p, n = surf.at(th, z, d)
         d0 = (n + UP * 0.8).normalized()
@@ -1187,10 +1187,10 @@ def geode_ore():
     rnd = random.Random(77)
     sh = Shape(2.2, 1.95, 3.55, seed=71, wob=0.08, n=1.9, cap=0.45, flare=0.06, peak=(0.15, 0.2))
     shell = chisel(hull(strata(sh, [], rnd, n=8, rings=(0.2, 0.45, 0.7, 0.88), cap_n=5)[0]), 0.13)
-    no = Vector((0.06, -0.84, 0.54)).normalized()
-    centre = Vector((0.0, 0.0, sh.h * 0.45))
+    no = Vector((0.06, -0.8, 0.6)).normalized()
+    centre = Vector((0.0, 0.0, sh.h * 0.5))
     reach = BVHTree.FromBMesh(shell).ray_cast(centre, no)[3]
-    c, rim_pts = open_up(shell, centre + no * (reach - 0.85), no, rnd, rim=0.26, depth=1.3)
+    c, rim_pts = open_up(shell, centre + no * (reach - 0.55), no, rnd, rim=0.24, depth=1.2)
     rock = geode_material("GeodeRock", base="#4E4B5E", warm="#5C5262", edge="#A39CB6", crack="#1E1C26", dirt="#2E2B33",
                           top=("#6E6A80", 0.25), vary=0.25, cracks=0.25)
     egg_m = egg_material("GeodeEgg")
@@ -1198,20 +1198,20 @@ def geode_ore():
     glow = glow_material("GeodeOre", "#E2D4FF", 2.2)
     b = Build("GeodeOre")
     b.add("rock", shell, rock)
-    axis = (no * 0.35 + UP * 0.9).normalized()
+    axis = (no * 0.4 + UP * 0.9).normalized()
     egg = egg_shape(2.05, 0.74)
     lg = layer(egg, "g")
     for v in egg.verts:
         v[lg] = v.co.z / 2.05
-    b.add("egg", egg, egg_m, aim(c - no * 0.95, axis, 20))
+    b.add("egg", egg, egg_m, aim(c - no * 0.85 - UP * 0.25, axis, 20))
     e1, e2 = frame(no)
     ring = sorted(rim_pts, key=lambda p: math.atan2((p - c).dot(e2), (p - c).dot(e1)))
-    count = 15
+    count = 20
     for k in range(count):
         p = ring[int(k * len(ring) / count)]
         out = (p - c - no * (p - c).dot(no)).normalized()
         ax = jitter(rnd, no * 0.85 + out * 0.6, 0.12)
-        ln, rad = rnd.uniform(0.32, 0.58), rnd.uniform(0.07, 0.1)
+        ln, rad = rnd.uniform(0.4, 0.7), rnd.uniform(0.08, 0.11)
         at = aim(p - ax * 0.04, ax, rnd.uniform(0, 60))
         if k % 3 == 0:
             facets, core = lit_crystal(ln, rad, seed=300 + k)
@@ -1219,7 +1219,7 @@ def geode_ore():
             b.add("crystal cores", core, glow, at)
         else:
             b.add("crystals", crystal(ln, rad, seed=300 + k), pale, at, flat=True)
-    foot = c - no * 0.95
+    foot = c - no * 0.85 - UP * 0.25
     for k in range(5):
         a = TAU * k / 5 + 0.3
         o = e1 * math.cos(a) + e2 * math.sin(a)
