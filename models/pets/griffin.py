@@ -1275,7 +1275,7 @@ def bake(griffin, texture):
     glow = [ob for ob in griffin.objects if "GLOW" in ob.name]
     body = kit.bake_texture([ob for ob in griffin.objects if ob not in glow], texture, name="Griffin_Body",
                             shade=0.48, soften=3, rough=0.85, uv_angle=85.0, uv_margin=0.004, pack_margin=0.003)
-    lift_breast(body, texture)
+    lift_breast(body, texture, size=512 if os.environ.get("PETS_FAST") else 1024)  # kit bakes 512 under PETS_FAST
     bpy.ops.object.select_all(action='DESELECT')
     for ob in glow:
         ob.select_set(True)
