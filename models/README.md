@@ -74,7 +74,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
 | Turtle | Old forest tortoise in a naturalist storybook style: high domed shell with ridged growth rings, moss with mushrooms and a fern on top, olive scaly skin, calm amber eyes | 8,960 | 13 (11 since the remake) |
 | Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
-| Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
+| Griffin | Storm griffin: white eagle head with glowing blue eyes and a gold cere, layered off-white breast, navy wings with lightning streaks, muscled golden lion body, tufted navy tail with a glowing core, 9.5 studs tall | 18,406 | 13 |
 | Golem | Ancient crystal golem: carved slate blocks with moss, emerald crystal clusters, glowing eye slots and rune cracks, 9.9 studs tall | 7,314 | 6 |
 | Wolf | Shadow alpha wolf: long wedge muzzle, tall ears, slate blue-grey coat with a charcoal saddle, big silver mane of sculpted locks, violet crystals glowing along the spine, calm violet eyes, 7 studs tall | 15,032 | 19 (10 since the remake) |
 | Driller | Mining machine shaped like a mole: worn mining-yellow armour over gunmetal, chrome drill in a glowing ring, light-bar visor, furnace grille, oversized shovel claws, exhaust stacks, dug-up gems on its back, 5.1 studs tall and 7.9 long | 11,844 | 12 |
@@ -181,9 +181,9 @@ Known weak points, from the last review of each:
   feather shafts blur away. Up close the head is a rounded, slightly boxy shape, the
   backs of the wings are plain with the wing arm reading as a dark rod, and the rows of chest
   feathers are an even spiky pattern.
-- Griffin: the white breast is a regular pattern of scale-like feathers that reads as armour more
-  than soft plumage, and goes nearly flat white in strong light. The beak is a little large and
-  bright, the lion body and thighs are smooth, the tail is thin and the eagle shanks are long.
+- Griffin: up close the breast still reads slightly like rows of shingles rather than fluff, the
+  flat skull planes and pointed neck hackles look a little like cardboard, and the lion hind legs
+  below the thigh are tubes with painted muscle. Only about 100 triangles of budget are left.
 - Golem: the legs and feet read as stacked boxes, a little robotic, and many limb blocks are similar
   slabs. The cracks, worn edges and carvings vanish at game distance, where the stone is plain dark
   grey. Each crystal's glowing core reads as one brighter crystal rather than light from inside.
