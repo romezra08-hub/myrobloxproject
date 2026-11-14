@@ -775,9 +775,9 @@ def mouth_z(y):
 def eye_socket(bvh, C, gaze, re, outer, n=12):
     """The skin round an eye set into the head (`bvh` is the head): an almond opening whose upper
     lid covers about the top third of the eye and droops a touch at the outer corner. Its edge
-    rolls onto the eyeball, a soft fold of skin rises round it, and its outer rings settle onto the
-    head's surface (not into it, which would bake a dark crease round the eye), so the lids blend into
-    the face instead of standing out as rings."""
+    rolls onto the eyeball, a soft fold of skin rises round it, and its outer rings lie a hair above
+    the head without ever crossing it (wherever it cuts into the head the bake draws a dark ring
+    round the eye), so the lids blend into the face instead of standing out as rings."""
     E = seat(C, gaze)
     R = E.to_3x3()
     a, b_up, b_dn = 0.78 * re, 0.22 * re, 0.58 * re
@@ -798,7 +798,8 @@ def eye_socket(bvh, C, gaze, re, outer, n=12):
     bm = bmesh.new()
     layer(bm)
     rings = []
-    for d, mode, val in ((0.0, "eye", 1.008), (0.10, "eye", None), (0.45, "skin", 0.010), (0.95, "skin", 0.0025), (1.5, "skin", 0.0004)):
+    for d, mode, val in ((0.0, "eye", 1.008), (0.10, "eye", None), (0.45, "skin", 0.010), (0.95, "skin", 0.0055),
+                         (1.45, "skin", 0.0042), (2.0, "skin", 0.004)):
         ring = []
         for x, z in outline:
             xs, zs = grow(x, z, d * re)
@@ -970,8 +971,7 @@ def build():
     cran = cranium()
     face = BVHTree.FromBMesh(cran)
     plates = [((0.0, -0.06), 0.21, 0.20), ((-0.068, -0.245), 0.125, 0.13), ((0.068, -0.245), 0.125, 0.13),
-              ((-0.095, 0.135), 0.17, 0.17), ((0.095, 0.135), 0.17, 0.17), ((0.0, 0.29), 0.13, 0.11),
-              ((-0.16, -0.17), 0.09, 0.12), ((0.16, -0.17), 0.09, 0.12)]
+              ((-0.095, 0.135), 0.17, 0.17), ((0.095, 0.135), 0.17, 0.17), ((0.0, 0.29), 0.13, 0.11)]
     for (x, y), w, l in plates:
         hit, nrm, _, _ = face.ray_cast(Vector((x, y, 0.7)), Vector((0, 0, -1)))
         add("head plates", plate_on(face, hit, nrm, (0, 1, 0), w, l, h=0.016), "plate", H)

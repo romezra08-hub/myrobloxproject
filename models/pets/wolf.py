@@ -17,6 +17,10 @@ wolf on a shield, never cute, never creepy, never plastic. Must-haves, checked i
      tip and paws; light enough to read at game distance. Dark crystals with a violet glow along
      the spine and shoulders.
 
+Round 19: a tidier outline. The longest side locks of the mane are capped in length and lean out
+less, so the front outline is broad and even instead of one blade sticking out from the shoulder;
+fewer, cleaner crystals at the withers (a busy cluster from behind).
+
 Round 18: the face from straight in front, which still looked friendly more than noble: smaller,
 sharper eyes whose top edge rises towards the ear, with a thinner dark rim; the lip line no longer
 wraps round the front of the muzzle (it made a cat's mouth) and is a soft crease in shadow rather
@@ -932,10 +936,10 @@ def build():
         side = abs(math.cos(math.radians(th)))
         front = smooth(math.sin(math.radians(th)), 0.35, -0.6)
         gm = lerp(0.36, 0.84, front) + 0.04 * (i % 2)
-        L = lerp(0.8, 1.35, f) * (1 + 0.16 * math.sin(i * 1.9)) * lerp(1.0, 0.8, front) * (1 + 0.3 * side * f)
+        L = min(lerp(0.8, 1.35, f) * (1 + 0.16 * math.sin(i * 1.9)) * lerp(1.0, 0.8, front) * (1 + 0.3 * side * f), 1.5)
         W = L * (0.26 + 0.08 * (0.5 + 0.5 * math.sin(i * 2.9)))
-        add("mane", on_skin(idx, th, L, W, back=1.0, down=0.5 * side, out=(0.4 + 0.8 * f) * side, g=gm, on=neck,
-                            rise=0.03 + 0.28 * side * f, flick=0.02 + 0.14 * side, curl=0.3 * math.sin(i * 2.7), n=5,
+        add("mane", on_skin(idx, th, L, W, back=1.0, down=0.6 * side, out=(0.4 + 0.55 * f) * side, g=gm, on=neck,
+                            rise=0.03 + 0.22 * side * f, flick=0.02 + 0.14 * side, curl=0.3 * math.sin(i * 2.7), n=5,
                             fork=L > 1.05), coat)
     # the chest: a silver-white bib of locks flowing down
     for k, idx in enumerate((7.7, 7.15, 6.6)):
@@ -968,17 +972,16 @@ def build():
         s = skin.s_of(idx)
         p, n, t = skin.bare(s, 90.0), skin.normal(s, 90.0), skin.at(s)[1]
         grow(p - n * 0.02, (n * 0.9 - t * 0.45).normalized(), h, r, -t)
-        sx = 1 if k % 2 == 0 else -1
-        th = 90 - 20 * sx
-        p2, n2 = skin.bare(s - 0.12, th), skin.normal(s - 0.12, th)
-        grow(p2 - n2 * 0.02, (n2 * 0.9 - t * 0.4).normalized(), h * 0.55, r * 0.75, -t)
+        if k in (1, 3):                                    # a smaller crystal beside every other one
+            sx = 1 if k == 1 else -1
+            th = 90 - 20 * sx
+            p2, n2 = skin.bare(s - 0.12, th), skin.normal(s - 0.12, th)
+            grow(p2 - n2 * 0.02, (n2 * 0.9 - t * 0.4).normalized(), h * 0.55, r * 0.75, -t)
     for sx in (-1, 1):
         s = skin.s_of(6.05)
         th = 90 - 52 * sx
         p, n, t = skin.bare(s, th), skin.normal(s, th), skin.at(s)[1]
         grow(p - n * 0.02, (n - t * 0.4).normalized(), 0.8, 0.14, -t)
-        p, n = skin.bare(s - 0.3, th - 10 * sx), skin.normal(s - 0.3, th - 10 * sx)
-        grow(p - n * 0.02, (n - t * 0.5).normalized(), 0.5, 0.1, -t)
 
     # ---- head: placed in its own space, then turned as one -------------------------------------------
     head = head_shell()

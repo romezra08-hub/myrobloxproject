@@ -1375,7 +1375,7 @@ def disc_point(egg, s, th, rho, ang):
     return egg.walk(s, th, rho * math.sin(ang), rho * math.cos(ang))
 
 
-def crater(b, egg, s, th, r0, r1, n, mat, rnd, lean=0.3, h=0.08):
+def crater(b, egg, s, th, r0, r1, n, mat, rnd, lean=0.3, h=0.08, gap=0.02, chamfer=0.025):
     """A ring of `n` broken shell pieces round (s, th), from r0 to r1 studs out, their inner edges pushed
     up and out as if something broke through from inside."""
     P = egg.point(s, th)
@@ -1389,7 +1389,7 @@ def crater(b, egg, s, th, r0, r1, n, mat, rnd, lean=0.3, h=0.08):
                 (r0 * rnd.uniform(0.9, 1.15), a1)]
         corners = [egg.point(*disc_point(egg, s, th, rho, a)) for rho, a in ring]
         C = egg.point(*disc_point(egg, s, th, (r0 + r1) / 2, am))
-        b.add("shell shards", stone_plate(egg, C, corners, rnd, gap=0.05, chamfer=0.035, h=h, sink=0.05, tilt=0.05,
+        b.add("shell shards", stone_plate(egg, C, corners, rnd, gap=gap, chamfer=chamfer, h=h, sink=0.05, tilt=0.05,
                                           away=P, lean=lean), mat)
 
 
@@ -1481,8 +1481,8 @@ def shadow():
             b.add("fur", fur_lock(egg, s0, thc, ln * rise * rnd.uniform(0.94, 1.04), n, bend=sweep * rise, extra=extra, flare=fl,
                                   shade=rnd.random()), fur_m, crease=32)
     # the front: violet-black crystals bursting out through broken shell, cradled by a silver crescent
-    b.add("crack glow", pool(egg, F_s, F_th, 0.58, 0.03, k=12), glow)
-    crater(b, egg, F_s, F_th, 0.2, 0.6, 6, shell_m, rnd, lean=0.75, h=0.07)
+    b.add("crack glow", pool(egg, F_s, F_th, 0.55, 0.03, k=12), glow)
+    crater(b, egg, F_s, F_th, 0.17, 0.64, 6, shell_m, rnd, lean=0.6, h=0.065)
     burst(b, egg, F_s, F_th, ((1.36, 0, 0.0, 0.21), (0.9, 30, 0.2, 0.15), (0.8, 30, 0.2, 0.14), (0.62, 40, 0.2, 0.12),
                               (0.52, 44, 0.19, 0.11), (0.44, 52, 0.22, 0.1)), gem_m, glow, rnd, 40, out=0.55, lit=3)
     for hd, ln, seed in (((0.85, -0.5), 0.7, 3), ((0.9, 0.6), 0.65, 5), ((0.05, 1.0), 0.55, 7)):
