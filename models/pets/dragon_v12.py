@@ -934,41 +934,50 @@ def build():
     add("head", jaw, facem, H, crease=38)
 
     for sx in (-1, 1):
-        # brow ridge: a heavy blade over the eye that runs back into the horn
-        brow = [(0.16 * sx, -1.05, 0.27), (0.31 * sx, -0.80, 0.40), (0.41 * sx, -0.52, 0.44), (0.42 * sx, -0.20, 0.48), (0.33 * sx, 0.10, 0.50)]
-        add("brows", loft(brow, [(0.04, 0.03), (0.09, 0.07), (0.12, 0.09), (0.12, 0.09), (0.12, 0.1)], P_BROW,
-                          up=(0.55 * sx, 0, 1), rings=10, grad=False), facem, H, crease=38)
+        # brow ridge: a heavy, level shelf over the eye (never slanting down to the nose: that reads as a
+        # scowl) that runs back into the horn
+        brow = [(0.2 * sx, -1.0, 0.34), (0.36 * sx, -0.82, 0.44), (0.47 * sx, -0.56, 0.48), (0.47 * sx, -0.26, 0.5), (0.36 * sx, 0.06, 0.52)]
+        add("brows", loft(brow, [(0.05, 0.04), (0.14, 0.1), (0.18, 0.13), (0.17, 0.12), (0.14, 0.11)], P_BROW,
+                          up=(0.75 * sx, 0, 1), rings=10, grad=False), facem, H, crease=38)
         # cheek ridge: a hard crease from under the eye back to the frill
-        cheek = [(0.36 * sx, -1.0, -0.06), (0.47 * sx, -0.62, -0.04), (0.54 * sx, -0.22, -0.02), (0.5 * sx, 0.12, 0.02)]
-        add("cheeks", loft(cheek, [(0.02, 0.02), (0.06, 0.05), (0.08, 0.07), (0.06, 0.05)], P_BROW,
+        cheek = [(0.36 * sx, -1.0, -0.06), (0.49 * sx, -0.62, -0.04), (0.57 * sx, -0.22, -0.02), (0.52 * sx, 0.12, 0.02)]
+        add("cheeks", loft(cheek, [(0.02, 0.02), (0.08, 0.06), (0.1, 0.08), (0.07, 0.05)], P_BROW,
                            up=(1.0 * sx, 0, 0.35), rings=8, grad=False), facem, H, crease=38)
+        # cheek spikes: three swept back and out from the cheekbone, widening the face
+        for y0, z0, ln, out, dz in ((-0.42, -0.04, 0.42, 0.75, 0.05), (-0.16, -0.06, 0.55, 0.85, -0.05), (0.1, -0.1, 0.5, 0.8, -0.2)):
+            base = Vector((0.5 * sx, y0, z0))
+            dirn = Vector((out * sx, 1.0, dz)).normalized()
+            pts = [base, base + dirn * ln * 0.55 + Vector((0, 0, 0.02)), base + dirn * ln]
+            add("cheek spikes", loft(pts, [0.075, 0.045, 0.006], P_HORN, up=(0.2 * sx, 0, 1), rings=4), horn, H, crease=50)
         # the eye: a glowing almond, slanted, tucked under the brow
         p, nrm = face.hit((0.9 * sx, -0.6, 0.25), (-sx, 0.0, -0.05))
         back = Vector((0, 1, 0.1))
         eye = [(-0.5, -0.06), (-0.3, 0.06), (0.0, 0.13), (0.3, 0.17), (0.5, 0.16), (0.32, 0.02), (0.05, -0.08), (-0.25, -0.1)]
-        add("eyes", lens([(a * 0.46, b * 0.5) for a, b in eye], 0.08, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.03)),
+        add("eyes", lens([(a * 0.48, b * 0.52) for a, b in eye], 0.08, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.03)),
             glow, H @ facing(p - nrm * 0.015, nrm, back), crease=0)
         # nostrils: small dark slits on the snout
         q, qn = face.hit((0.11 * sx, -2.2, 0.1), (0, 1, -0.6))
         add("nostrils", lens([(-0.5, 0), (0, 0.18), (0.5, 0.05), (0, -0.15)], 0.06, centre=(0, 0)), dark,
             H @ facing(q - qn * 0.01, qn, (sx * 0.4, 1, 0)) @ M(scale=(0.16, 1, 0.18)), crease=0)
-        # the big horns, swept back
-        hornpath = [(0.30 * sx, 0.0, 0.42), (0.43 * sx, 0.45, 0.74), (0.55 * sx, 1.02, 0.92), (0.63 * sx, 1.62, 0.88), (0.66 * sx, 2.22, 0.62)]
-        add("horns", loft(hornpath, [0.25, 0.2, 0.14, 0.085, 0.012], P_HORN, up=(0.6 * sx, 0.3, 1), rings=14), horn, H, crease=50)
-        lower = [(0.42 * sx, 0.02, 0.2), (0.6 * sx, 0.42, 0.3), (0.74 * sx, 0.9, 0.3), (0.8 * sx, 1.3, 0.18)]
-        add("horns", loft(lower, [0.13, 0.1, 0.06, 0.01], P_HORN, up=(0.8 * sx, 0.2, 1), rings=8), horn, H, crease=50)
-        # a frill of smaller horns behind the jaw
-        for k, (y0, z0, ln, ang) in enumerate(((-0.05, -0.12, 0.62, -12), (0.12, 0.08, 0.72, 4), (0.26, 0.28, 0.58, 18))):
-            base = Vector((0.40 * sx, y0, z0))
-            dirn = Vector((0.45 * sx, 1.0, math.tan(math.radians(ang)))).normalized()
-            pts = [base, base + dirn * ln * 0.5 + Vector((0, 0, 0.03)), base + dirn * ln]
-            add("frill", loft(pts, [0.08, 0.05, 0.008], P_HORN, up=(0.3 * sx, 0, 1), rings=4), horn, H, crease=50)
+        # the big horns: ridged at the root, swept back and out so that from the front they frame the face
+        hornpath = [(0.30 * sx, 0.0, 0.42), (0.47 * sx, 0.42, 0.78), (0.68 * sx, 0.96, 0.98), (0.88 * sx, 1.55, 0.98), (1.02 * sx, 2.15, 0.78)]
+        path, radii = ridged(hornpath, 0.27, 0.012, ridges=5, upto=0.4, depth=0.14, dense=26, power=1.15)
+        add("horns", loft(path, radii, P_HORN, up=(0.6 * sx, 0.3, 1), rings=26), horn, H, crease=50)
+        lower = [(0.42 * sx, 0.02, 0.2), (0.64 * sx, 0.42, 0.3), (0.84 * sx, 0.88, 0.28), (0.96 * sx, 1.3, 0.14)]
+        path, radii = ridged(lower, 0.14, 0.01, ridges=3, upto=0.35, depth=0.14, dense=14)
+        add("horns", loft(path, radii, P_HORN, up=(0.8 * sx, 0.2, 1), rings=14), horn, H, crease=50)
+        # the crown: a fan of smaller horns behind the jaw, splayed out so they frame the head
+        for k, (y0, z0, ln, ang, out) in enumerate(((-0.05, -0.14, 0.7, -14, 0.7), (0.12, 0.06, 0.82, 2, 0.75), (0.26, 0.26, 0.7, 16, 0.65))):
+            base = Vector((0.42 * sx, y0, z0))
+            dirn = Vector((out * sx, 1.0, math.tan(math.radians(ang)))).normalized()
+            pts = [base, base + dirn * ln * 0.5 + Vector((0, 0, 0.04)), base + dirn * ln]
+            add("frill", loft(pts, [0.09, 0.055, 0.008], P_HORN, up=(0.3 * sx, 0, 1), rings=4), horn, H, crease=50)
         # two fangs from the upper jaw, over the lower lip
         fang = [(0.235 * sx, -1.56, -0.14), (0.245 * sx, -1.58, -0.27), (0.24 * sx, -1.60, -0.37)]
         add("fangs", loft(fang, [0.05, 0.035, 0.005], P_CLAW, up=(0, -1, 0), rings=4), horn, H, crease=50)
-        # a dark mouth line along the lips
-        lip = [(skull_at(y)[6] * 0.93 * sx, y, skull_at(y)[5] - 0.012) for y in (-0.1, -0.5, -0.9, -1.3, -1.65, -1.86)]
-        add("mouth", loft(lip, [0.02, 0.024, 0.024, 0.022, 0.02, 0.014], profile_round(5), up=(0, 0, 1), rings=8, grad=False), dark, H, crease=0)
+        # the closed mouth: an ember seam glowing along the lips, the fire showing through
+        lip = [(skull_at(y)[6] * 0.95 * sx, y, skull_at(y)[5] - 0.012) for y in (0.0, -0.4, -0.85, -1.3, -1.65, -1.88)]
+        add("mouth", loft(lip, [0.022, 0.032, 0.034, 0.03, 0.026, 0.014], profile_round(5), up=(0, 0, 1), rings=8, grad=False), glow, H, crease=0)
 
     # a small crest on the top of the skull carries the row of blades onto the head, and a ridge of
     # small spikes runs up the snout
@@ -990,20 +999,184 @@ def build():
             add("vents", lens([(-0.5, 0), (-0.3, 0.06), (0.3, 0.08), (0.5, 0), (0.3, -0.06), (-0.3, -0.05)], 0.05, centre=(0, 0)),
                 glow, facing(p - nrm * 0.008, nrm, along) @ M(scale=(0.62 - 0.05 * k, 1, 0.42)), crease=0)
 
+    cut = cull_and_weigh(d.parts)
+    print("  hidden faces removed: %d triangles" % cut)
     d.build()
     for ob in d.objects:
         print("  %-26s %6d triangles" % (ob.name, sum(len(p.vertices) - 2 for p in ob.data.polygons)))
     return d
 
 
+UV_ANGLE, UV_MARGIN, PACK_MARGIN = 85.0, 0.004, 0.003
+HIDDEN_SHARE = 0.3            # a barely seen surface gets this much of the texture size a seen one gets (in each direction)
+EMBER = "#FF5A12"             # the glow in the seams between the plates
+EMBER_REACH = 0.16            # crevice shading from shapes this close
+EMBER_FROM, EMBER_TO, EMBER_MAX = 0.18, 0.62, 0.8
+
+
+def weigh_islands(ob, keep=HIDDEN_SHARE):
+    """In edit mode, after the unwrap: shrink every texture island that is mostly hidden (the face
+    value "hid") about its centre, so that the packing gives the seen surfaces more pixels."""
+    me = ob.data
+    bm = bmesh.from_edit_mesh(me)
+    uvl = bm.loops.layers.uv.active
+    lh = bm.faces.layers.float.get("hid")
+    if lh is None:
+        return
+    bm.faces.ensure_lookup_table()
+    parent = list(range(len(bm.faces)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    for e in bm.edges:
+        lf = e.link_faces
+        if len(lf) != 2:
+            continue
+        f0, f1 = lf
+        same = True
+        for v in e.verts:
+            u0 = next(l[uvl].uv for l in f0.loops if l.vert is v)
+            u1 = next(l[uvl].uv for l in f1.loops if l.vert is v)
+            if (u0 - u1).length_squared > 1e-12:
+                same = False
+                break
+        if same:
+            parent[find(f0.index)] = find(f1.index)
+    islands = {}
+    for f in bm.faces:
+        islands.setdefault(find(f.index), []).append(f)
+    for faces in islands.values():
+        area = sum(f.calc_area() for f in faces) or 1.0
+        w = sum(f[lh] * f.calc_area() for f in faces) / area
+        if w <= 0.01:
+            continue
+        k = 1.0 - (1.0 - keep) * w
+        loops = [l for f in faces for l in f.loops]
+        c = sum((l[uvl].uv for l in loops), Vector((0.0, 0.0))) / len(loops)
+        for l in loops:
+            l[uvl].uv = c + (l[uvl].uv - c) * k
+    bmesh.update_edit_mesh(me)
+
+
+class _OpsProxy:
+    """bpy.ops as the kit sees it, with uv.pack_islands replaced by `pack`."""
+
+    def __init__(self, ops, pack):
+        self._ops, self._pack = ops, pack
+
+    def __getattr__(self, k):
+        if k == "uv":
+            return _UvProxy(self._ops.uv, self._pack)
+        return getattr(self._ops, k)
+
+
+class _UvProxy:
+    def __init__(self, uv, pack):
+        self._uv, self._pack = uv, pack
+
+    def __getattr__(self, k):
+        return self._pack if k == "pack_islands" else getattr(self._uv, k)
+
+
+def ember_seams(ob, path, size):
+    """After the bake: where the plates (vertex value "ember") sink into a tight crevice, between two
+    plates or where a plate meets the skin, turn the colour towards glowing ember, so that the seams
+    read as crisp lines of fire. Two quick bakes into the texture's own layout: the mask and a short
+    reach crevice shading."""
+    import bpy
+    import numpy as np
+    sc = bpy.context.scene
+    keep_samples = sc.cycles.samples
+    world = sc.world
+    if world is None:
+        world = sc.world = bpy.data.worlds.new("BakeWorld")
+    keep_reach = world.light_settings.distance
+    world.light_settings.distance = EMBER_REACH
+    baked = ob.data.materials[0]
+    m = bpy.data.materials.new("EmberMask")
+    kit.principled(m)
+    tree = m.node_tree
+    a = tree.nodes.new("ShaderNodeAttribute")
+    a.attribute_type, a.attribute_name = 'GEOMETRY', "ember"
+    em = tree.nodes.new("ShaderNodeEmission")
+    tree.links.new(a.outputs["Fac"], em.inputs["Color"])
+    out = next(n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL')
+    tree.links.new(em.outputs[0], out.inputs[0])
+    img = bpy.data.images.new("ember_mask", size, size, alpha=False, float_buffer=True)
+    tn = tree.nodes.new("ShaderNodeTexImage")
+    tn.image = img
+    tree.nodes.active = tn
+    ob.data.materials[0] = m
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+
+    def grab():
+        px = np.empty(size * size * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        return px.reshape(size, size, 4)[..., :1].copy()
+    sc.cycles.samples = 4
+    bpy.ops.object.bake(type='EMIT', margin=12)
+    mask = np.clip(grab(), 0.0, 1.0)
+    sc.cycles.samples = 24
+    bpy.ops.object.bake(type='AO', margin=12)
+    ao = grab()
+    ao = (ao + np.roll(ao, 1, 0) + np.roll(ao, -1, 0) + np.roll(ao, 1, 1) + np.roll(ao, -1, 1)) / 5.0
+    ob.data.materials[0] = baked
+    sc.cycles.samples = keep_samples
+    world.light_settings.distance = keep_reach
+    crev = np.clip(((1.0 - ao) - EMBER_FROM) / (EMBER_TO - EMBER_FROM), 0.0, 1.0)
+    k = mask * EMBER_MAX * crev * crev * (3 - 2 * crev)
+    tex = next(n.image for n in baked.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image.size[0] == size)
+    px = np.empty(size * size * 4, dtype=np.float32)
+    tex.pixels.foreach_get(px)
+    px = px.reshape(size, size, 4)
+    px[..., :3] = px[..., :3] * (1 - k) + np.array(kit.srgb(EMBER), dtype=np.float32) * k
+    tex.pixels.foreach_set(px.ravel())
+    tex.filepath_raw, tex.file_format = path, 'PNG'
+    tex.save()
+    bpy.data.images.remove(img)
+    bpy.data.materials.remove(m)
+
+
 def bake(dragon, texture):
     """Everything that does not glow becomes one textured mesh, Dragon_Body: the scales, tones and
-    soft shading in the creases are baked into its colour image. The glowing parts are joined into
-    one mesh, Dragon_GLOW, that keeps its emissive material. Roblox gets two MeshParts."""
-    glow = [ob for ob in dragon.objects if "GLOW" in ob.name]
-    body = kit.bake_texture([ob for ob in dragon.objects if ob not in glow], texture, name="Dragon_Body",
-                            shade=0.55, soften=2, rough=0.8, uv_angle=85.0, uv_margin=0.004, pack_margin=0.003)
+    soft shading in the creases are baked into its colour image, the barely seen surfaces getting
+    less of it, and the seams between the plates are then lit ember (ember_seams). The glowing parts
+    are joined into one mesh, Dragon_GLOW, that keeps its emissive material. Roblox gets two MeshParts."""
     import bpy
+    glow = [ob for ob in dragon.objects if "GLOW" in ob.name]
+    real_pack = bpy.ops.uv.pack_islands
+
+    def pack(**kw):
+        weigh_islands(bpy.context.view_layer.objects.active)
+        return real_pack(**kw)
+    saved = bpy.ops
+    bpy.ops = _OpsProxy(saved, pack)            # kit.bake_texture packs once, right after the unwrap
+    try:
+        body = kit.bake_texture([ob for ob in dragon.objects if ob not in glow], texture, name="Dragon_Body",
+                                shade=0.55, soften=2, rough=0.8, uv_angle=UV_ANGLE, uv_margin=UV_MARGIN, pack_margin=PACK_MARGIN)
+    finally:
+        bpy.ops = saved
+    ember_seams(body, texture, 512 if os.environ.get("PETS_FAST") else 1024)    # kit bakes 512 under PETS_FAST
+    me = body.data
+    if "hid" in me.attributes:
+        hid = [dd.value for dd in me.attributes["hid"].data]
+        uv = me.uv_layers.active.data
+        a2 = a3 = 0.0
+        for pl, h in zip(me.polygons, hid):
+            if h > 0.01:
+                continue
+            pts = [uv[i].uv for i in pl.loop_indices]
+            a2 += abs(sum(pts[i].x * pts[(i + 1) % len(pts)].y - pts[(i + 1) % len(pts)].x * pts[i].y for i in range(len(pts)))) / 2
+            a3 += pl.area
+        print("seen surfaces: about %.0f pixels to a stud" % ((a2 * 1024 * 1024 / max(a3, 1e-9)) ** 0.5))
+    for name in ("hid", "ember", "grad", "web"):
+        if name in me.attributes:
+            me.attributes.remove(me.attributes[name])
     bpy.ops.object.select_all(action='DESELECT')
     for ob in glow:
         ob.select_set(True)
@@ -1012,6 +1185,9 @@ def bake(dragon, texture):
         bpy.ops.object.join()
     g = bpy.context.view_layer.objects.active
     g.name = g.data.name = "Dragon_GLOW"
+    for name in ("hid", "ember", "grad", "web"):
+        if name in g.data.attributes:
+            g.data.attributes.remove(g.data.attributes[name])
     dragon.objects = [body, g]
 
 
