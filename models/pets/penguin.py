@@ -1125,6 +1125,17 @@ def bake(pen, texture, high, shade_pre, eyes_at, parts, size=1024):
     pen.objects = [body] + [ob for ob in pen.objects if ob.name == "Penguin_Eyes"]
 
 
+def made(texture):
+    """Build and bake the finished penguin in one call, writing its texture to this path (used by lineup.py)."""
+    parts, bead = build()
+    pen = Prop("Penguin")
+    eyes = make_eyes(bead)
+    high, shade_pre = high_object(parts)
+    pen.objects = [eyes]
+    bake(pen, os.path.abspath(texture), high, shade_pre, bead, parts)
+    return pen
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review", help="write a review contact sheet to this PNG")

@@ -775,6 +775,13 @@ def bake(cat, spec, texture, size=1024):
     cat.objects = [body] + keep
 
 
+def made(texture):
+    """Build and bake the finished cat in one call, writing its texture to this path (used by lineup.py)."""
+    cat, spec = build()
+    bake(cat, spec, os.path.abspath(texture))
+    return cat
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review", help="write a review contact sheet to this PNG")

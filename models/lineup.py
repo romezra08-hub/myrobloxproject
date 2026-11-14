@@ -51,8 +51,12 @@ def main():
     props = []
     for i, name in enumerate(row):
         mod = __import__(name)
-        prop = mod.build()
-        mod.bake(prop, os.path.join(tmp, name + "_colour.png"))
+        texture = os.path.join(tmp, name + "_colour.png")
+        if hasattr(mod, "made"):                         # pets whose bake needs more than the prop
+            prop = mod.made(texture)
+        else:
+            prop = mod.build()
+            mod.bake(prop, texture)
         for ob in prop.objects:
             ob.location.x = 300 + 60 * i                 # out of the way while the next one is baked
         props.append(prop)
