@@ -68,7 +68,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Fox | Sitting storybook animal with short fur and a simple, friendly face | 11,644 | 20 |
 | Puppy | Plush toy with stitches, patches and a fleecy nap | 8,926 | 8 |
 | Unicorn | Moonlight unicorn as a faceted low-poly sculpture: prancing horse, pearl-silver coat, sapphire-to-violet mane and tail, twisted glowing crystal horn, gold hooves | 5,864 | 15 (7 since the remake) |
-| Dragon | Adult obsidian fire dragon: wedge head, horn crown, raised red wings, glowing ember eyes and chest seams, 10.2 studs tall | 18,304 | 11 (6 since the redesign) |
+| Dragon | Adult obsidian fire dragon: larger wedge head with a calm brow, cheek spikes and a black horn crown with bone tips, back plates, rib plates and armour scales, raised red wings, glowing ember eyes and seams, 10.2 studs tall | 19,401 | 16 (11 since the redesign) |
 | Bunny | Crochet toy with rows of yarn stitches and a scarf | 8,290 | 4 |
 | Cat | Needle-felted oatmeal tabby with roving-style stripes, a halo of stray wool fibres and a tiny felt miner's hat with a glowing lamp | 9,482 | 13 (8 since the remake) |
 | Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
@@ -162,9 +162,9 @@ None of them has been checked inside Roblox Studio yet; the renders are from Ble
 
 Known weak points, from the last review of each:
 
-- Dragon: even re-packed, the texture fills 38% of the image, and the small body scales still blur at
-  mid range. The body barrel and thighs are smooth masses, the horns read grey-brown rather than black
-  with bone tips, and at game distance the small head loses its face detail apart from the eyes.
+- Dragon: the texture is still soft (about 38 px per stud; over 1,000 small pieces share one image),
+  so the scales read because they are bold, not sharp. Under strong light the far horn's base can
+  look pale, and from the front the chest is a plain mass behind the bronze belly plates.
 - Bunny: the stitches are painted, not raised, and the pom-pom tail is not fluffy enough.
 - Cat: the forms under the wool are fairly smooth, so the felt look comes mostly from the texture,
   a fabric sheen Roblox does not have and stray hairs that will be tiny in game. The outline is a

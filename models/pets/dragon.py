@@ -15,6 +15,15 @@ cartoon dragon "childish"; this one is the big creature players brag about. Must
   5. Obsidian scales, a darker back, bronze belly plates, black-to-bone horns and claws, deep red
      membranes and ember-orange glow (eyes, chest seams, neck vents, the tail blade's core).
   6. Not plastic: small scales and several tones baked into the texture, a matte finish.
+
+Rounds 12-16 (anatomy and read at distance): a ridge of overlapping back plates under the blades,
+curved rib plates down the flanks, deltoid, triceps, forearm, glute, quad and chest muscle masses,
+and staggered rows of pointed armour scales on the shoulders and thighs. The barrel and haunches use
+bigger, domed scales; the seams round every plate are lit ember after the bake (ember_seams). Faces
+no camera can see are deleted and barely seen ones get less of the texture, the wing membranes a bit
+less and the head a bit more (cull_and_weigh, weigh_islands). Horns are black obsidian with a painted
+highlight, ridged roots and bone tips. The head is 23% larger, with a level brow shelf over the eyes,
+cheek spikes, a horn crown swept wide to frame it and an ember seam along the closed lips.
 """
 import argparse
 import bisect
@@ -32,7 +41,7 @@ from mathutils.bvhtree import BVHTree  # noqa: E402
 
 HEAD_AT = (-0.42, -3.80, 7.45)     # the back of the skull
 HEAD_ROT = (8, 3, -16)             # nose a little down, a small tilt, turned towards -X (where the cameras are)
-HEAD_SIZE = 0.86
+HEAD_SIZE = 1.06
 
 # The upper head (skull and snout) as sections from the back of the skull to the nose:
 # y (nose towards -y), top z, half width of the top plane, cheek z, cheek half width, lip z, lip half width.
@@ -539,8 +548,14 @@ def membrane(wrist, rim, scallop, billow, back, thick=0.07, cols=5, ts=(0.3, 0.5
 class Surface:
     """Finds points exactly on a mesh, so that details sit on it and neither float nor sink."""
 
-    def __init__(self, bm):
-        self.bvh = BVHTree.FromBMesh(bm)
+    def __init__(self, *bms):
+        verts, polys = [], []
+        for bm in bms:
+            base = len(verts)
+            bm.verts.index_update()
+            verts += [v.co.copy() for v in bm.verts]
+            polys += [[base + v.index for v in f.verts] for f in bm.faces]
+        self.bvh = BVHTree.FromPolygons(verts, polys)
 
     def hit(self, origin, direction, out=0.0):
         loc, nrm, _, _ = self.bvh.ray_cast(Vector(origin), Vector(direction).normalized())
@@ -549,18 +564,171 @@ class Surface:
         return loc + nrm * out, nrm
 
 
+def gloss(mat, strength=0.55, tint="#B8BCC8", light=(-0.45, -0.6, 0.66), lo=0.78, hi=0.98, sheen=0.0):
+    """Paint a sharp highlight into the colour where the surface faces `light`: a glossy look that
+    survives the bake into one matte texture (Roblox reads the colour, not the shine)."""
+    tree = mat.node_tree
+    new, link = tree.nodes.new, tree.links.new
+    hsv = next(n for n in tree.nodes if n.type == 'HUE_SAT')
+    src = next((l.from_socket for l in tree.links if l.to_socket == hsv.inputs["Color"]), None)
+    geo = new("ShaderNodeNewGeometry")
+    dot = new("ShaderNodeVectorMath")
+    dot.operation = 'DOT_PRODUCT'
+    link(geo.outputs["Normal"], dot.inputs[0])
+    dot.inputs[1].default_value = Vector(light).normalized()
+    rng = new("ShaderNodeMapRange")
+    rng.interpolation_type = 'SMOOTHSTEP'
+    rng.inputs["From Min"].default_value, rng.inputs["From Max"].default_value = lo, hi
+    rng.inputs["To Min"].default_value, rng.inputs["To Max"].default_value = sheen, strength
+    link(dot.outputs["Value"], rng.inputs["Value"])
+    mix = new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    link(rng.outputs["Result"], mix.inputs[0])
+    if src is not None:
+        link(src, mix.inputs[6])
+    else:
+        mix.inputs[6].default_value = tuple(hsv.inputs["Color"].default_value)
+    mix.inputs[7].default_value = (*kit.srgb(tint), 1.0)
+    link(mix.outputs[2], hsv.inputs["Color"])
+    return mat
+
+
+def dome(mat, amount=0.35):
+    """Shade each scale of a scaly() material like a low dome: lighter in the middle, darker at the
+    rim, so the scales read as raised tiles and not as a drawn net."""
+    tree = mat.node_tree
+    new, link = tree.nodes.new, tree.links.new
+    hsv = next(n for n in tree.nodes if n.type == 'HUE_SAT')
+    mapping = next(n for n in tree.nodes if n.type == 'MAPPING')
+    src = next(l.from_socket for l in tree.links if l.to_socket == hsv.inputs["Value"])
+    vor = new("ShaderNodeTexVoronoi")
+    vor.feature = 'F1'
+    vor.inputs["Scale"].default_value = 1.0
+    link(mapping.outputs["Vector"], vor.inputs["Vector"])
+    shade = new("ShaderNodeMath")
+    shade.operation = 'MULTIPLY_ADD'                  # 1 + amount * (0.3 - distance) * 2
+    shade.inputs[1].default_value, shade.inputs[2].default_value = -2 * amount, 1 + 0.6 * amount
+    link(vor.outputs["Distance"], shade.inputs[0])
+    both = new("ShaderNodeMath")
+    both.operation = 'MULTIPLY'
+    link(src, both.inputs[0])
+    link(shade.outputs[0], both.inputs[1])
+    link(both.outputs[0], hsv.inputs["Value"])
+    return mat
+
+
+def ridged(points, r0, r1, ridges=5, upto=0.36, depth=0.16, dense=28, power=1.0):
+    """A horn path resampled densely with its radius falling from r0 to r1, ringed with `ridges`
+    raised growth rings over the first `upto` of its length."""
+    pts = [Vector(p) for p in points]
+    n = len(pts) - 1
+    path, radii = [], []
+    for i in range(dense + 1):
+        t = i / dense
+        path.append(tuple(_cr(pts, t * n)))
+        r = r1 + (r0 - r1) * (1 - t) ** power
+        if t < upto:
+            ring = max(0.0, math.cos(2 * math.pi * ridges * t / upto)) ** 3
+            r *= 1 + depth * ring * (1 - t / upto * 0.5)
+        radii.append(r)
+    return path, radii
+
+
+def mass(points, radii, up, rings=None):
+    """A muscle: a smooth teardrop mass along `points` (round section, flattened by the radii)."""
+    return loft(points, radii, profile_round(10, 2.2), up=up, rings=rings or (len(points) - 1) * 3, grad=False)
+
+
+def _hemisphere():
+    """Ray directions spread over the hemisphere round +Z, out to nearly grazing."""
+    out = [Vector((0, 0, 1))]
+    for tilt, n in ((25, 6), (50, 9), (72, 12), (86, 14)):
+        t = math.radians(tilt)
+        for j in range(n):
+            a = 2 * math.pi * (j + 0.5 * (tilt // 25 % 2)) / n
+            out.append(Vector((math.sin(t) * math.cos(a), math.sin(t) * math.sin(a), math.cos(t))))
+    return out
+
+
+MEMBRANE_HID = 0.6         # the wing membranes get about 0.55 of the texture size the body gets
+OPEN_FULL = 0.4            # a face that sees at least this much of the sky counts as fully seen
+
+
+def cull_and_weigh(parts, keep=("GLOW", "Membrane")):
+    """Delete the faces no camera can see (buried in another shape, tucked under a plate, flat on the
+    floor) and mark the barely seen ones with the face value "hid" (0 seen to 1 hidden), so the unwrap
+    can give them less of the texture. Returns the number of triangles removed."""
+    verts, polys = [], []
+    for bm, _ in parts.values():
+        base = len(verts)
+        bm.verts.index_update()
+        verts += [v.co.copy() for v in bm.verts]
+        polys += [[base + v.index for v in f.verts] for f in bm.faces]
+    bvh = BVHTree.FromPolygons(verts, polys)
+    dirs = _hemisphere()
+    removed = 0
+    for key, (bm, _) in parts.items():
+        lh = bm.faces.layers.float.get("hid") or bm.faces.layers.float.new("hid")
+        lb = bm.faces.layers.float.get("boost")
+        if "Membrane" in key:                # big smooth panels: they keep their look at a lower texture density
+            for f in bm.faces:
+                f[lh] = MEMBRANE_HID
+        if any(k in key for k in keep):
+            continue
+        bm.normal_update()
+        dead = []
+        for f in bm.faces:
+            n = f.normal
+            if n.length < 0.5:
+                continue
+            c = f.calc_center_median()
+            if c.z < 0.02 and n.z < -0.9:
+                dead.append(f)
+                continue
+            rot = n.to_track_quat('Z', 'Y').to_matrix()
+            world = [rot @ d for d in dirs]
+            o = c + n * 0.004
+            free = sum(1 for d in world if bvh.ray_cast(o, d, 60.0)[0] is None)
+            if free == 0:
+                seen = False
+                for p in [c.lerp(v.co, 0.8) for v in f.verts[:8]]:
+                    o = p + n * 0.004
+                    if any(bvh.ray_cast(o, d, 60.0)[0] is None for d in world):
+                        seen = True
+                        break
+                if not seen:                     # a face turned the wrong way would look buried: try its back too
+                    o = c - n * 0.004
+                    if sum(1 for d in world if bvh.ray_cast(o, -d, 60.0)[0] is None) < len(dirs) // 3:
+                        dead.append(f)
+                        continue
+            f[lh] = max(0.0, min(1.0, 1.0 - free / len(dirs) / OPEN_FULL)) - (f[lb] if lb else 0.0)
+        removed += sum(len(f.verts) - 2 for f in dead)
+        bmesh.ops.delete(bm, geom=dead, context='FACES')
+    return removed
+
+
 # ---- the dragon --------------------------------------------------------------------------------------
 
 def build():
-    scale = kit.scaly(kit.material("Scale", "#3C3842"), size=0.17, joins=0.5, vary=0.24, shade_down=0.12, rough=0.8)
+    scale = kit.scaly(kit.material("Scale", "#3C3842"), size=0.22, joins=0.62, vary=0.26, shade_down=0.12, rough=0.8)
     tones(scale, up="#17151A", down="#544640", up_mix=0.62, down_mix=0.5)
-    belly = kit.scaly(kit.material("Belly", "#7C5A28"), size=0.3, joins=0.36, vary=0.14, rough=0.6)
-    tones(belly, up="#9C7838", down="#4C3519", up_mix=0.35, down_mix=0.5)
-    horn = kit.scaly(kit.material("Horn", "#1A1718"), size=0.5, joins=0.08, vary=0.08, rough=0.5)
-    ramp_by(horn, "grad", [(0.0, "#0E0C0D"), (0.62, "#1D1918"), (0.86, "#8F7E62"), (1.0, "#E8DCBC")])
+    dome(scale, 0.25)
+    hide = kit.scaly(kit.material("Hide", "#3E3943"), size=0.36, joins=0.72, vary=0.3, shade_down=0.1, rough=0.8)
+    tones(hide, up="#18161B", down="#56473F", up_mix=0.6, down_mix=0.5)
+    dome(hide, 0.4)
+    belly = kit.scaly(kit.material("Belly", "#7C5A28"), size=0.42, joins=0.3, vary=0.14, rough=0.6)
+    tones(belly, up="#A27C3A", down="#4C3519", up_mix=0.35, down_mix=0.5)
+    horn = kit.scaly(kit.material("Horn", "#0C0B0E"), size=0.6, joins=0.05, vary=0.06, rough=0.5)
+    ramp_by(horn, "grad", [(0.0, "#050406"), (0.66, "#0B0A0D"), (0.8, "#5E5444"), (0.9, "#CBBE9C"), (1.0, "#F2EAD2")])
+    gloss(horn, strength=0.48, light=(-0.25, -0.35, 0.9), lo=0.93, hi=0.997, sheen=0.03)
+    blade = kit.scaly(kit.material("Blade", "#0C0B0E"), size=0.6, joins=0.05, vary=0.06, rough=0.5)
+    ramp_by(blade, "grad", [(0.0, "#060507"), (0.6, "#0E0C10"), (0.78, "#4A4236"), (0.9, "#BFB292"), (1.0, "#EDE4CB")])
+    armour = kit.scaly(kit.material("Armour", "#24212A"), size=0.55, joins=0.12, vary=0.1, rough=0.6)
+    tones(armour, up="#121015", down="#3A302E", up_mix=0.5, down_mix=0.4)
+    gloss(armour, strength=0.2, light=(-0.25, -0.35, 0.9), lo=0.94, hi=0.997)
     web = kit.scaly(kit.material("Membrane", "#6A140F"), size=0.32, joins=0.18, vary=0.1, rough=0.75)
     ramp_by(web, "web", [(0.0, "#1C0909"), (0.35, "#4A0E0B"), (0.75, "#841A10"), (1.0, "#B0381A")])
-    facem = kit.scaly(kit.material("Face", "#3C3842"), size=0.085, joins=0.45, vary=0.22, rough=0.8)
+    facem = kit.scaly(kit.material("Face", "#3C3842"), size=0.13, joins=0.55, vary=0.24, rough=0.8)
     tones(facem, up="#1C1A20", down="#4E423D", up_mix=0.55, down_mix=0.45)
     dark = kit.material("Dark", "#0B0A0C", rough=0.7)
     glow = kit.material("GLOW_Ember", "#FF6A14", rough=0.4, emit=6.0)
@@ -568,9 +736,17 @@ def build():
     d = Prop("Dragon")
     d.tally = {}
 
-    def add(part, bm, mat, at=None, crease=40.0):
+    def add(part, bm, mat, at=None, crease=40.0, ember=0.0, boost=None):
         for name in ("grad", "web"):
             layer(bm, name)
+        le = layer(bm, "ember")             # where the crevices glow ember after the bake (see ember_seams)
+        for v in bm.verts:
+            v[le] = ember
+        lb = bm.faces.layers.float.get("boost") or bm.faces.layers.float.new("boost")
+        if boost is None:
+            boost = HEAD_BOOST if at is not None and at is H else 0.0
+        for f in bm.faces:
+            f[lb] = boost
         if at is not None:
             bm.transform(at)
         for v in bm.verts:
@@ -614,7 +790,14 @@ def build():
     body = skin.mesh(segs=20, cuts=(3.0, 5.6, 8.2, 10.9, 13.2, 15.4, 17.6))
     for v in body.verts:
         v.co.z = max(v.co.z, 0.0)
-    add("skin", body, scale, crease=0)
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(skin.pts))
+    for k, p in enumerate(skin.pts):
+        kd.insert(p, k)
+    kd.balance()
+    trunk, rest = kit.split(body, lambda f: 5.6 <= kd.find(f.calc_center_median())[1] / skin.samples <= 13.2)
+    add("skin", trunk, hide, crease=0)              # the barrel gets big bold scales, the neck and tail finer ones
+    add("skin", rest, scale, crease=0)
 
     # ---- belly: bronze plates; on the chest they part to show the ember glowing beneath ---------------
     under = skin.line(-90.0)
@@ -629,10 +812,33 @@ def build():
         s1 = Skin.along(under, dist + size * (0.9 if seam else 1.22))
         p = plate(skin, s0, s1, half, lift=(0.02, 0.075), bow=0.0, pinch=0.06,
                   vs=(0, 0.1, 0.62, 0.95, 1), qs=(-1, -0.86, -0.3, 0.3, 0.86, 1))
-        add("belly plates", p, belly, crease=50)
+        add("belly plates", p, belly, crease=50, ember=1.0)
         dist += size
     add("chest glow", plate(skin, seam_from - 0.1, seam_to + 0.25, 36, lift=(0.012, 0.012), pinch=0.0,
                             vs=(0, 0.1, 0.3, 0.5, 0.7, 0.9, 1), qs=(-1, -0.8, -0.4, 0, 0.4, 0.8, 1)), glow, crease=0)
+
+    # ---- back plates: a ridge of broad overlapping armour plates down the spine, under the blades ----
+    ridge = skin.line(90.0)
+    dist, stop = Skin.run_at(ridge, skin.s_of(2.2)), Skin.run_at(ridge, skin.s_of(16.5))
+    while dist < stop:
+        s0 = Skin.along(ridge, dist)
+        i = skin.index_of(s0)
+        size = _table([(2, 0.36), (4, 0.46), (6, 0.62), (7.5, 0.7), (9, 0.64), (10.5, 0.66), (12, 0.54), (14, 0.44), (16.5, 0.32)], i)
+        half = _table([(2, 30), (5, 28), (7, 30), (8.5, 34), (10, 32), (12, 30), (16.5, 32)], i)
+        s1 = Skin.along(ridge, dist + size * 1.25)
+        add("back plates", plate(skin, s0, s1, half, centre=90.0, lift=(0.03, 0.12), pinch=0.25, bow=0.06,
+                                 vs=(0, 0.15, 0.6, 0.92, 1), qs=(-1, -0.8, -0.3, 0.3, 0.8, 1)), armour, crease=40, ember=1.0)
+        dist += size
+
+    # ---- the ribcage: curved armour bands down each flank between the shoulder and the hip ------------
+    for sx in (-1, 1):
+        for k in range(6):
+            i0 = 7.25 + 0.36 * k
+            s0, s1 = skin.s_of(i0), skin.s_of(i0 + 0.46)
+            centre = -18.0 if sx > 0 else 198.0
+            half = 40.0 - 2.0 * abs(k - 2.5)
+            add("rib plates", plate(skin, s0, s1, half, centre=centre, lift=(0.02, 0.14), pinch=0.35, bow=0.16,
+                                    vs=(0, 0.15, 0.6, 0.92, 1), qs=(-1, -0.85, -0.45, 0, 0.45, 0.85, 1)), armour, crease=40, ember=1.0)
 
     # ---- dorsal blades from behind the head to the tail tip, largest at the shoulders ------------------
     ridge = skin.line(90.0)
@@ -646,8 +852,8 @@ def build():
         top = skin.bare(s, 90.0)
         bm = lens(blade_outline(size, size * 0.85, sweep=0.55, steps=3), max(0.05, 0.13 * size), centre=(0.0, 0.25 * size))
         set_grad(bm, lambda co, h=size: 0.25 + 0.5 * co.z / h)
-        add("dorsal blades", bm, horn, stand(top - u * 0.03, t, u), crease=45)
-        dist += size * 1.12
+        add("dorsal blades", bm, blade, stand(top + u * 0.04, t, u), crease=45)
+        dist += size * 1.32
 
     # ---- tail blade: a dark spearhead with bone edges and a glowing core -------------------------------
     c, t, u = skin.at(skin.L)[:3]
@@ -656,7 +862,7 @@ def build():
     bm = lens([(a * 1.1, b * 1.15) for a, b in spear], 0.2, rows=((0.55, 0.9), (0.85, 0.5), (1.0, 0.0)), centre=(0.0, 0.3))
     set_grad(bm, lambda co: 0.1 + 0.9 * math.hypot(co.x / 0.5, (co.z - 0.3) / 0.8) ** 2)
     at = stand(c - t * 0.12, Vector((0, 0, 1)), t)
-    add("tail blade", bm, horn, at, crease=45)
+    add("tail blade", bm, blade, at, crease=45)
     vein = lens([(0, 0.82), (0.05, 0.45), (0.06, 0.2), (0, -0.04), (-0.06, 0.2), (-0.05, 0.45)], 0.24, centre=(0.0, 0.3))
     add("tail blade", vein, glow, at, crease=0)
 
@@ -675,7 +881,7 @@ def build():
             claw = [(0, 0.3, 0.2), (0, 0.48, 0.12), (0, 0.56, 0.0)]
             add("claws", grounded(loft(claw, [0.08, 0.05, 0.008], P_CLAW, up=(0, 0.3, 1), rings=4), F), horn, crease=50)
 
-    armour = []
+    plates = []                               # (surface, ray origin, long axis, size, extra lift)
     for sx in (-1, 1):
         near = sx < 0
         # front legs: the near one steps forward
@@ -685,10 +891,22 @@ def build():
         arm = [(0.92 * sx, -1.8, 3.95), (1.2 * sx, -1.6, 3.1), tuple(elbow), tuple(elbow.lerp(wrist, 0.33) + Vector((0.03 * sx, 0.04, 0))),
                tuple(wrist), (1.26 * sx, -2.06 - step, 0.30)]
         bm = loft(arm, [(0.7, 0.9), (0.6, 0.74), (0.48, 0.54), (0.46, 0.52), (0.31, 0.34), (0.31, 0.33)], P_LEG, up=(0, -1, 0), rings=18)
-        limb = Surface(bm)
-        armour.append((limb, (3 * sx, -1.74, 3.55), (0, 0.45, -1), (1.0, 0.72)))
-        armour.append((limb, (3 * sx, elbow.y - 0.3 - 0.25 * step, 1.75), wrist - elbow, (0.78, 0.44)))
+        # shoulder muscle: a deltoid cap over the top of the arm narrowing to the elbow, the triceps behind
+        delt = mass([(0.98 * sx, -1.78, 4.05), (1.3 * sx, -1.78, 3.62), (1.42 * sx, -1.66, 3.05), (1.38 * sx, -1.5, 2.62)],
+                    [(0.42, 0.5), (0.5, 0.62), (0.36, 0.44), (0.08, 0.1)], up=(0, -1, 0))
+        tri = mass([(1.0 * sx, -1.28, 3.8), (1.24 * sx, -1.18, 3.25), (1.3 * sx, -1.2, 2.7)], [(0.36, 0.34), (0.36, 0.34), (0.1, 0.1)], up=(0, 1, 0))
+        fore = mass([(1.36 * sx, -1.5 - 0.1 * step, 2.25), (1.36 * sx, -1.62 - 0.35 * step, 1.75), (1.3 * sx, -1.85 - 0.8 * step, 1.05)],
+                    [(0.32, 0.3), (0.3, 0.3), (0.08, 0.08)], up=(0, -1, 0))
+        limb = Surface(bm, delt, tri, fore)
+        for z, ys, sz in ((3.98, (-2.0, -1.46), 0.62), (3.64, (-2.18, -1.72, -1.24), 0.56), (3.3, (-1.96, -1.46), 0.52),
+                          (2.98, (-1.72,), 0.46)):
+            for yy in ys:
+                plates.append((limb, (3 * sx, yy, z), (0, 0.15, -1), (sz * 1.05, sz * 0.92), 0.12))
+        plates.append((limb, (3 * sx, elbow.y - 0.3 - 0.25 * step, 1.75), wrist - elbow, (0.78, 0.44), 0.1))
+        plates.append((limb, (3 * sx, elbow.y - 0.36 - 0.45 * step, 1.25), wrist - elbow, (0.62, 0.36), 0.1))
         add("legs", bm, scale, crease=55)
+        for m_ in (delt, tri, fore):
+            add("muscle", m_, hide, crease=0)
         spur = [tuple(elbow + Vector((0, 0.1, 0.05))), tuple(elbow + Vector((0.02 * sx, 0.38, 0.12))), tuple(elbow + Vector((0.03 * sx, 0.6, 0.24)))]
         add("spurs", loft(spur, [0.12, 0.07, 0.01], P_CLAW, up=(0, 0, 1), rings=4), horn, crease=50)
         foot(1.26 * sx, -2.10 - step, 6 * sx, 1.25, False)
@@ -696,25 +914,47 @@ def build():
         # hind legs: a powerful haunch, the knee forward, the hock high and back
         thigh = [(0.80 * sx, 1.95, 4.15), (1.08 * sx, 1.45, 3.25), (1.22 * sx, 0.95, 2.25), (1.24 * sx, 1.0, 2.05)]
         bm = loft(thigh, [(0.86, 1.2), (0.76, 1.02), (0.46, 0.52), (0.38, 0.42)], P_LEG, up=(0, -1, 0.15), rings=12)
-        armour.append((Surface(bm), (3 * sx, 1.55, 3.45), (0, 0.5, -1), (1.1, 0.82)))
-        add("haunch", bm, scale, crease=55)
+        # the big outer thigh muscle and the front (quad) muscle down to the knee, the glute over the hip
+        glute = mass([(0.9 * sx, 2.45, 4.35), (1.3 * sx, 2.15, 3.85), (1.5 * sx, 1.8, 3.2), (1.42 * sx, 1.55, 2.6)],
+                     [(0.4, 0.55), (0.52, 0.72), (0.42, 0.6), (0.1, 0.14)], up=(0, 1, 0.3))
+        quad = mass([(1.05 * sx, 1.05, 3.85), (1.35 * sx, 0.9, 3.15), (1.42 * sx, 0.8, 2.45), (1.3 * sx, 0.86, 2.08)],
+                    [(0.36, 0.42), (0.42, 0.5), (0.3, 0.34), (0.08, 0.08)], up=(0, -1, 0))
+        haunch = Surface(bm, glute, quad)
+        for z, ys, sz in ((4.0, (1.4, 1.95, 2.45), 0.62), (3.62, (1.15, 1.68, 2.2), 0.62), (3.24, (1.0, 1.48, 1.96), 0.56),
+                          (2.86, (1.02, 1.5), 0.5), (2.5, (1.12,), 0.42)):
+            for yy in ys:
+                plates.append((haunch, (3 * sx, yy, z), (0, -0.25, -1), (sz * 1.05, sz * 0.92), 0.12))
+        add("haunch", bm, hide, crease=55)
+        for m_ in (glute, quad):
+            add("muscle", m_, hide, crease=0)
         shin = [(1.22 * sx, 0.92, 2.15), (1.25 * sx, 1.5, 1.62), (1.24 * sx, 2.08, 1.15), (1.22 * sx, 1.86, 0.55), (1.2 * sx, 1.72, 0.28)]
         bm = loft(shin, [0.5, 0.41, 0.33, 0.28, 0.28], P_LEG, up=(0, -1, 0), rings=14)
-        armour.append((Surface(bm), (3 * sx, 1.5, 1.66), Vector(shin[2]) - Vector(shin[0]), (0.66, 0.42)))
+        plates.append((Surface(bm), (3 * sx, 1.5, 1.66), Vector(shin[2]) - Vector(shin[0]), (0.66, 0.42), 0.06))
         add("legs", bm, scale, crease=55)
         hock = [(1.24 * sx, 2.12, 1.18), (1.25 * sx, 2.45, 1.3), (1.26 * sx, 2.72, 1.5)]
         add("spurs", loft(hock, [0.13, 0.08, 0.01], P_CLAW, up=(0, 0, 1), rings=4), horn, crease=50)
         foot(1.2 * sx, 1.62, 4 * sx, 1.28, True)
 
-    # ---- armour scutes: hard angular plates draped over the shoulders, forearms, haunches and shins -------
+    # chest muscle: two pectoral masses either side of the belly plates, between the front legs
+    for sx in (-1, 1):
+        add("muscle", mass([(0.3 * sx, -2.0, 4.2), (0.62 * sx, -2.42, 3.6), (0.82 * sx, -2.2, 3.0), (0.86 * sx, -1.95, 2.75)],
+                           [(0.4, 0.42), (0.48, 0.52), (0.36, 0.38), (0.06, 0.06)], up=(0, -1, 0)), hide, crease=0)
+
+    # ---- armour scales: hard angular plates in overlapping rows on the shoulders, haunches and shins ----
     scute = [(-0.62, 0.0), (-0.3, 0.36), (0.12, 0.44), (0.5, 0.2), (0.62, -0.18), (0.42, -0.5), (0.0, -0.4), (-0.36, -0.24)]
-    for limb, origin, along, size in armour:
+    # an armour scale seen with its point down the limb: X runs down it, Z across
+    shield = [(0.5, 0.0), (0.28, 0.3), (-0.05, 0.46), (-0.4, 0.4), (-0.5, 0.0), (-0.4, -0.4), (-0.05, -0.46), (0.28, -0.3)]
+    for limb, origin, along, size, tile in plates:
         origin = Vector(origin)
-        p, nrm = limb.hit(origin, (-origin.x, 0, 0))
+        try:
+            p, nrm = limb.hit(origin, (-origin.x, 0, 0))
+        except ValueError:
+            continue
+        down = abs(Vector(along).normalized().z) > 0.9      # a scale pointing down the limb, not a crosswise plate
+        outline = shield if down else scute
         thick = 0.14
-        bm = lens([(a * size[0], b * size[1]) for a, b in scute], thick, rows=((0.35, 1.0), (1.0, 0.0)),
-                  centre=(0.1 * size[0], -0.02 * size[1]))
-        set_grad(bm, lambda co, sz=size: 0.3 + 0.38 * math.hypot(co.x / (0.6 * sz[0]), co.z / (0.45 * sz[1])) ** 2)
+        bm = lens([(a * size[0], b * size[1]) for a, b in outline], thick, rows=((0.35, 1.0), (1.0, 0.0)),
+                  centre=(0.1 * size[0], -0.02 * size[1]) if not down else (0.12 * size[0], 0.0))
         T = facing(p, nrm, Vector(along))
         sign = 1.0 if T.col[1].xyz.dot(nrm) > 0 else -1.0
         for v in bm.verts:                                   # drape it over the curve of the limb
@@ -723,8 +963,12 @@ def build():
                 q, _ = limb.hit(flat + nrm * 1.5, -nrm)
             except ValueError:
                 q = flat
-            v.co = q + nrm * (v.co.y * sign + thick / 2 - 0.035)
-        add("scutes", bm, horn, crease=30)
+            if down:                                          # roof tiles: the lower end stands proud
+                rise = tile * max(0.0, 0.3 + v.co.x / size[0])
+            else:
+                rise = tile * max(0.0, 0.45 - v.co.z / size[1])
+            v.co = q + nrm * (v.co.y * sign + thick / 2 - 0.035 + rise)
+        add("scutes", bm, armour, crease=30, ember=1.0)
 
     # ---- wings: raised and half spread -------------------------------------------------------------------
     for sx, lift, reach in ((-1, 0.0, 1.0), (1, 0.35, 1.04)):
@@ -762,49 +1006,59 @@ def build():
     add("head", jaw, facem, H, crease=38)
 
     for sx in (-1, 1):
-        # brow ridge: a heavy blade over the eye that runs back into the horn
-        brow = [(0.16 * sx, -1.05, 0.27), (0.31 * sx, -0.80, 0.40), (0.41 * sx, -0.52, 0.44), (0.42 * sx, -0.20, 0.48), (0.33 * sx, 0.10, 0.50)]
-        add("brows", loft(brow, [(0.04, 0.03), (0.09, 0.07), (0.12, 0.09), (0.12, 0.09), (0.12, 0.1)], P_BROW,
-                          up=(0.55 * sx, 0, 1), rings=10, grad=False), facem, H, crease=38)
+        # brow ridge: a heavy, level shelf over the eye (never slanting down to the nose: that reads as a
+        # scowl) that runs back into the horn
+        brow = [(0.2 * sx, -1.0, 0.34), (0.36 * sx, -0.82, 0.44), (0.47 * sx, -0.56, 0.48), (0.47 * sx, -0.26, 0.5), (0.36 * sx, 0.06, 0.52)]
+        add("brows", loft(brow, [(0.04, 0.035), (0.12, 0.09), (0.16, 0.12), (0.155, 0.11), (0.13, 0.1)], P_BROW,
+                          up=(0.75 * sx, 0, 1), rings=12, grad=False), facem, H, crease=38)
         # cheek ridge: a hard crease from under the eye back to the frill
-        cheek = [(0.36 * sx, -1.0, -0.06), (0.47 * sx, -0.62, -0.04), (0.54 * sx, -0.22, -0.02), (0.5 * sx, 0.12, 0.02)]
-        add("cheeks", loft(cheek, [(0.02, 0.02), (0.06, 0.05), (0.08, 0.07), (0.06, 0.05)], P_BROW,
+        cheek = [(0.36 * sx, -1.0, -0.06), (0.49 * sx, -0.62, -0.04), (0.57 * sx, -0.22, -0.02), (0.52 * sx, 0.12, 0.02)]
+        add("cheeks", loft(cheek, [(0.02, 0.02), (0.08, 0.06), (0.1, 0.08), (0.07, 0.05)], P_BROW,
                            up=(1.0 * sx, 0, 0.35), rings=8, grad=False), facem, H, crease=38)
+        # cheek spikes: three swept back and out from the cheekbone, widening the face
+        for y0, z0, ln, out, dz in ((-0.42, -0.04, 0.42, 0.75, 0.05), (-0.16, -0.06, 0.55, 0.85, -0.05), (0.1, -0.1, 0.5, 0.8, -0.2)):
+            base = Vector((0.5 * sx, y0, z0))
+            dirn = Vector((out * sx, 1.0, dz)).normalized()
+            pts = [base, base + dirn * ln * 0.55 + Vector((0, 0, 0.02)), base + dirn * ln]
+            add("cheek spikes", loft(pts, [0.075, 0.045, 0.006], P_HORN, up=(0.2 * sx, 0, 1), rings=4), horn, H, crease=50)
         # the eye: a glowing almond, slanted, tucked under the brow
         p, nrm = face.hit((0.9 * sx, -0.6, 0.25), (-sx, 0.0, -0.05))
         back = Vector((0, 1, 0.1))
         eye = [(-0.5, -0.06), (-0.3, 0.06), (0.0, 0.13), (0.3, 0.17), (0.5, 0.16), (0.32, 0.02), (0.05, -0.08), (-0.25, -0.1)]
-        add("eyes", lens([(a * 0.46, b * 0.5) for a, b in eye], 0.08, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.03)),
+        add("eyes", lens([(a * 0.48, b * 0.52) for a, b in eye], 0.08, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.03)),
             glow, H @ facing(p - nrm * 0.015, nrm, back), crease=0)
         # nostrils: small dark slits on the snout
         q, qn = face.hit((0.11 * sx, -2.2, 0.1), (0, 1, -0.6))
         add("nostrils", lens([(-0.5, 0), (0, 0.18), (0.5, 0.05), (0, -0.15)], 0.06, centre=(0, 0)), dark,
             H @ facing(q - qn * 0.01, qn, (sx * 0.4, 1, 0)) @ M(scale=(0.16, 1, 0.18)), crease=0)
-        # the big horns, swept back
-        hornpath = [(0.30 * sx, 0.0, 0.42), (0.43 * sx, 0.45, 0.74), (0.55 * sx, 1.02, 0.92), (0.63 * sx, 1.62, 0.88), (0.66 * sx, 2.22, 0.62)]
-        add("horns", loft(hornpath, [0.25, 0.2, 0.14, 0.085, 0.012], P_HORN, up=(0.6 * sx, 0.3, 1), rings=14), horn, H, crease=50)
-        lower = [(0.42 * sx, 0.02, 0.2), (0.6 * sx, 0.42, 0.3), (0.74 * sx, 0.9, 0.3), (0.8 * sx, 1.3, 0.18)]
-        add("horns", loft(lower, [0.13, 0.1, 0.06, 0.01], P_HORN, up=(0.8 * sx, 0.2, 1), rings=8), horn, H, crease=50)
-        # a frill of smaller horns behind the jaw
-        for k, (y0, z0, ln, ang) in enumerate(((-0.05, -0.12, 0.62, -12), (0.12, 0.08, 0.72, 4), (0.26, 0.28, 0.58, 18))):
-            base = Vector((0.40 * sx, y0, z0))
-            dirn = Vector((0.45 * sx, 1.0, math.tan(math.radians(ang)))).normalized()
-            pts = [base, base + dirn * ln * 0.5 + Vector((0, 0, 0.03)), base + dirn * ln]
-            add("frill", loft(pts, [0.08, 0.05, 0.008], P_HORN, up=(0.3 * sx, 0, 1), rings=4), horn, H, crease=50)
+        # the big horns: ridged at the root, swept back and out so that from the front they frame the face
+        hornpath = [(0.30 * sx, 0.0, 0.42), (0.47 * sx, 0.42, 0.78), (0.68 * sx, 0.96, 0.98), (0.88 * sx, 1.55, 0.98), (1.02 * sx, 2.15, 0.78)]
+        path, radii = ridged(hornpath, 0.27, 0.012, ridges=5, upto=0.4, depth=0.14, dense=26, power=1.15)
+        add("horns", loft(path, radii, P_HORN, up=(0.6 * sx, 0.3, 1), rings=26), horn, H, crease=50)
+        lower = [(0.42 * sx, 0.02, 0.2), (0.64 * sx, 0.42, 0.3), (0.84 * sx, 0.88, 0.28), (0.96 * sx, 1.3, 0.14)]
+        path, radii = ridged(lower, 0.14, 0.01, ridges=3, upto=0.35, depth=0.14, dense=14)
+        add("horns", loft(path, radii, P_HORN, up=(0.8 * sx, 0.2, 1), rings=14), horn, H, crease=50)
+        # the crown: a fan of smaller horns behind the jaw, splayed out so they frame the head
+        for k, (y0, z0, ln, ang, out) in enumerate(((-0.05, -0.14, 0.7, -14, 0.7), (0.12, 0.06, 0.82, 2, 0.75), (0.26, 0.26, 0.7, 16, 0.65))):
+            base = Vector((0.42 * sx, y0, z0))
+            dirn = Vector((out * sx, 1.0, math.tan(math.radians(ang)))).normalized()
+            pts = [base, base + dirn * ln * 0.5 + Vector((0, 0, 0.04)), base + dirn * ln]
+            add("frill", loft(pts, [0.09, 0.055, 0.008], P_HORN, up=(0.3 * sx, 0, 1), rings=4), horn, H, crease=50)
         # two fangs from the upper jaw, over the lower lip
         fang = [(0.235 * sx, -1.56, -0.14), (0.245 * sx, -1.58, -0.27), (0.24 * sx, -1.60, -0.37)]
         add("fangs", loft(fang, [0.05, 0.035, 0.005], P_CLAW, up=(0, -1, 0), rings=4), horn, H, crease=50)
-        # a dark mouth line along the lips
-        lip = [(skull_at(y)[6] * 0.93 * sx, y, skull_at(y)[5] - 0.012) for y in (-0.1, -0.5, -0.9, -1.3, -1.65, -1.86)]
-        add("mouth", loft(lip, [0.02, 0.024, 0.024, 0.022, 0.02, 0.014], profile_round(5), up=(0, 0, 1), rings=8, grad=False), dark, H, crease=0)
+        # the closed mouth: an ember seam glowing along the lips at the back of the jaw, the fire showing
+        # through. It stops well short of the nose, so from the front the two sides never join into a grin.
+        lip = [(skull_at(y)[6] * 0.95 * sx, y, skull_at(y)[5] - 0.012) for y in (0.02, -0.25, -0.55, -0.85, -1.1, -1.3)]
+        add("mouth", loft(lip, [0.008, 0.024, 0.028, 0.026, 0.018, 0.005], profile_round(5), up=(0, 0, 1), rings=8, grad=False), glow, H, crease=0)
 
     # a small crest on the top of the skull carries the row of blades onto the head, and a ridge of
     # small spikes runs up the snout
-    for y0, h in ((-1.78, 0.2), (-1.45, 0.15), (-1.12, 0.11), (-0.25, 0.22), (0.12, 0.28)):
+    for y0, h in ((-1.78, 0.2), (-1.45, 0.15), (-1.12, 0.11), (-0.25, 0.16), (0.12, 0.2)):
         p, _ = face.hit((0, y0, 3.0), (0, 0, -1))
         bm = lens(blade_outline(h, h * 0.9, sweep=0.5), 0.06, centre=(0, 0.25 * h))
-        set_grad(bm, lambda co, h=h: 0.25 + 0.5 * co.z / h)
-        add("crest", bm, horn, H @ stand(p - Vector((0, 0, 0.02)), (0, 1, 0), (0, 0, 1)), crease=45)
+        set_grad(bm, lambda co, h=h: 0.1 + 0.85 * max(co.z / h, 0.0) ** 2)    # dark, only the very tips pale
+        add("crest", bm, blade, H @ stand(p - Vector((0, 0, 0.02)), (0, 1, 0), (0, 0, 1)), crease=45)
     add("head", skull, facem, H, crease=38)
 
     # ---- glowing vents along the sides of the neck -----------------------------------------------------
@@ -818,20 +1072,185 @@ def build():
             add("vents", lens([(-0.5, 0), (-0.3, 0.06), (0.3, 0.08), (0.5, 0), (0.3, -0.06), (-0.3, -0.05)], 0.05, centre=(0, 0)),
                 glow, facing(p - nrm * 0.008, nrm, along) @ M(scale=(0.62 - 0.05 * k, 1, 0.42)), crease=0)
 
+    cut = cull_and_weigh(d.parts)
+    print("  hidden faces removed: %d triangles" % cut)
     d.build()
     for ob in d.objects:
         print("  %-26s %6d triangles" % (ob.name, sum(len(p.vertices) - 2 for p in ob.data.polygons)))
     return d
 
 
+UV_ANGLE, UV_MARGIN, PACK_MARGIN = 85.0, 0.004, 0.003
+HIDDEN_SHARE = 0.25           # a barely seen surface gets this much of the texture size a seen one gets (in each direction)
+HEAD_BOOST = 0.45             # the head's surfaces get 1 + 0.75 * this of the texture size the body gets
+EMBER = "#FF5A12"             # the glow in the seams between the plates
+EMBER_REACH = 0.16            # crevice shading from shapes this close
+EMBER_FROM, EMBER_TO, EMBER_MAX = 0.18, 0.62, 0.8
+
+
+def weigh_islands(ob, keep=HIDDEN_SHARE):
+    """In edit mode, after the unwrap: shrink every texture island that is mostly hidden (the face
+    value "hid") about its centre, so that the packing gives the seen surfaces more pixels."""
+    me = ob.data
+    bm = bmesh.from_edit_mesh(me)
+    uvl = bm.loops.layers.uv.active
+    lh = bm.faces.layers.float.get("hid")
+    if lh is None:
+        return
+    bm.faces.ensure_lookup_table()
+    parent = list(range(len(bm.faces)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    for e in bm.edges:
+        lf = e.link_faces
+        if len(lf) != 2:
+            continue
+        f0, f1 = lf
+        same = True
+        for v in e.verts:
+            u0 = next(l[uvl].uv for l in f0.loops if l.vert is v)
+            u1 = next(l[uvl].uv for l in f1.loops if l.vert is v)
+            if (u0 - u1).length_squared > 1e-12:
+                same = False
+                break
+        if same:
+            parent[find(f0.index)] = find(f1.index)
+    islands = {}
+    for f in bm.faces:
+        islands.setdefault(find(f.index), []).append(f)
+    for faces in islands.values():
+        area = sum(f.calc_area() for f in faces) or 1.0
+        w = sum(f[lh] * f.calc_area() for f in faces) / area
+        if abs(w) <= 0.01:
+            continue
+        k = 1.0 - (1.0 - keep) * w                 # below 1 for the hidden, above 1 for the boosted head
+        loops = [l for f in faces for l in f.loops]
+        c = sum((l[uvl].uv for l in loops), Vector((0.0, 0.0))) / len(loops)
+        for l in loops:
+            l[uvl].uv = c + (l[uvl].uv - c) * k
+    bmesh.update_edit_mesh(me)
+
+
+class _OpsProxy:
+    """bpy.ops as the kit sees it, with uv.pack_islands replaced by `pack`."""
+
+    def __init__(self, ops, pack):
+        self._ops, self._pack = ops, pack
+
+    def __getattr__(self, k):
+        if k == "uv":
+            return _UvProxy(self._ops.uv, self._pack)
+        return getattr(self._ops, k)
+
+
+class _UvProxy:
+    def __init__(self, uv, pack):
+        self._uv, self._pack = uv, pack
+
+    def __getattr__(self, k):
+        return self._pack if k == "pack_islands" else getattr(self._uv, k)
+
+
+def ember_seams(ob, path, size):
+    """After the bake: where the plates (vertex value "ember") sink into a tight crevice, between two
+    plates or where a plate meets the skin, turn the colour towards glowing ember, so that the seams
+    read as crisp lines of fire. Two quick bakes into the texture's own layout: the mask and a short
+    reach crevice shading."""
+    import bpy
+    import numpy as np
+    sc = bpy.context.scene
+    keep_samples = sc.cycles.samples
+    world = sc.world
+    if world is None:
+        world = sc.world = bpy.data.worlds.new("BakeWorld")
+    keep_reach = world.light_settings.distance
+    world.light_settings.distance = EMBER_REACH
+    baked = ob.data.materials[0]
+    m = bpy.data.materials.new("EmberMask")
+    kit.principled(m)
+    tree = m.node_tree
+    a = tree.nodes.new("ShaderNodeAttribute")
+    a.attribute_type, a.attribute_name = 'GEOMETRY', "ember"
+    em = tree.nodes.new("ShaderNodeEmission")
+    tree.links.new(a.outputs["Fac"], em.inputs["Color"])
+    out = next(n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL')
+    tree.links.new(em.outputs[0], out.inputs[0])
+    img = bpy.data.images.new("ember_mask", size, size, alpha=False, float_buffer=True)
+    tn = tree.nodes.new("ShaderNodeTexImage")
+    tn.image = img
+    tree.nodes.active = tn
+    ob.data.materials[0] = m
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+
+    def grab():
+        px = np.empty(size * size * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        return px.reshape(size, size, 4)[..., :1].copy()
+    sc.cycles.samples = 4
+    bpy.ops.object.bake(type='EMIT', margin=12)
+    mask = np.clip(grab(), 0.0, 1.0)
+    sc.cycles.samples = 24
+    bpy.ops.object.bake(type='AO', margin=12)
+    ao = grab()
+    ao = (ao + np.roll(ao, 1, 0) + np.roll(ao, -1, 0) + np.roll(ao, 1, 1) + np.roll(ao, -1, 1)) / 5.0
+    ob.data.materials[0] = baked
+    sc.cycles.samples = keep_samples
+    world.light_settings.distance = keep_reach
+    crev = np.clip(((1.0 - ao) - EMBER_FROM) / (EMBER_TO - EMBER_FROM), 0.0, 1.0)
+    k = mask * EMBER_MAX * crev * crev * (3 - 2 * crev)
+    tex = next(n.image for n in baked.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image.size[0] == size)
+    px = np.empty(size * size * 4, dtype=np.float32)
+    tex.pixels.foreach_get(px)
+    px = px.reshape(size, size, 4)
+    px[..., :3] = px[..., :3] * (1 - k) + np.array(kit.srgb(EMBER), dtype=np.float32) * k
+    tex.pixels.foreach_set(px.ravel())
+    tex.filepath_raw, tex.file_format = path, 'PNG'
+    tex.save()
+    bpy.data.images.remove(img)
+    bpy.data.materials.remove(m)
+
+
 def bake(dragon, texture):
     """Everything that does not glow becomes one textured mesh, Dragon_Body: the scales, tones and
-    soft shading in the creases are baked into its colour image. The glowing parts are joined into
-    one mesh, Dragon_GLOW, that keeps its emissive material. Roblox gets two MeshParts."""
-    glow = [ob for ob in dragon.objects if "GLOW" in ob.name]
-    body = kit.bake_texture([ob for ob in dragon.objects if ob not in glow], texture, name="Dragon_Body",
-                            shade=0.55, soften=2, rough=0.8, uv_angle=85.0, uv_margin=0.004, pack_margin=0.003)
+    soft shading in the creases are baked into its colour image, the barely seen surfaces getting
+    less of it, and the seams between the plates are then lit ember (ember_seams). The glowing parts
+    are joined into one mesh, Dragon_GLOW, that keeps its emissive material. Roblox gets two MeshParts."""
     import bpy
+    glow = [ob for ob in dragon.objects if "GLOW" in ob.name]
+    real_pack = bpy.ops.uv.pack_islands
+
+    def pack(**kw):
+        weigh_islands(bpy.context.view_layer.objects.active)
+        return real_pack(**kw)
+    saved = bpy.ops
+    bpy.ops = _OpsProxy(saved, pack)            # kit.bake_texture packs once, right after the unwrap
+    try:
+        body = kit.bake_texture([ob for ob in dragon.objects if ob not in glow], texture, name="Dragon_Body",
+                                shade=0.55, soften=2, rough=0.8, uv_angle=UV_ANGLE, uv_margin=UV_MARGIN, pack_margin=PACK_MARGIN)
+    finally:
+        bpy.ops = saved
+    ember_seams(body, texture, 512 if os.environ.get("PETS_FAST") else 1024)    # kit bakes 512 under PETS_FAST
+    me = body.data
+    if "hid" in me.attributes:
+        hid = [dd.value for dd in me.attributes["hid"].data]
+        uv = me.uv_layers.active.data
+        a2 = a3 = 0.0
+        for pl, h in zip(me.polygons, hid):
+            if h > 0.01:
+                continue
+            pts = [uv[i].uv for i in pl.loop_indices]
+            a2 += abs(sum(pts[i].x * pts[(i + 1) % len(pts)].y - pts[(i + 1) % len(pts)].x * pts[i].y for i in range(len(pts)))) / 2
+            a3 += pl.area
+        print("seen surfaces: about %.0f pixels to a stud" % ((a2 * 1024 * 1024 / max(a3, 1e-9)) ** 0.5))
+    for name in ("hid", "boost", "ember", "grad", "web"):
+        if name in me.attributes:
+            me.attributes.remove(me.attributes[name])
     bpy.ops.object.select_all(action='DESELECT')
     for ob in glow:
         ob.select_set(True)
@@ -840,6 +1259,9 @@ def bake(dragon, texture):
         bpy.ops.object.join()
     g = bpy.context.view_layer.objects.active
     g.name = g.data.name = "Dragon_GLOW"
+    for name in ("hid", "boost", "ember", "grad", "web"):
+        if name in g.data.attributes:
+            g.data.attributes.remove(g.data.attributes[name])
     dragon.objects = [body, g]
 
 
