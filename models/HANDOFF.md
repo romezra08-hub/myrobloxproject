@@ -6,8 +6,9 @@ For a new Claude session (for example one on the PC with the Roblox Studio MCP).
 ## What exists (all made by script in headless Blender, nothing copied)
 - **Pets** (`models/pets/<name>.py`, exports in `models/export/`, sheets in `models/preview/`):
   fox, puppy, cat, bunny, penguin, turtle, unicorn, dragon, phoenix, griffin, golem, wolf, driller.
-  Remade or polished on 13–14 Nov: unicorn, penguin, turtle (tortoise), wolf, cat, griffin, driller.
-  Golem and phoenix were being polished in the cloud session when this was written.
+  Remade or polished on 13–14 Nov: unicorn, penguin, turtle (tortoise), wolf, cat, griffin, driller,
+  golem, phoenix. The dragon polish was still running in the cloud session; `git pull` for it.
+  `models/preview/lineup.png` shows all 13 at the same scale.
 - **Eggs** (`models/eggs/eggs.py`): meadow, ember, phoenix, storm, crystal, shadow.
 - **Pickaxes** (`models/tools/pickaxes.py`): wooden, iron, gold, emerald, ember.
 - **Ore rocks** (`models/props/ores.py`): stone, coal, iron, gold, emerald, ember, egg geode.
