@@ -779,7 +779,7 @@ def build():
             s0, s1 = skin.s_of(i0), skin.s_of(i0 + 0.46)
             centre = -18.0 if sx > 0 else 198.0
             half = 40.0 - 2.0 * abs(k - 2.5)
-            add("rib plates", plate(skin, s0, s1, half, centre=centre, lift=(0.02, 0.09), pinch=0.35, bow=0.18 * sx * 0 + 0.16,
+            add("rib plates", plate(skin, s0, s1, half, centre=centre, lift=(0.02, 0.09), pinch=0.35, bow=0.16,
                                     vs=(0, 0.15, 0.6, 0.92, 1), qs=(-1, -0.85, -0.45, 0, 0.45, 0.85, 1)), armour, crease=40, ember=1.0)
 
     # ---- dorsal blades from behind the head to the tail tip, largest at the shoulders ------------------
@@ -823,7 +823,7 @@ def build():
             claw = [(0, 0.3, 0.2), (0, 0.48, 0.12), (0, 0.56, 0.0)]
             add("claws", grounded(loft(claw, [0.08, 0.05, 0.008], P_CLAW, up=(0, 0.3, 1), rings=4), F), horn, crease=50)
 
-    armour = []
+    plates = []                               # (surface, ray origin, long axis, size, extra lift)
     for sx in (-1, 1):
         near = sx < 0
         # front legs: the near one steps forward
@@ -833,10 +833,20 @@ def build():
         arm = [(0.92 * sx, -1.8, 3.95), (1.2 * sx, -1.6, 3.1), tuple(elbow), tuple(elbow.lerp(wrist, 0.33) + Vector((0.03 * sx, 0.04, 0))),
                tuple(wrist), (1.26 * sx, -2.06 - step, 0.30)]
         bm = loft(arm, [(0.7, 0.9), (0.6, 0.74), (0.48, 0.54), (0.46, 0.52), (0.31, 0.34), (0.31, 0.33)], P_LEG, up=(0, -1, 0), rings=18)
-        limb = Surface(bm)
-        armour.append((limb, (3 * sx, -1.74, 3.55), (0, 0.45, -1), (1.0, 0.72)))
-        armour.append((limb, (3 * sx, elbow.y - 0.3 - 0.25 * step, 1.75), wrist - elbow, (0.78, 0.44)))
+        # shoulder muscle: a deltoid cap over the top of the arm narrowing to the elbow, the triceps behind
+        delt = mass([(0.98 * sx, -1.78, 4.05), (1.3 * sx, -1.78, 3.62), (1.42 * sx, -1.66, 3.05), (1.38 * sx, -1.5, 2.62)],
+                    [(0.42, 0.5), (0.5, 0.62), (0.36, 0.44), (0.08, 0.1)], up=(0, -1, 0))
+        tri = mass([(1.0 * sx, -1.28, 3.8), (1.24 * sx, -1.18, 3.25), (1.3 * sx, -1.2, 2.7)], [(0.36, 0.34), (0.36, 0.34), (0.1, 0.1)], up=(0, 1, 0))
+        fore = mass([(1.36 * sx, -1.5 - 0.1 * step, 2.25), (1.36 * sx, -1.62 - 0.35 * step, 1.75), (1.3 * sx, -1.85 - 0.8 * step, 1.05)],
+                    [(0.32, 0.3), (0.3, 0.3), (0.08, 0.08)], up=(0, -1, 0))
+        limb = Surface(bm, delt, tri, fore)
+        for k, (z, w, hgt) in enumerate(((3.92, 1.12, 0.62), (3.52, 1.04, 0.56), (3.12, 0.9, 0.5))):
+            plates.append((limb, (3 * sx, -1.7, z), (0, 1, 0.12), (w, hgt), 0.15))
+        plates.append((limb, (3 * sx, elbow.y - 0.3 - 0.25 * step, 1.75), wrist - elbow, (0.78, 0.44), 0.1))
+        plates.append((limb, (3 * sx, elbow.y - 0.36 - 0.45 * step, 1.25), wrist - elbow, (0.62, 0.36), 0.1))
         add("legs", bm, scale, crease=55)
+        for m_ in (delt, tri, fore):
+            add("muscle", m_, scale, crease=0)
         spur = [tuple(elbow + Vector((0, 0.1, 0.05))), tuple(elbow + Vector((0.02 * sx, 0.38, 0.12))), tuple(elbow + Vector((0.03 * sx, 0.6, 0.24)))]
         add("spurs", loft(spur, [0.12, 0.07, 0.01], P_CLAW, up=(0, 0, 1), rings=4), horn, crease=50)
         foot(1.26 * sx, -2.10 - step, 6 * sx, 1.25, False)
@@ -844,25 +854,38 @@ def build():
         # hind legs: a powerful haunch, the knee forward, the hock high and back
         thigh = [(0.80 * sx, 1.95, 4.15), (1.08 * sx, 1.45, 3.25), (1.22 * sx, 0.95, 2.25), (1.24 * sx, 1.0, 2.05)]
         bm = loft(thigh, [(0.86, 1.2), (0.76, 1.02), (0.46, 0.52), (0.38, 0.42)], P_LEG, up=(0, -1, 0.15), rings=12)
-        armour.append((Surface(bm), (3 * sx, 1.55, 3.45), (0, 0.5, -1), (1.1, 0.82)))
+        # the big outer thigh muscle and the front (quad) muscle down to the knee, the glute over the hip
+        glute = mass([(0.9 * sx, 2.45, 4.35), (1.3 * sx, 2.15, 3.85), (1.5 * sx, 1.8, 3.2), (1.42 * sx, 1.55, 2.6)],
+                     [(0.4, 0.55), (0.52, 0.72), (0.42, 0.6), (0.1, 0.14)], up=(0, 1, 0.3))
+        quad = mass([(1.05 * sx, 1.05, 3.85), (1.35 * sx, 0.9, 3.15), (1.42 * sx, 0.8, 2.45), (1.3 * sx, 0.86, 2.08)],
+                    [(0.36, 0.42), (0.42, 0.5), (0.3, 0.34), (0.08, 0.08)], up=(0, -1, 0))
+        haunch = Surface(bm, glute, quad)
+        for k, (z, yy, w, hgt) in enumerate(((3.95, 1.75, 1.12, 0.6), (3.5, 1.6, 1.1, 0.58), (3.05, 1.45, 0.98, 0.54), (2.62, 1.3, 0.8, 0.46))):
+            plates.append((haunch, (3 * sx, yy, z), (0, 1, 0.35), (w, hgt), 0.15))
         add("haunch", bm, scale, crease=55)
+        for m_ in (glute, quad):
+            add("muscle", m_, scale, crease=0)
         shin = [(1.22 * sx, 0.92, 2.15), (1.25 * sx, 1.5, 1.62), (1.24 * sx, 2.08, 1.15), (1.22 * sx, 1.86, 0.55), (1.2 * sx, 1.72, 0.28)]
         bm = loft(shin, [0.5, 0.41, 0.33, 0.28, 0.28], P_LEG, up=(0, -1, 0), rings=14)
-        armour.append((Surface(bm), (3 * sx, 1.5, 1.66), Vector(shin[2]) - Vector(shin[0]), (0.66, 0.42)))
+        plates.append((Surface(bm), (3 * sx, 1.5, 1.66), Vector(shin[2]) - Vector(shin[0]), (0.66, 0.42), 0.06))
         add("legs", bm, scale, crease=55)
         hock = [(1.24 * sx, 2.12, 1.18), (1.25 * sx, 2.45, 1.3), (1.26 * sx, 2.72, 1.5)]
         add("spurs", loft(hock, [0.13, 0.08, 0.01], P_CLAW, up=(0, 0, 1), rings=4), horn, crease=50)
         foot(1.2 * sx, 1.62, 4 * sx, 1.28, True)
 
-    # ---- armour scutes: hard angular plates draped over the shoulders, forearms, haunches and shins -------
+    # chest muscle: two pectoral masses either side of the belly plates, between the front legs
+    for sx in (-1, 1):
+        add("muscle", mass([(0.3 * sx, -2.0, 4.2), (0.62 * sx, -2.42, 3.6), (0.82 * sx, -2.2, 3.0), (0.86 * sx, -1.95, 2.75)],
+                           [(0.4, 0.42), (0.48, 0.52), (0.36, 0.38), (0.06, 0.06)], up=(0, -1, 0)), scale, crease=0)
+
+    # ---- armour scales: hard angular plates in overlapping rows on the shoulders, haunches and shins ----
     scute = [(-0.62, 0.0), (-0.3, 0.36), (0.12, 0.44), (0.5, 0.2), (0.62, -0.18), (0.42, -0.5), (0.0, -0.4), (-0.36, -0.24)]
-    for limb, origin, along, size in armour:
+    for limb, origin, along, size, tile in plates:
         origin = Vector(origin)
         p, nrm = limb.hit(origin, (-origin.x, 0, 0))
         thick = 0.14
         bm = lens([(a * size[0], b * size[1]) for a, b in scute], thick, rows=((0.35, 1.0), (1.0, 0.0)),
                   centre=(0.1 * size[0], -0.02 * size[1]))
-        set_grad(bm, lambda co, sz=size: 0.3 + 0.38 * math.hypot(co.x / (0.6 * sz[0]), co.z / (0.45 * sz[1])) ** 2)
         T = facing(p, nrm, Vector(along))
         sign = 1.0 if T.col[1].xyz.dot(nrm) > 0 else -1.0
         for v in bm.verts:                                   # drape it over the curve of the limb
@@ -871,8 +894,9 @@ def build():
                 q, _ = limb.hit(flat + nrm * 1.5, -nrm)
             except ValueError:
                 q = flat
-            v.co = q + nrm * (v.co.y * sign + thick / 2 - 0.035)
-        add("scutes", bm, horn, crease=30)
+            rise = tile * max(0.0, 0.45 - v.co.z / size[1])       # roof tiles: the lower edge stands proud
+            v.co = q + nrm * (v.co.y * sign + thick / 2 - 0.035 + rise)
+        add("scutes", bm, armour, crease=30, ember=1.0)
 
     # ---- wings: raised and half spread -------------------------------------------------------------------
     for sx, lift, reach in ((-1, 0.0, 1.0), (1, 0.35, 1.04)):
