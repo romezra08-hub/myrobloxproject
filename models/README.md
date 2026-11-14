@@ -73,7 +73,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Cat | Needle-felted oatmeal tabby with roving-style stripes, a halo of stray wool fibres and a tiny felt miner's hat with a glowing lamp | 9,482 | 13 (8 since the remake) |
 | Penguin | Whittled folk-art figure: knife-cut and gouged pale wood under thin worn milk paint, carved bobble hat, on a round oiled base | 7,437 | 12 (9 since the remake) |
 | Turtle | Old forest tortoise in a naturalist storybook style: high domed shell with ridged growth rings, moss with mushrooms and a fern on top, olive scaly skin, calm amber eyes | 8,960 | 13 (11 since the remake) |
-| Phoenix | Fire bird off a coat of arms: raised blade-feather wings, flame crest and train, glowing eyes and chest ember, 9.3 studs tall | 17,572 | 6 |
+| Phoenix | Fire bird off a coat of arms: raptor head with a swept flame crest and glowing eyes, raised blade-feather wings with covert rows on the backs, flame-feather breast round an ember heart, flame train, 9.3 studs tall | 18,304 | 12 |
 | Griffin | Storm griffin: white eagle head with glowing blue eyes and a gold cere, layered off-white breast, navy wings with lightning streaks, muscled golden lion body, tufted navy tail with a glowing core, 9.5 studs tall | 18,406 | 13 |
 | Golem | Ancient crystal golem: chipped slate slabs with moss and roots, knee boulders and splayed toe stones, emerald crystals lit from inside, glowing eye slots, rune rings and seams, 9.9 studs tall | 11,246 | 11 |
 | Wolf | Shadow alpha wolf: long wedge muzzle, tall ears, slate blue-grey coat with a charcoal saddle, big silver mane of sculpted locks, violet crystals glowing along the spine, calm violet eyes, 7 studs tall | 15,032 | 19 (10 since the remake) |
@@ -179,10 +179,9 @@ Known weak points, from the last review of each:
 - Turtle: at game distance the shell detail collapses into a brown dome, and from the front the rim
   reads as a separate frilly band. The skin reads as smooth olive at mid range; scales and wrinkles
   only show up close. A soft rim shows round each eye socket close up, and the nostrils are smudges.
-- Phoenix: the hundreds of curved feathers fill 41% of the image even re-packed, so the drawn
-  feather shafts blur away. Up close the head is a rounded, slightly boxy shape, the
-  backs of the wings are plain with the wing arm reading as a dark rod, and the rows of chest
-  feathers are an even spiky pattern.
+- Phoenix: from the front three-quarter the beak reads as a long gold cone and the brow is soft. The
+  drawn feather shafts vanish at mid range (hundreds of small pieces share one 1024 texture), and the
+  legs and feet are plain gold tubes.
 - Griffin: up close the breast still reads slightly like rows of shingles rather than fluff, the
   flat skull planes and pointed neck hackles look a little like cardboard, and the lion hind legs
   below the thigh are tubes with painted muscle. Only about 100 triangles of budget are left.
