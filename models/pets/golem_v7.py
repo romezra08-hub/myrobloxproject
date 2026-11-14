@@ -399,7 +399,7 @@ def stone(name, base="#3C3F43", warm="#54493E", edge="#9A958A", crack="#141516",
     # moss on top surfaces: broad patches, darker in the middle and fresher green at the edges
     if moss_amount:
         mn = N.noise(co, 1.2, 4.0, 0.6).outputs["Fac"]
-        patch = N.ramp(mn, 0.45, 0.52)
+        patch = N.ramp(mn, 0.47, 0.53)
         mo = N.math('MULTIPLY', N.math('MULTIPLY', N.up(0.3, 0.72), patch), moss_amount)
         tone_m = N.mix(N.ramp(mn, 0.52, 0.66), moss_light, moss)
         mossy = N.value(tone_m, N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.7, 0.65))
@@ -446,9 +446,9 @@ def crystal_material(name):
 # ---- the golem ------------------------------------------------------------------------------------------
 
 def build():
-    rock = stone("Stone", base="#4A4C4F", warm="#63554A", moss_amount=1.0, vary=0.46, weather=0.75, under=0.55)
+    rock = stone("Stone", base="#4A4C4F", warm="#63554A", moss="#2F4224", moss_light="#58703A", moss_amount=0.9, vary=0.46, weather=0.75, under=0.55)
     core = stone("CoreStone", base="#2C2D30", warm="#352F2A", edge="#55534E", wear=0.3, cracks=0.4, under=0.4)
-    mossmat = stone("Moss", base="#3E5A24", warm="#56742C", edge="#86A44C", crack="#1F2A14", wear=0.6, cracks=0.0, vary=0.35)
+    mossmat = stone("Moss", base="#34491F", warm="#4A6228", edge="#728C44", crack="#1F2A14", wear=0.6, cracks=0.0, vary=0.35)
     rootmat = stone("Root", base="#4A3B2B", warm="#5E4A34", edge="#8A7656", crack="#1E1710", wear=0.5, cracks=0.3, vary=0.25)
     scorch = stone("Scorch", base="#161716", warm="#1C1A17", edge="#2A2A28", wear=0.2, cracks=0.0)
     carved = stone("Carved", base="#1D1E20", warm="#221F1C", edge="#3A3936", wear=0.3, cracks=0.0, vary=0.1)
@@ -518,20 +518,25 @@ def build():
         x = 1.2 * sx
         F = M((x, fy, 0.0), rot=(0, 0, 15 * sx))
         # the foot: a sole slab, an instep slab sloping down to the toes, a heel stone, four splayed toes
-        slab("feet", (1.5, 1.35, 0.52), F @ M((0, 0.18, 0.26)), top=(0.86, 0.82), shift=(0, 0.06))
-        slab("feet", (1.1, 0.95, 0.42), F @ M((0.04 * sx, -0.12, 0.66), rot=(14, 0, 3 * sx)), top=(0.8, 0.72), bottom=(1.0, 1.0))
-        slab("feet", (0.8, 0.5, 0.42), F @ M((0.1 * sx, 0.86, 0.2), rot=(-10, 0, -8 * sx)), top=(0.8, 0.7))
+        slab("feet", (1.75, 1.5, 0.54), F @ M((0, 0.22, 0.27)), top=(0.86, 0.82), shift=(0, 0.06))
+        slab("feet", (1.22, 1.0, 0.44), F @ M((0.04 * sx, -0.12, 0.68), rot=(15, 0, 3 * sx)), top=(0.78, 0.7), bottom=(1.0, 1.0))
+        slab("feet", (0.9, 0.55, 0.46), F @ M((0.1 * sx, 0.98, 0.22), rot=(-10, 0, -8 * sx)), top=(0.8, 0.7))
         tr = random.Random(40 + sx)
-        for k, ang in enumerate((-31, -10, 10, 31)):
+        for k, ang in enumerate((-38, -13, 12, 36)):
             a = math.radians(ang + tr.uniform(-4, 4))
-            w = (0.42, 0.48, 0.46, 0.38)[k] * tr.uniform(0.92, 1.08)
-            ln = (0.6, 0.74, 0.7, 0.55)[k] * tr.uniform(0.92, 1.08)
-            h = (0.4, 0.46, 0.44, 0.36)[k]
-            base = Vector((0.18 * math.sin(a) * 2, -0.42, 0.0))
+            w = (0.5, 0.58, 0.55, 0.46)[k] * tr.uniform(0.92, 1.08)
+            ln = (0.8, 0.98, 0.92, 0.72)[k] * tr.uniform(0.92, 1.08)
+            h = (0.46, 0.52, 0.5, 0.42)[k]
+            base = Vector((0.5 * math.sin(a), -0.5, 0.0))
             tip_dir = Vector((math.sin(a), -math.cos(a), 0.0))
-            c = base + tip_dir * ln * 0.55
-            T = F @ Matrix.Translation((c.x, c.y, h * 0.42)) @ Matrix.Rotation(a, 4, 'Z') @ M(rot=(97, 0, 0))
-            slab("toes", (w, h, ln), T, top=(0.72, 0.62), shift=(0, -0.06), chips=1)
+            R = Matrix.Rotation(a, 4, 'Z')
+            # the knuckle stone, then the tip stone bent down to bite the ground
+            c = base + tip_dir * ln * 0.3
+            slab("toes", (w, h, ln * 0.6), F @ Matrix.Translation((c.x, c.y, h * 0.5)) @ R @ M(rot=(94, 0, 0)),
+                 top=(0.86, 0.8), chips=1)
+            c = base + tip_dir * ln * 0.78
+            slab("toes", (w * 0.86, h * 0.78, ln * 0.46), F @ Matrix.Translation((c.x, c.y, h * 0.3)) @ R @ M(rot=(106, 0, 0)),
+                 top=(0.66, 0.55), shift=(0, -0.05), chips=1)
         slab("joints", (0.92, 0.92, 0.6), M((x, fy + 0.1, 0.86)), core, rock=8, chips=0)
         # the shin: a calf mass wide under the knee, narrowing to the ankle, with two broken front plates and
         # an outer slab; a rune band glows in the gap between the plates
@@ -564,7 +569,7 @@ def build():
         root([Vector((x + 0.5 * sx, fy - 0.15, 2.62)), Vector((x + 0.68 * sx, fy - 0.3, 2.3)),
               Vector((x + 0.66 * sx, fy - 0.42, 2.0)), Vector((x + 0.58 * sx, fy - 0.38, 1.78))], 0.07, 0.02)
         # moss cushions in the joints
-        moss_tuft((x + 0.05 * sx, fy - 0.3, 0.8), 0.42, 60 + sx, up=(0, -0.4, 1))
+        moss_tuft((x + 0.05 * sx, fy - 0.36, 0.86), 0.42, 60 + sx, up=(0, -0.4, 1))
         moss_tuft((x - 0.3 * sx, fy - 0.25, 2.42), 0.36, 64 + sx, up=(0, -0.5, 1))
         moss_tuft((x + 0.55 * sx, fy + 0.05, 2.18), 0.3, 68 + sx, up=(sx, 0, 0.6))
         moss_tuft((x + 0.4 * sx, fy + 0.1, 3.45), 0.34, 72 + sx)
@@ -846,8 +851,8 @@ def main():
                                           head + Vector((0, 0.3, -0.35)), 30)
         rig.cams["legs"] = review._camera("C_legs", Vector((0, 0, 1.7)) + Vector((-0.42, -1.0, 0.2)).normalized() * 12.5,
                                           Vector((0, 0, 1.7)), 34)
-        cc = L @ Vector((0, 0.6, 7.9))
-        rig.cams["crystals"] = review._camera("C_crys", cc + Vector((-0.5, -1.0, 0.55)).normalized() * 8.0, cc, 34)
+        cc = L @ Vector((-1.6, 0.4, 8.3))
+        rig.cams["crystals"] = review._camera("C_crys", cc + Vector((-0.75, -1.0, 0.35)).normalized() * 9.0, cc, 30)
         return rig, review
 
     if a.peek:
