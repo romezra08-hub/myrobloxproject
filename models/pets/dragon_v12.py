@@ -620,7 +620,7 @@ def _hemisphere():
 OPEN_FULL = 0.32           # a face that sees at least this much of the sky counts as fully seen
 
 
-def cull_and_weigh(parts, keep=("GLOW",)):
+def cull_and_weigh(parts, keep=("GLOW", "Membrane")):
     """Delete the faces no camera can see (buried in another shape, tucked under a plate, flat on the
     floor) and mark the barely seen ones with the face value "hid" (0 seen to 1 hidden), so the unwrap
     can give them less of the texture. Returns the number of triangles removed."""
@@ -658,9 +658,11 @@ def cull_and_weigh(parts, keep=("GLOW",)):
                     if any(bvh.ray_cast(o, d, 60.0)[0] is None for d in world):
                         seen = True
                         break
-                if not seen:
-                    dead.append(f)
-                    continue
+                if not seen:                     # a face turned the wrong way would look buried: try its back too
+                    o = c - n * 0.004
+                    if sum(1 for d in world if bvh.ray_cast(o, -d, 60.0)[0] is None) < len(dirs) // 3:
+                        dead.append(f)
+                        continue
             f[lh] = max(0.0, min(1.0, 1.0 - free / len(dirs) / OPEN_FULL))
         removed += sum(len(f.verts) - 2 for f in dead)
         bmesh.ops.delete(bm, geom=dead, context='FACES')
@@ -840,8 +842,10 @@ def build():
         fore = mass([(1.36 * sx, -1.5 - 0.1 * step, 2.25), (1.36 * sx, -1.62 - 0.35 * step, 1.75), (1.3 * sx, -1.85 - 0.8 * step, 1.05)],
                     [(0.32, 0.3), (0.3, 0.3), (0.08, 0.08)], up=(0, -1, 0))
         limb = Surface(bm, delt, tri, fore)
-        for k, (z, w, hgt) in enumerate(((3.92, 1.12, 0.62), (3.52, 1.04, 0.56), (3.12, 0.9, 0.5))):
-            plates.append((limb, (3 * sx, -1.7, z), (0, 1, 0.12), (w, hgt), 0.15))
+        for z, ys, sz in ((3.98, (-2.0, -1.46), 0.62), (3.64, (-2.18, -1.72, -1.24), 0.56), (3.3, (-1.96, -1.46), 0.52),
+                          (2.98, (-1.72,), 0.46)):
+            for yy in ys:
+                plates.append((limb, (3 * sx, yy, z), (0, 0.15, -1), (sz * 1.05, sz * 0.92), 0.12))
         plates.append((limb, (3 * sx, elbow.y - 0.3 - 0.25 * step, 1.75), wrist - elbow, (0.78, 0.44), 0.1))
         plates.append((limb, (3 * sx, elbow.y - 0.36 - 0.45 * step, 1.25), wrist - elbow, (0.62, 0.36), 0.1))
         add("legs", bm, scale, crease=55)
@@ -860,8 +864,10 @@ def build():
         quad = mass([(1.05 * sx, 1.05, 3.85), (1.35 * sx, 0.9, 3.15), (1.42 * sx, 0.8, 2.45), (1.3 * sx, 0.86, 2.08)],
                     [(0.36, 0.42), (0.42, 0.5), (0.3, 0.34), (0.08, 0.08)], up=(0, -1, 0))
         haunch = Surface(bm, glute, quad)
-        for k, (z, yy, w, hgt) in enumerate(((3.95, 1.75, 1.12, 0.6), (3.5, 1.6, 1.1, 0.58), (3.05, 1.45, 0.98, 0.54), (2.62, 1.3, 0.8, 0.46))):
-            plates.append((haunch, (3 * sx, yy, z), (0, 1, 0.35), (w, hgt), 0.15))
+        for z, ys, sz in ((4.0, (1.4, 1.95, 2.45), 0.62), (3.62, (1.15, 1.68, 2.2), 0.62), (3.24, (1.0, 1.48, 1.96), 0.56),
+                          (2.86, (1.02, 1.5), 0.5), (2.5, (1.12,), 0.42)):
+            for yy in ys:
+                plates.append((haunch, (3 * sx, yy, z), (0, -0.25, -1), (sz * 1.05, sz * 0.92), 0.12))
         add("haunch", bm, scale, crease=55)
         for m_ in (glute, quad):
             add("muscle", m_, scale, crease=0)
@@ -880,12 +886,19 @@ def build():
 
     # ---- armour scales: hard angular plates in overlapping rows on the shoulders, haunches and shins ----
     scute = [(-0.62, 0.0), (-0.3, 0.36), (0.12, 0.44), (0.5, 0.2), (0.62, -0.18), (0.42, -0.5), (0.0, -0.4), (-0.36, -0.24)]
+    # an armour scale seen with its point down the limb: X runs down it, Z across
+    shield = [(0.5, 0.0), (0.28, 0.3), (-0.05, 0.46), (-0.4, 0.4), (-0.5, 0.0), (-0.4, -0.4), (-0.05, -0.46), (0.28, -0.3)]
     for limb, origin, along, size, tile in plates:
         origin = Vector(origin)
-        p, nrm = limb.hit(origin, (-origin.x, 0, 0))
+        try:
+            p, nrm = limb.hit(origin, (-origin.x, 0, 0))
+        except ValueError:
+            continue
+        down = abs(Vector(along).normalized().z) > 0.9      # a scale pointing down the limb, not a crosswise plate
+        outline = shield if down else scute
         thick = 0.14
-        bm = lens([(a * size[0], b * size[1]) for a, b in scute], thick, rows=((0.35, 1.0), (1.0, 0.0)),
-                  centre=(0.1 * size[0], -0.02 * size[1]))
+        bm = lens([(a * size[0], b * size[1]) for a, b in outline], thick, rows=((0.35, 1.0), (1.0, 0.0)),
+                  centre=(0.1 * size[0], -0.02 * size[1]) if not down else (0.12 * size[0], 0.0))
         T = facing(p, nrm, Vector(along))
         sign = 1.0 if T.col[1].xyz.dot(nrm) > 0 else -1.0
         for v in bm.verts:                                   # drape it over the curve of the limb
@@ -894,7 +907,10 @@ def build():
                 q, _ = limb.hit(flat + nrm * 1.5, -nrm)
             except ValueError:
                 q = flat
-            rise = tile * max(0.0, 0.45 - v.co.z / size[1])       # roof tiles: the lower edge stands proud
+            if down:                                          # roof tiles: the lower end stands proud
+                rise = tile * max(0.0, 0.3 + v.co.x / size[0])
+            else:
+                rise = tile * max(0.0, 0.45 - v.co.z / size[1])
             v.co = q + nrm * (v.co.y * sign + thick / 2 - 0.035 + rise)
         add("scutes", bm, armour, crease=30, ember=1.0)
 
