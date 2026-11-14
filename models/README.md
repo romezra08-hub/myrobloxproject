@@ -14,6 +14,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `eggs/eggs.py` | All six hatching eggs (`--only storm` builds one); `eggs_v1.py`... are its rounds |
+| `props/ores.py` | All seven mineable ore rocks (`--only gold` builds one); `ores_v1.py`... are its rounds |
 | `tools/pickaxes.py` | All five pickaxes (`--only gold` builds one); `pickaxes_v1.py`... are its rounds |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
 | `preview/<name>.png` | The review sheet of the current version |
@@ -120,6 +121,29 @@ like a pinecone, and its painted feather lines blur. Meadow's smooth shell can s
 like plastic up close, and Ember's obsidian reads charcoal more than black glass. Ember's glow part
 is a whole inner shell seen through the gaps between the scales; how its Neon looks in Studio is
 untested.
+
+## The ore rocks
+
+Seven rocks to mine, one per pickaxe tier plus a special one, each 4–5 studs wide and 2.8–4.4 tall.
+Import and set up a rock like a pet: `SetupPets.lua` sends anything named `...Ore` to
+**ReplicatedStorage > Ores** and, unlike pets and eggs, keeps it solid (hull collisions, clickable)
+so players bump into it and your mining code can raycast or click it. Glow parts stay non-solid.
+Review sheet: `preview/ores.png`.
+
+| Rock | Look | Triangles |
+|---|---|---|
+| Stone | Weathered grey rock with lichen and quartz flecks (the starter) | 1,132 |
+| Coal | Dark rock with black jagged coal seams breaking out | 1,720 |
+| Iron | Brown-grey rock with clusters of rusty ore lumps and metal nuggets | 2,484 |
+| Gold | Warm sandy slabs with thick gold veins and nuggets | 2,316 |
+| Emerald | Dark slate split by a cluster of emerald crystals lit from inside | 1,218 |
+| Ember | Black obsidian with a molten crack and orange ember crystals | 2,348 |
+| Egg Geode | Cracked open on a speckled egg in a violet hollow ringed with crystals: the "you found an egg" rock | 2,570 |
+
+Weak points: the gold veins read as gold bars bent over the rock rather than set into it, and the
+gold slabs look a little like buns. Up close the geode's rim crystals are still a spiky crown. The
+ember crack glows as a broad flat band, and the iron lumps look stuck on rather than grown. The
+gloss on coal, gold and obsidian is painted into the texture, so it will not move in game.
 
 ## Why they do not look like plastic
 
