@@ -76,7 +76,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Griffin | Storm griffin: white eagle head with glowing blue eyes, navy wings with lightning streaks, golden lion body, 9.5 studs tall | 17,594 | 6 |
 | Golem | Ancient crystal golem: carved slate blocks with moss, emerald crystal clusters, glowing eye slots and rune cracks, 9.9 studs tall | 7,314 | 6 |
 | Wolf | Shadow alpha wolf: long wedge muzzle, tall ears, slate blue-grey coat with a charcoal saddle, big silver mane of sculpted locks, violet crystals glowing along the spine, calm violet eyes, 7 studs tall | 15,032 | 19 (10 since the remake) |
-| Driller | Mining machine shaped like a mole: banded armour of chipped painted steel, a steel drill on its nose, oversized shovel claws with hazard stripes, glowing furnace grille and visor lights, exhaust stacks, dug-up gems on its back, 5.1 studs tall and 7.8 long | 11,907 | 6 |
+| Driller | Mining machine shaped like a mole: worn mining-yellow armour over gunmetal, chrome drill in a glowing ring, light-bar visor, furnace grille, oversized shovel claws, exhaust stacks, dug-up gems on its back, 5.1 studs tall and 7.9 long | 11,844 | 12 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -167,10 +167,9 @@ Known weak points, from the last review of each:
   than the winged creatures. The big silver mane locks are smooth and alike, so up close the ruff
   reads a little like layered petals, and the body and legs are smooth shapes where painted strokes
   do most of the work.
-- Driller: mostly grey, so at game distance it is a low grey dome with two stacks and claws, and
-  head-on the drill disappears against the body. The head is a boxy block behind the brass collar,
-  and its visor lights shrink to two orange dots far away. Up close the painted wear goes soft and
-  the drill flutes look smooth rather than machined.
+- Driller: the outline is still a low loaf with stacks, and from the side the armour bands look a
+  bit like a row of drums. The yellow is a little uniform at mid distance and the paint chips are
+  small. In the renders the glow ring lights the yellow snout orange, which Roblox Neon will not do.
 
 ## How the practice rounds work
 
