@@ -717,9 +717,9 @@ def rock_colour(N, base, warm, edge, crack, dirt, top=None, vary=0.3, wear=0.75,
         mossy = N.value("#3B4B2B", N.math('MULTIPLY_ADD', speck.outputs["Fac"], 0.7, 0.65))
         col = N.mix(N.mul(N.up(0.45, 0.8), patch, moss), col, mossy)
     if lichen:
-        vor = N.voronoi(N.warp(co, 3.0, 0.07), 2.4)
+        vor = N.voronoi(N.warp(N.warp(co, 2.0, 0.12), 7.0, 0.05), 1.7)        # ragged rosettes, not dots
         r, g, b = N.rgb(vor.outputs["Color"])[:3]
-        size = N.math('MULTIPLY_ADD', b, 0.16, 0.13)
+        size = N.math('MULTIPLY_ADD', b, 0.22, 0.2)
         spot = N.ramp(N.math('SUBTRACT', vor.outputs["Distance"], size), 0.0, -0.03)
         keep = N.math('GREATER_THAN', r, 0.36)
         paint = N.colours(g, [(0.0, "#9DB07A"), (0.6, "#9DB07A"), (0.62, "#D09A3C"), (0.8, "#D09A3C"), (0.82, "#D2D0C0"), (1.0, "#D2D0C0")], constant=True)
@@ -1190,7 +1190,7 @@ def geode_ore():
     no = Vector((0.06, -0.8, 0.6)).normalized()
     centre = Vector((0.0, 0.0, sh.h * 0.5))
     reach = BVHTree.FromBMesh(shell).ray_cast(centre, no)[3]
-    c, rim_pts = open_up(shell, centre + no * (reach - 0.55), no, rnd, rim=0.24, depth=1.2)
+    c, rim_pts = open_up(shell, centre + no * (reach - 0.42), no, rnd, rim=0.24, depth=1.2)
     rock = geode_material("GeodeRock", base="#4E4B5E", warm="#5C5262", edge="#A39CB6", crack="#1E1C26", dirt="#2E2B33",
                           top=("#6E6A80", 0.25), vary=0.25, cracks=0.25)
     egg_m = egg_material("GeodeEgg")
@@ -1203,29 +1203,34 @@ def geode_ore():
     lg = layer(egg, "g")
     for v in egg.verts:
         v[lg] = v.co.z / 2.05
-    b.add("egg", egg, egg_m, aim(c - no * 0.85 - UP * 0.25, axis, 20))
+    foot = c - no * 0.35 - axis * 0.85                     # the middle of the egg sits in the middle of the opening
+    b.add("egg", egg, egg_m, aim(foot, axis, 20))
     e1, e2 = frame(no)
     ring = sorted(rim_pts, key=lambda p: math.atan2((p - c).dot(e2), (p - c).dot(e1)))
-    count = 20
-    for k in range(count):
-        p = ring[int(k * len(ring) / count)]
-        out = (p - c - no * (p - c).dot(no)).normalized()
-        ax = jitter(rnd, no * 0.85 + out * 0.6, 0.12)
-        ln, rad = rnd.uniform(0.4, 0.7), rnd.uniform(0.08, 0.11)
-        at = aim(p - ax * 0.04, ax, rnd.uniform(0, 60))
-        if k % 3 == 0:
-            facets, core = lit_crystal(ln, rad, seed=300 + k)
-            b.add("crystals", facets, pale, at, flat=True)
-            b.add("crystal cores", core, glow, at)
-        else:
-            b.add("crystals", crystal(ln, rad, seed=300 + k), pale, at, flat=True)
-    foot = c - no * 0.85 - UP * 0.25
-    for k in range(5):
-        a = TAU * k / 5 + 0.3
+    # clusters of small pale crystals round the rim, leaning out and away from the opening; the biggest of
+    # each cluster lit from inside
+    clusters = 7
+    for k in range(clusters):
+        i0 = int((k + rnd.uniform(-0.15, 0.15)) * len(ring) / clusters) % len(ring)
+        for j in range(rnd.choice((2, 3, 3))):
+            p = ring[(i0 + j * 2) % len(ring)]
+            out = (p - c - no * (p - c).dot(no)).normalized()
+            ax = jitter(rnd, out * 0.8 + no * 0.65, 0.15)
+            ln, rad = rnd.uniform(0.42, 0.66) * (1 - 0.22 * j), rnd.uniform(0.085, 0.11) * (1 - 0.15 * j)
+            at = aim(p - ax * 0.05, ax, rnd.uniform(0, 60))
+            if j == 0:
+                facets, core = lit_crystal(ln, rad, seed=300 + k * 4 + j)
+                b.add("crystals", facets, pale, at, flat=True)
+                b.add("crystal cores", core, glow, at)
+            else:
+                b.add("crystals", crystal(ln, rad, seed=300 + k * 4 + j), pale, at, flat=True)
+    # a nest of small glowing crystals round the egg's foot, deep in the hollow
+    for k in range(6):
+        a = TAU * k / 6 + 0.3
         o = e1 * math.cos(a) + e2 * math.sin(a)
-        ax = jitter(rnd, no + o * 0.7, 0.1)
-        facets, core = lit_crystal(rnd.uniform(0.35, 0.5), 0.08, seed=350 + k)
-        at = aim(foot + o * 0.74 + no * 0.15, ax, rnd.uniform(0, 60))
+        ax = jitter(rnd, no * 0.8 + o * 0.6, 0.1)
+        facets, core = lit_crystal(rnd.uniform(0.32, 0.46), 0.08, seed=350 + k)
+        at = aim(c - no * 0.75 + o * 0.78, ax, rnd.uniform(0, 60))
         b.add("crystals", facets, pale, at, flat=True)
         b.add("crystal cores", core, glow, at)
     pebbles(b, sh, rnd, rock, [(-60, 0.2, 0.3), (45, 0.3, 0.26), (190, 0.2, 0.3), (-15, 0.5, 0.2)])
