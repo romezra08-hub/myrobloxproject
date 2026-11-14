@@ -536,7 +536,7 @@ def build():
         # the shin: a calf mass wide under the knee, narrowing to the ankle, with two broken front plates and
         # an outer slab; a rune band glows in the gap between the plates
         S = M((x * 1.02, fy + 0.06, 1.42), rot=(4, 0, -3 * sx))
-        shin = slab("shins", (1.04, 1.06, 1.3), S, top=(1.3, 1.26), rock=4, rock_depth=(0.9, 0.98), chips=1, keep=True)
+        shin = slab("shins", (1.04, 1.06, 1.3), S, top=(1.3, 1.26), rock=4, rock_depth=(0.9, 0.98), chips=0, keep=True)
         slab("shins", (0.96, 0.3, 0.62), S @ M((0.04 * sx, -0.66, 0.33), rot=(-9, 4 * sx, 5 * sx)), top=(1.0, 0.8), bottom=(0.84, 1.0))
         slab("shins", (0.74, 0.28, 0.42), S @ M((-0.03 * sx, -0.54, -0.44), rot=(7, -5 * sx, -6 * sx)), top=(0.86, 0.9))
         slab("shins", (0.3, 0.92, 0.7), S @ M((0.66 * sx, 0.05, 0.36), rot=(0, 9 * sx, 0)), top=(0.8, 0.85))
@@ -546,10 +546,10 @@ def build():
              rock_depth=(0.8, 0.95), chips=1)
         # the thigh: a mass broad at the hip and tapering to the knee, an outer slab and a front slab
         Th = M((x * 0.96, fy * 0.5 + 0.08, 2.9), rot=(-9, 0, 4 * sx))
-        thigh = slab("thighs", (1.0, 1.04, 1.25), Th, top=(1.38, 1.3), rock=4, rock_depth=(0.9, 0.98), chips=1, keep=True)
+        thigh = slab("thighs", (1.0, 1.04, 1.25), Th, top=(1.38, 1.3), rock=4, rock_depth=(0.9, 0.98), chips=0, keep=True)
         slab("thighs", (0.34, 1.12, 0.9), Th @ M((0.72 * sx, 0.05, 0.2), rot=(0, -12 * sx, 4)), top=(0.75, 0.86), bottom=(1.0, 0.9))
         slab("thighs", (0.98, 0.32, 0.72), Th @ M((-0.06 * sx, -0.72, 0.18), rot=(-11, 0, -4 * sx)), top=(1.0, 0.85), bottom=(0.78, 1.0))
-        legs.append((shin, S, -0.1, thigh, Th, -0.42, x, fy, sx))
+        legs.append((shin, S, -0.1, thigh, Th, -0.34, x, fy, sx))
         # roots: one winds round the ankle into the ground, one hangs over the outside of the knee
         a0 = math.radians(-60 if sx < 0 else 240)
         pts = []
@@ -683,8 +683,13 @@ def build():
         axis = m @ Vector((0, 0, h))
 
         def on(a, dh):
-            o = m @ Vector((3.0 * math.cos(a), 3.0 * math.sin(a), h + dh))
-            return surf.hit(o, (m @ Vector((0, 0, h + dh))) - o)
+            for hh in (h + dh, h + dh * 0.5, h, h + 0.06, h - 0.06):
+                o = m @ Vector((3.0 * math.cos(a), 3.0 * math.sin(a), hh))
+                try:
+                    return surf.hit(o, (m @ Vector((0, 0, hh))) - o)
+                except ValueError:
+                    continue
+            raise ValueError("rune band off the stone")
 
         pts, nrms = zip(*(on(2 * math.pi * k / n, 0.0) for k in range(n)))
         add("carvings", ribbon(pts, nrms, width, 0.012, closed=True), carved, crease=None)
@@ -839,8 +844,10 @@ def main():
         rig = review.Rig(golem, samples=samples, focus=(head.x, head.y + 0.4, head.z - 1.0))
         rig.cams["face"] = review._camera("C_face", head + Vector((-0.55, -1.0, 0.18)).normalized() * 9.0,
                                           head + Vector((0, 0.3, -0.35)), 30)
-        rig.cams["legs"] = review._camera("C_legs", Vector((0, 0, 1.6)) + Vector((-0.6, -1.0, 0.22)).normalized() * 9.5,
-                                          Vector((0, 0, 1.6)), 34)
+        rig.cams["legs"] = review._camera("C_legs", Vector((0, 0, 1.7)) + Vector((-0.42, -1.0, 0.2)).normalized() * 12.5,
+                                          Vector((0, 0, 1.7)), 34)
+        cc = L @ Vector((0, 0.6, 7.9))
+        rig.cams["crystals"] = review._camera("C_crys", cc + Vector((-0.5, -1.0, 0.55)).normalized() * 8.0, cc, 34)
         return rig, review
 
     if a.peek:
