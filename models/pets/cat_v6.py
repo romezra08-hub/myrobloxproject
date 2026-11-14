@@ -126,7 +126,7 @@ def euler_facing(nrm):
     """Rotation (degrees, XYZ) that turns a shape's -Y side to face along `nrm`."""
     yaw = math.degrees(math.atan2(nrm.x, -nrm.y))
     pitch = math.degrees(math.atan2(nrm.z, math.hypot(nrm.x, nrm.y)))
-    return (pitch, 0, yaw)
+    return (-pitch, 0, yaw)
 
 
 # ---- the cat ---------------------------------------------------------------------------------------------
@@ -194,9 +194,8 @@ def build():
             v.co.y *= 0.9
     on_skull = tree(skull)
     cat.add(skull.copy(), mats["head"], H)
-    skull.free()
 
-    face = bmesh.new()                                      # whisker pads and chin, to lay the thread on
+    face = skull                                            # skull, whisker pads and chin, to lay the thread on
     pads = []
     for sx in (-1, 1):
         p, n = from_front(on_skull, 0.088 * sx, -0.2)
@@ -274,8 +273,6 @@ def build():
     cat.add(ball((0.085, 0.03, 0.085), cuts=2), glow, C @ M(p + n * 0.068, rot=euler_facing(n)))
 
     # ---- the markings, as strokes of roving laid on the surface (world space) ----------------------------
-    head_tree = tree(rounded_box((1.44, 1.2, 1.14), n=2.3, cuts=9))     # (only the rough shape is needed)
-
     def on_head(x, z, y0=-3.0):
         """A point on the front of the skull, head-local, found from straight in front."""
         p, _ = from_front(on_skull, x, z, y0)
@@ -324,7 +321,6 @@ def build():
                     arc.append(hitp)
             body_strokes.append((arc, [w * s for s in (0.25, 0.7, 1, 1, 1, 0.9, 0.9, 0.8, 0.6, 0.2)][:len(arc)]))
     spec["body_strokes"] = body_strokes
-    head_tree = None
 
     cat.build(SCALE)
     tag(cat, spec)

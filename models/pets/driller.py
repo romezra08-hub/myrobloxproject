@@ -9,14 +9,17 @@ badger tank: cool and tough, never a cute toy and never a creepy animal. Must-ha
      the nose, forward and a little lowered; two oversized shovel claws of thick steel blades
      planted on the ground in front.
   2. A rounded back of overlapping riveted plates, like an armadillo's banded shell.
-  3. A small armoured head behind the drill with two narrow glowing visor slits: no pupils, no
-     mouth, no smile. Headlights, not eyes.
-  4. A furnace glowing through a chest grille, two short exhaust stacks, pipes along the flanks, a
-     chain hanging between plates, a few amethyst and sapphire chunks stuck in the back plates.
-  5. Gunmetal and dark steel, brass and copper trim, hazard stripes on the claw backs and the rear
-     bumper only, a polished drill and a modest orange glow.
-  6. Not plastic: worn light edges, grime in the joints, scratches, soot, patina and brushed
-     streaks are painted into the baked colour; crisp creases and real plate thickness.
+  3. A machine face: a painted brow hood over a wide visor light bar (a row of lamp cells, never
+     two eyes), a heavy snout housing and a dark collar framing the bright drill.
+  4. A furnace glowing through a belly grille and along the flanks, two short exhaust stacks,
+     pipes along the flanks, a chain hanging between plates, a few amethyst and sapphire chunks
+     stuck in the back plates.
+  5. One paint scheme: mining-machine yellow on the armour, gunmetal underneath, brass and copper
+     fittings, hazard stripes on the claw backs and the rear bumper only, a polished drill and an
+     orange glow.
+  6. Not plastic: paint chipped back to bare steel along the edges with a dark rim round each chip,
+     grime in the joints, rain streaks, soot, patina and scratches are painted into the baked
+     colour; crisp creases and real plate thickness.
 """
 import argparse
 import math
@@ -36,9 +39,10 @@ from mathutils.bvhtree import BVHTree  # noqa: E402
 SPRING = 1.5                     # height of the shell's springline
 SHELL_Y = (-1.35, 2.42)          # front and back of the banded shell (a dome cap closes the back)
 BANDS, BAND_LEN = 6, 0.82
-HEAD_AT = Vector((0.0, -1.85, 1.9))
+HEAD_AT = Vector((0.0, -1.85, 1.95))
 HEAD_ROT = (10, 0, 0)            # nose a little down
 DRILL_TILT = 20.0                # the drill points this many degrees below level
+HUB = Vector((0.0, -0.45, -0.34))  # the drill's axis leaves the head here (head space)
 ENGINE_Y = 1.1                  # the boiler housing on the back, the stacks rising from its rear corners
 STACK_TOP = 4.7
 SOOT = [Vector((-0.28, 1.4, 3.7)), Vector((0.28, 1.4, 3.7)), Vector((-0.33, 1.9, 4.62)), Vector((0.3, 1.8, 4.35))]
@@ -141,6 +145,62 @@ class Surface:
         if loc is None:
             raise ValueError("nothing in the way of the ray from %s" % (tuple(origin),))
         return loc, nrm
+
+
+def _hemisphere():
+    """Ray directions spread over the hemisphere round +Z, out to nearly grazing."""
+    out = [Vector((0, 0, 1))]
+    for tilt, n in ((25, 6), (50, 9), (72, 12), (86, 14)):
+        t = math.radians(tilt)
+        for j in range(n):
+            a = 2 * math.pi * (j + 0.5 * (tilt // 25 % 2)) / n
+            out.append(Vector((math.sin(t) * math.cos(a), math.sin(t) * math.sin(a), math.cos(t))))
+    return out
+
+
+def cull_hidden(parts, keep=("GLOW",)):
+    """Delete the faces no camera can see: tucked under other plates, buried inside another shape or
+    flat on the ground. Each face is tried from its centre and near each corner with rays over its
+    whole outward hemisphere; it goes only if every ray hits something. That frees triangles and,
+    more usefully, texture space for the faces that show. Returns the number of triangles removed."""
+    verts, polys = [], []
+    for bm, _ in parts.values():
+        base = len(verts)
+        bm.verts.index_update()
+        verts += [v.co.copy() for v in bm.verts]
+        polys += [[base + v.index for v in f.verts] for f in bm.faces]
+    bvh = BVHTree.FromPolygons(verts, polys)
+    dirs = _hemisphere()
+    removed = 0
+    for key, (bm, _) in parts.items():
+        if any(k in key for k in keep):
+            continue
+        bm.normal_update()
+        dead = []
+        for f in bm.faces:
+            n = f.normal
+            if n.length < 0.5:
+                continue
+            c = f.calc_center_median()
+            if c.z < 0.02 and n.z < -0.9:
+                dead.append(f)
+                continue
+            rot = n.to_track_quat('Z', 'Y').to_matrix()
+            world = [rot @ d for d in dirs]
+            seen = False
+            for p in [c] + [c.lerp(v.co, 0.8) for v in f.verts[:8]]:
+                o = p + n * 0.004
+                for d in world:
+                    if bvh.ray_cast(o, d, 60.0)[0] is None:
+                        seen = True
+                        break
+                if seen:
+                    break
+            if not seen:
+                dead.append(f)
+        removed += sum(len(f.verts) - 2 for f in dead)
+        bmesh.ops.delete(bm, geom=dead, context='FACES')
+    return removed
 
 
 # ---- shapes ------------------------------------------------------------------------------------------
@@ -263,44 +323,50 @@ def cap_plate(w, l, bulge=(0.08, 0.05), thick=0.1, nu=6, nv=4, bevel=0.025, tape
 
 
 def drill_cone(length, radius, flutes=3, per=12, rings=16, turns=1.1):
-    """A spiral-fluted drill along +Z from its base (z=0) to its point: each flute a concave scoop
-    ending in a sharp cutting ridge that winds round the cone. Vertex layer "grad" is 0 at the base
-    and 1 at the tip."""
+    """A spiral-fluted drill along +Z from its base (z=0) to its point: each flute a flat polished
+    land, then a concave scoop ending in a cutting face that climbs straight back up to the next
+    land. The cutting face has its own vertices (layer "spin" 1 there, 0 on the land), so it can be
+    painted dark right up to a hard, crisp ridge. Vertex layer "grad" is 0 at the base, 1 at the tip."""
     bm = bmesh.new()
     lay = layer(bm, "grad")
     spin = layer(bm, "spin")
     segs = flutes * per
-    prof = []
+    prof = []                                             # a flat polished land, then the scoop of the flute
     for k in range(per):
-        if k == 0:
+        if k <= 1:
             prof.append(1.0)
-        elif k == 1:
-            prof.append(0.985)
+        elif k == 2:
+            prof.append(0.975)
         else:
-            prof.append(0.96 - 0.27 * ((k - 1) / (per - 1)) ** 0.75)
-    loops = []
+            prof.append(0.94 - 0.3 * ((k - 2) / (per - 2)) ** 0.7)
+    loops = []                                            # per ring, per flute: per + 1 vertices (the last one tops the cutting face)
     for i in range(rings):
         t = i / rings
         env = radius * (1.0 - t) ** 0.92
         twist = turns * 2 * math.pi * t
         ring = []
-        for j in range(segs):
-            a = 2 * math.pi * j / segs + twist
-            r = env * prof[j % per]
-            v = bm.verts.new((r * math.cos(a), r * math.sin(a), t * length))
-            v[lay] = t
-            v[spin] = (j % per) / per
-            ring.append(v)
+        for f in range(flutes):
+            col = []
+            for k in range(per + 1):
+                a = 2 * math.pi * (f * per + k) / segs + twist
+                r = env * prof[k % per]
+                v = bm.verts.new((r * math.cos(a), r * math.sin(a), t * length))
+                v[lay] = t
+                v[spin] = 1.0 if k == per else k / per
+                col.append(v)
+            ring.append(col)
         loops.append(ring)
-    for a, b in zip(loops, loops[1:]):
-        for j in range(segs):
-            k = (j + 1) % segs
-            bm.faces.new((a[j], a[k], b[k], b[j]))
+    for ra, rb in zip(loops, loops[1:]):
+        for ca, cb in zip(ra, rb):
+            for k in range(per):
+                bm.faces.new((ca[k], ca[k + 1], cb[k + 1], cb[k]))
     tip = bm.verts.new((0, 0, length))
     tip[lay] = 1.0
-    for j in range(segs):
-        bm.faces.new((loops[-1][j], loops[-1][(j + 1) % segs], tip))
-    bm.faces.new(loops[0][::-1])
+    tip[spin] = 0.0
+    for col in loops[-1]:
+        for k in range(per):
+            bm.faces.new((col[k], col[k + 1], tip))
+    bm.faces.new([v for col in loops[0] for v in col[:per]][::-1])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     return bm
 
@@ -531,7 +597,7 @@ class Nodes:
             mp = self.new("ShaderNodeMapping")
             mp.inputs["Scale"].default_value = (60.0, 2.0, 2.0)
             self.link(v, mp.inputs["Vector"])
-            line = self.ramp(self.noise(mp.outputs["Vector"], 1.0, 2.0, 0.5), 0.71, 0.76)
+            line = self.ramp(self.noise(mp.outputs["Vector"], 1.0, 2.0, 0.5), 0.735, 0.748, smooth=False)
             out = line if out is None else self.math('MAXIMUM', out, line)
         patch = self.ramp(self.noise(self.co, 2.4, 2.0), 0.48, 0.6)
         return self.math('MULTIPLY', self.math('MULTIPLY', out, patch), density)
@@ -611,10 +677,11 @@ def brass(name, base="#9C7531", hi="#EBD08A", tarnish="#4E3A1C", patina="#4C8B78
 
 
 def drill_steel(name):
-    """Polished drill steel: fine grain running along each flute, darker scoured steel and packed
-    earth in the flute floors, a thin mirror-bright line on every cutting ridge, a straw-and-blue
-    temper colour near the base."""
-    m = kit.material(name, "#868E96", rough=0.35)
+    """Polished drill steel that reads from across the room: each flute's land polished nearly white,
+    the scoop behind it darkening to scoured steel and packed earth at its foot, so the three
+    spirals stand out bright against dark; a mirror line on every cutting ridge, a straw-and-blue
+    temper colour at the base."""
+    m = kit.material(name, "#A9B1B8", rough=0.3)
     b = kit.principled(m)
     N = Nodes(m)
     a = N.new("ShaderNodeAttribute")
@@ -622,22 +689,91 @@ def drill_steel(name):
     g = a.outputs["Fac"]
     sp = N.new("ShaderNodeAttribute")
     sp.attribute_type, sp.attribute_name = 'GEOMETRY', "spin"
+    across = sp.outputs["Fac"]                            # 0 on the land behind a cutting ridge, ~0.92 at the foot of the next
     xyz = N.new("ShaderNodeCombineXYZ")
-    N.link(N.math('MULTIPLY', sp.outputs["Fac"], 34.0), xyz.inputs[0])
+    N.link(N.math('MULTIPLY', across, 34.0), xyz.inputs[0])
     N.link(N.math('MULTIPLY', g, 2.5), xyz.inputs[1])
     grain = N.noise(xyz.outputs[0], 1.0, 3.0, 0.6)
-    across = sp.outputs["Fac"]                            # 0 just behind a cutting ridge, 1 at the foot of the next
-    col = N.value("#868E96", N.math('MULTIPLY', N.math('MULTIPLY_ADD', grain, 0.5, 0.75),
-                                    N.ramp(across, 0.1, 0.95, 1.12, 0.62)))
-    col = N.mix(N.ramp(g, 0.0, 0.08, 0.6, 0.0), col, "#9A7A44")
-    col = N.mix(N.math('MULTIPLY', N.ramp(g, 0.05, 0.09, 0.0, 1.0), N.ramp(g, 0.1, 0.16, 0.4, 0.0)), col, "#55628A")
-    col = N.mix(N.math('MULTIPLY', N.cavity(0.18, 0.99, 0.6), 0.9), col, "#24272B")
-    dirt = N.math('MULTIPLY', N.math('MULTIPLY', N.cavity(0.15, 0.99, 0.75), N.ramp(g, 0.3, 0.75)),
-                  N.ramp(N.noise(N.co, 6.0, 4.0), 0.4, 0.6, 0.35, 0.95))
-    col = N.mix(dirt, col, "#4A3524")
-    col = N.mix(N.edge(0.016, 0.999, 0.96), col, "#F6F8FA")
-    col = N.mix(N.scratches(0.45), col, "#D8DDE1")
+    # polished land: a faked chrome reflection, bright sky above, a dark horizon band, warm ground bounce below
+    geo = N.new("ShaderNodeNewGeometry")
+    nz = N.new("ShaderNodeSeparateXYZ")
+    N.link(geo.outputs["Normal"], nz.inputs[0])
+    sky = N.mix(N.ramp(nz.outputs[2], -0.05, 0.4), "#59616A", "#F1F4F6")
+    chrome = N.mix(N.ramp(nz.outputs[2], -0.5, -0.08, 1.0, 0.0), sky, "#A49C90")
+    col = N.mix(N.ramp(across, 0.12, 0.8), chrome, "#2A3035")
+    col = N.value(col, N.math('MULTIPLY_ADD', grain, 0.3, 0.85))
+    col = N.mix(N.ramp(g, 0.0, 0.07, 0.65, 0.0), col, "#A88446")
+    col = N.mix(N.math('MULTIPLY', N.ramp(g, 0.05, 0.08, 0.0, 1.0), N.ramp(g, 0.09, 0.14, 0.45, 0.0)), col, "#4F5F8E")
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.16, 0.99, 0.6), 0.8), col, "#1D2024")
+    dirt = N.math('MULTIPLY', N.math('MULTIPLY', N.ramp(across, 0.6, 0.9), N.ramp(g, 0.25, 0.7)),
+                  N.ramp(N.noise(N.co, 6.0, 4.0), 0.42, 0.56, 0.3, 0.9))
+    col = N.mix(dirt, col, "#46311F")
+    col = N.mix(N.edge(0.014, 0.999, 0.965), col, "#FBFCFD")
+    col = N.mix(N.scratches(0.4), col, "#E4E8EB")
     N.link(col, b.inputs["Base Color"])
+    return m
+
+
+def paint(name, base, bare="#9AA1A8", grime="#140F0B", vary=0.2, chips=1.0, chip_scale=5.0, edge_chip=0.32,
+          fade=0.3, rain=0.3, oil=0.2, mud=0.45, soot=0.9, dust=0.5, top_dust=0.3, scratch=0.4, rough=0.55,
+          skirt=None, skirt_colour="#2F353B"):
+    """Thick industrial enamel over steel: each plate a slightly different batch, sun-faded patches,
+    grime washed down in streaks and oily blotches low down, paint chipped back to bare brushed steel
+    (most of it along the edges) with a hard dark rim round every chip, a thin rubbed-bright line on
+    the very edges, scratches, grime in the joints, dust settled on top and towards the feet, soot by
+    the stacks. The chip thresholds are hard, so the wear stays crisp when the texture is magnified."""
+    m = kit.material(name, base, rough=rough)
+    b = kit.principled(m)
+    N = Nodes(m)
+    grain = N.noise(N.stretched((30.0, 1.4, 30.0)), 1.0, 3.0, 0.55)
+    tone = N.math('MULTIPLY_ADD', N.island(), vary, 1.0 - vary / 2)
+    blotch = N.noise(N.co, 1.4, 4.0, 0.6)
+    paint_col = base
+    if skirt:
+        # two-tone: a hard paint line round the body, gunmetal below it
+        sep = N.new("ShaderNodeSeparateXYZ")
+        N.link(N.co, sep.inputs[0])
+        paint_col = N.mix(N.ramp(sep.outputs[2], skirt - 0.006, skirt + 0.006, smooth=False), skirt_colour, base)
+    col = N.value(paint_col, N.math('MULTIPLY', N.math('MULTIPLY_ADD', blotch, 0.28, 0.86), tone))
+    if fade:
+        f = N.ramp(N.noise(N.co, 1.9, 3.0, 0.55), 0.5, 0.68, 0.0, fade)
+        col = N.mix(f, col, N.mix(0.4, N.value(col, 1.2), "#B5AC94"))
+    if rain:
+        streak = N.ramp(N.noise(N.stretched((5.0, 5.0, 0.6)), 1.0, 2.0, 0.5), 0.54, 0.7, 0.0, rain)
+        col = N.mix(streak, col, "#3B2E20")
+    if mud:
+        # earth thrown up on the lower skirts of the armour: a soft gradient, heavier in broad patches
+        patch = N.ramp(N.noise(N.co, 1.5, 3.0, 0.5), 0.35, 0.65, 0.4, 1.0)
+        col = N.mix(N.math('MULTIPLY', N.math('MULTIPLY', N.height(1.15, 1.95), patch), mud), col, "#4F3E2B")
+    if oil:
+        blot = N.math('MULTIPLY', N.ramp(N.noise(N.co, 1.3, 4.0, 0.6), 0.55, 0.7), N.height(0.6, 2.4, 1.0, 0.35))
+        col = N.mix(N.math('MULTIPLY', blot, oil), col, "#1A140E")
+    if chips:
+        # compact flakes, gathered in worn zones and along the edges; flat panels stay mostly painted
+        flake = N.noise(N.co, chip_scale, 3.0, 0.55)
+        zone = N.math('MULTIPLY_ADD', N.noise(N.co, 1.1, 2.0, 0.5), 0.3, -0.15)
+        s = N.math('ADD', N.math('ADD', flake, zone), N.math('MULTIPLY', N.edge(0.07, 0.999, 0.86), edge_chip))
+        rim = N.ramp(s, 0.664, 0.669, smooth=False)
+        lost = N.ramp(s, 0.674, 0.679, smooth=False)
+        col = N.mix(N.math('MULTIPLY', rim, chips), col, "#2A2017")
+        under = N.value(bare, N.math('MULTIPLY_ADD', grain, 0.45, 0.75))
+        col = N.mix(N.math('MULTIPLY', lost, chips), col, under)
+    col = N.mix(N.math('MULTIPLY', N.cavity(0.3, 0.97, 0.5), 0.9), col, grime)
+    if dust:
+        col = N.mix(N.math('MULTIPLY', N.height(0.0, 0.9), dust), col, "#6A5E4C")
+    if top_dust:
+        settle = N.math('MULTIPLY', N.up(0.35, 0.85), N.ramp(N.noise(N.co, 3.2, 4.0, 0.6), 0.4, 0.62, 0.2, 1.0))
+        col = N.mix(N.math('MULTIPLY', settle, top_dust), col, "#8A8270")
+    # rubbed bright on the very edges, in broken lengths with hard ends
+    worn = N.math('MULTIPLY', N.edge(0.03, 0.998, 0.93), N.ramp(N.noise(N.co, 5.0, 4.0, 0.65), 0.4, 0.6, 0.0, 1.0))
+    col = N.mix(N.ramp(worn, 0.4, 0.46, smooth=False), col, "#C6CBCF")
+    if scratch:
+        col = N.mix(N.scratches(scratch), col, "#B9BEC2")
+    if soot:
+        sooty = N.math('MULTIPLY', N.near(SOOT, 0.15, 0.85), N.ramp(N.noise(N.co, 3.0, 4.0), 0.3, 0.6, 0.55, 1.0))
+        col = N.mix(N.math('MULTIPLY', sooty, soot), col, "#0B0A09")
+    N.link(col, b.inputs["Base Color"])
+    b.inputs["Roughness"].default_value = rough
     return m
 
 
@@ -721,8 +857,10 @@ def env(y):
 
 
 def build():
-    plate = metal("Gunmetal", "#34404C", edge="#B4BAC0", soot=0.9, chips=1.0, bare="#959CA3", vary=0.42, fade=0.55, oil=0.6,
-                  top_dust=0.45, grime="#0E0F10")
+    yellow = paint("Paint", "#DE9C22")
+    shellpaint = paint("PaintShell", "#DE9C22", skirt=1.74)
+    plate = metal("Gunmetal", "#353D46", edge="#B4BAC0", soot=0.9, chips=0.7, bare="#959CA3", vary=0.3, fade=0.3, oil=0.5,
+                  top_dust=0.4, grime="#0E0F10")
     dark = metal("DarkSteel", "#23272C", edge="#8A9198", soot=0.9, vary=0.25, oil=0.4, top_dust=0.3, grime="#0B0B0C")
     steel = metal("Steel", "#454B52", edge="#B8BDC2", dust=0.6, chips=0.8, bare="#989EA5", fade=0.35, oil=0.45, top_dust=0.35,
                   grime="#0E0F10")
@@ -750,9 +888,9 @@ def build():
         d.tally[part] = d.tally.get(part, 0) + sum(len(f.verts) - 2 for f in bm.faces)
         d.add(bm, mat)
 
-    def rivets(points, mat=brs, r=0.045):
+    def rivets(points, mat=dark, r=0.05):
         for p, n in points:
-            add("rivets", rivet(r, r * 0.8), mat, aim(p, n, 15), crease=0)
+            add("rivets", rivet(r, r * 0.8, segs=6), mat, aim(p, n, 15), crease=0)
 
     def on(Mx, at, uvs):
         return [(Mx @ p, (Mx.to_3x3() @ n).normalized()) for p, n in (at(u, v) for u, v in uvs)]
@@ -760,8 +898,21 @@ def build():
     # ---- hull: a dark steel core under the shell, a hazard-striped bumper at the back -------------------------
     add("hull", block((2.3, 3.9, 1.35), bevel=0.08, top=(0.9, 0.95)), dark, M((0, 0.42, 1.62)))
     add("hull", block((2.15, 0.34, 0.62), bevel=0.05), haz, M((0, 2.5, 1.2), rot=(-8, 0, 0)))
+    # rear lamps in dark bezels at the ends of the bumper, a tow eye in the middle
+    BU = M((0, 2.5, 1.2), rot=(-8, 0, 0))
+    for sx in (-1, 1):
+        add("rear", block((0.34, 0.08, 0.26), bevel=0.02), dark, BU @ M((sx * 0.8, 0.19, 0.12)))
+        add("rear", block((0.26, 0.04, 0.17), bevel=0.0), glow, BU @ M((sx * 0.8, 0.23, 0.12)), crease=0)
+        add("rear", block((0.03, 0.05, 0.2), bevel=0.0), iron, BU @ M((sx * 0.8, 0.25, 0.12)))
+    add("rear", block((0.34, 0.2, 0.26), bevel=0.03), dark, BU @ M((0, 0.25, -0.12)))
+    add("rear", chain_link(0.3, 0.22, 0.045, nu=8, nv=4), iron, BU @ M((0, 0.36, -0.14), rot=(90, 0, 0)), crease=0)
+    # furnace light leaking from under the armour skirt along both flanks
+    for sx in (-1, 1):
+        add("furnace", block((0.05, 2.7, 0.07), bevel=0.0), glow, M((sx * 1.165, 0.25, 1.04)), crease=0)
+        for y in (-0.7, 0.2, 1.1):
+            add("furnace", block((0.09, 0.07, 0.16), bevel=0.015), dark, M((sx * 1.18, y, 1.04)))
 
-    # ---- the banded shell: faceted, crested bands, each tucked under the one in front -------------------------
+    # ---- the banded shell: painted, faceted, crested bands, each tucked under the one in front ---------------
     shell = Surface()
     step = (SHELL_Y[1] - SHELL_Y[0] - BAND_LEN) / (BANDS - 1)
     for i in range(BANDS):
@@ -780,7 +931,7 @@ def build():
         bm, at = arch_band(rx_of, rz_of, y0, y1, -0.2, math.pi + 0.2, n=2.4, thick=0.14, cols=12, rows=2,
                            bevel=0.03, ridge=0.1, ridge_w=0.45)
         shell.take(bm)
-        add("shell", bm, plate, crease=11.0)
+        add("shell", bm, shellpaint, crease=11.0)
         rivets([at(u, 0.84, -0.005) for u in (0.15, 0.38, 0.62, 0.85)])
     # the rump: a faceted dome tucked under the last band, closing the back
     yc = SHELL_Y[1] - 0.14
@@ -792,61 +943,73 @@ def build():
     bm, at = arch_band(lambda v: rxc * kc(v), lambda v: rzc * kc(v), yc, yc + 0.62, -0.2, math.pi + 0.2, n=2.4, thick=0.13,
                        cols=12, rows=4, bevel=0.03, ridge=0.05, ridge_w=0.45)
     shell.take(bm)
-    add("shell", bm, plate, crease=11.0)
+    add("shell", bm, shellpaint, crease=11.0)
     rivets([at(u, 0.3, -0.005) for u in (0.2, 0.5, 0.8)])
     shell.done()
 
-    # ---- head: a wedge whose forehead and cheeks narrow to the drill hub; visors in the front corners ----------
+    # ---- head: a dark face under a painted brow hood, a wide visor light bar, a heavy snout housing ----------
     H = M(HEAD_AT, rot=HEAD_ROT)
-    head_cuts = [((0, -0.55, 0.32), (0, -0.6, 1.0)),                       # forehead
-                 ((0.6, -0.55, 0), (1, -0.5, 0)), ((-0.6, -0.55, 0), (-1, -0.5, 0)),       # cheeks
-                 ((0.52, -0.45, 0.22), (0.55, -1.0, 0.4)), ((-0.52, -0.45, 0.22), (-0.55, -1.0, 0.4)),  # visor faces
-                 ((0, -0.55, -0.32), (0, -0.8, -1.0))]                     # chin
-    add("head", block((1.6, 1.1, 1.1), cuts=head_cuts, bevel=0.045, top=(0.88, 0.95)), plate, H)
-    crest, crest_at = cap_plate(1.15, 0.85, bulge=(0.07, 0.03), thick=0.11, taper=0.8, corner=0.6)
-    CR = H @ M((0, 0.25, 0.52), rot=(-6, 0, 0)) @ M(rot=(0, 0, 180))
-    add("head", crest, plate, CR)
-    rivets(on(CR, crest_at, ((-0.6, 0.55), (0.6, 0.55), (-0.6, -0.5), (0.6, -0.5))))
-    # a nose guard: a ridge down the middle of the forehead from the crest to the drill hub
-    fh = Vector((0, -0.6, 1.0)).normalized()                          # the forehead's outward normal
-    g0, g1 = Vector((0, -0.18, 0.54)), Vector((0, -0.56, 0.31))      # both on the forehead plane
-    gm, gl = frame(g1, g0, (1, 0, 0))                                # its local -Y points out of the forehead
-    add("head", block((0.22, 0.18, gl + 0.1), bevel=0.035, top=(0.72, 0.75)), plate, H @ gm @ M((0, -0.05, 0)))
-    rivets([(H @ (gm @ Vector((0, -0.145, z))), (H.to_3x3() @ fh).normalized()) for z in (-0.12, 0.1)], dark, 0.035)
-    vn = Vector((0.55, -1.0, 0.4)).normalized()
+    head_cuts = [((0.7, -0.7, 0), (1, -0.5, 0)), ((-0.7, -0.7, 0), (-1, -0.5, 0)),             # cheeks
+                 ((0, -0.7, -0.42), (0, -0.75, -1.0))]                                            # chin
+    add("head", block((1.7, 1.25, 1.32), cuts=head_cuts, bevel=0.045, top=(0.86, 0.9)), dark, H @ M((0, -0.075, 0.04)))
+    # the visor: a protruding dark housing, a glowing bar split into five lamp cells by four ribs
+    VZ = 0.53
+    add("visor", block((1.34, 0.2, 0.25), bevel=0.03, top=(1.0, 0.85)), dark, H @ M((0, -0.75, VZ)))
+    add("visor", block((1.22, 0.04, 0.12), bevel=0.0), glow, H @ M((0, -0.85, VZ)), crease=0)
+    for x in (-0.37, -0.123, 0.123, 0.37):
+        add("visor", block((0.05, 0.07, 0.17), bevel=0.012), iron, H @ M((x, -0.865, VZ)))
+    for x in (-0.68, 0.68):
+        add("visor", block((0.09, 0.26, 0.3), bevel=0.02), brs, H @ M((x, -0.75, VZ)))
+    # the brow hood: a heavy painted plate overhanging the visor, a raised crest down its middle
+    brow, brow_at = cap_plate(1.92, 1.2, bulge=(0.12, 0.04), thick=0.14, taper=0.8, corner=0.55)
+    BR = H @ M((0, -0.33, 0.8), rot=(5, 0, 0)) @ M(rot=(0, 0, 180))
+    add("head", brow, yellow, BR)
+    rivets(on(BR, brow_at, ((-0.7, 0.45), (0.7, 0.45), (-0.66, -0.6), (0.66, -0.6))))
+    ridge_cuts = [((0, -0.38, 0.03), (0, -0.85, 1.0))]
+    add("head", block((0.58, 1.0, 0.15), cuts=ridge_cuts, bevel=0.03, top=(0.72, 0.96)), yellow, BR @ M((0, 0.04, 0.15)) @ M(rot=(0, 0, 180)))
     for sx in (-1, 1):
-        cheek, cheek_at = cap_plate(0.7, 0.8, bulge=(0.04, 0.04), thick=0.08)
-        add("head", cheek, plate, H @ M((sx * 0.78, 0.18, -0.05), rot=(0, 90 * sx, 0)))
-        # visor: a dark slot in the front corner of the head with a glowing strip set into it
-        n = Vector((sx * vn.x, vn.y, vn.z))
-        c = Vector((sx * 0.5, -0.5, 0.22))
-        c = c + n * (Vector((sx * 0.52, -0.45, 0.22)) - c).dot(n)       # onto the cut face
-        V = H @ basis(c, Vector((0, 0, 1)).cross(n), n) @ M(rot=(0, 0, 4 * sx))       # local y runs up the face
-        add("visor", block((0.5, 0.13, 0.12), bevel=0.02), dark, V)
-        add("visor", block((0.44, 0.065, 0.05), bevel=0.014), glow, V @ M((0, 0, 0.047)), crease=0)
-        add("visor", block((0.58, 0.05, 0.2), bevel=0.018, top=(1.0, 0.7)), plate, V @ M((0, 0.095, 0.07)) @ M(rot=(22, 0, 0)))
+        cheek, cheek_at = cap_plate(0.95, 0.95, bulge=(0.05, 0.05), thick=0.1, corner=0.4)
+        CK = H @ M((sx * 0.86, 0.08, -0.08), rot=(0, 90 * sx, 0))
+        add("head", cheek, yellow, CK)
+        rivets(on(CK, cheek_at, ((-0.6, 0.6), (0.6, 0.6), (-0.6, -0.6), (0.6, -0.6))))
 
-    # drill: an eight-sided hub, a brass collar, the fluted cone
+    # the snout: a short tapered painted housing, a ring of furnace light, a dark collar, the fluted cone
     ddir = Matrix.Rotation(math.radians(DRILL_TILT), 3, 'X') @ Vector((0, -1, 0))
-    hub = H @ Vector((0, -0.55, -0.2))
-    add("drill hub", cylinder(0.45, 0.42, segs=8, bevel=0.04, r2=0.42), dark, aim(hub, ddir, 22.5), crease=30)
-    add("drill hub", cylinder(0.61, 0.16, segs=16, bevel=0.035), brs, aim(hub + ddir * 0.27, ddir))
-    for j in range(6):
-        a = 2 * math.pi * (j + 0.5) / 6
-        q = aim(hub + ddir * 0.355, ddir) @ Vector((0.47 * math.cos(a), 0.47 * math.sin(a), 0))
-        add("rivets", rivet(0.04, 0.032), dark, aim(q, ddir), crease=0)
-    base = hub + ddir * 0.35
-    add("drill", drill_cone(2.3, 0.56, flutes=3, per=11, rings=16, turns=1.2), drill, aim(base, ddir))
+    hub = H @ HUB
+    add("snout", cylinder(0.8, 0.5, segs=8, bevel=0.05, r2=0.66), yellow, aim(hub + ddir * 0.2, ddir, 22.5), crease=30)
+    add("snout", cylinder(0.78, 0.06, segs=16, bevel=0.02), brs, aim(hub + ddir * 0.08, ddir))
+    add("snout", kit.tube([(0, 0, -0.03), (0, 0, 0.03)], [0.72, 0.72], segs=16, rings=1), glow, aim(hub + ddir * 0.47, ddir))
+    for j in range(8):
+        add("snout", block((0.13, 0.1, 0.14), bevel=0.02), dark,
+            aim(hub + ddir * 0.47, ddir) @ M(rot=(0, 0, 45 * j + 22.5)) @ M((0.7, 0, 0)))
+    add("snout", cylinder(0.69, 0.17, segs=16, bevel=0.035, r2=0.65), dark, aim(hub + ddir * 0.585, ddir))
+    for j in range(8):
+        a = 2 * math.pi * j / 8
+        q = aim(hub + ddir * 0.675, ddir) @ Vector((0.64 * math.cos(a), 0.64 * math.sin(a), 0))
+        add("rivets", rivet(0.035, 0.03, segs=6), brs, aim(q, ddir), crease=0)
+    base = hub + ddir * 0.63
+    add("drill", drill_cone(2.33, 0.6, flutes=3, per=11, rings=23, turns=1.25), drill, aim(base, ddir), crease=50)
 
-    # ---- chest furnace: a housing under the head, a glowing core behind grille bars --------------------------
-    add("furnace", block((1.35, 0.7, 0.5), bevel=0.05, top=(0.95, 0.85)), dark, M((0, -1.7, 1.08)))
-    add("furnace", block((1.08, 0.04, 0.3), bevel=0.0), glow, M((0, -2.05, 1.07)), crease=0)
-    for z in (0.87, 1.27):
-        add("furnace", block((1.22, 0.1, 0.08), bevel=0.02), brs, M((0, -2.07, z)))
-    for x in (-0.57, 0.57):
-        add("furnace", block((0.08, 0.1, 0.48), bevel=0.02), brs, M((x, -2.07, 1.07)))
-    for j in range(7):
-        add("furnace", block((0.05, 0.06, 0.36), bevel=0.012), iron, M((-0.45 + 0.15 * j, -2.09, 1.07)))
+    # ---- belly furnace: a low housing under the chest, its glow showing through angled louvres ---------------
+    add("furnace", block((2.0, 0.8, 0.75), bevel=0.05, top=(0.95, 0.9)), dark, M((0, -1.8, 0.78)))
+    add("furnace", block((1.74, 0.04, 0.46), bevel=0.0), glow, M((0, -2.2, 0.76)), crease=0)
+    for z in (0.5, 1.02):
+        add("furnace", block((1.9, 0.1, 0.08), bevel=0.02), brs, M((0, -2.22, z)))
+    for x in (-0.91, 0.0, 0.91):
+        add("furnace", block((0.08, 0.1, 0.6), bevel=0.02), brs, M((x, -2.22, 0.76)))
+    for z in (0.64, 0.77, 0.9):
+        add("furnace", block((1.72, 0.05, 0.07), bevel=0.012), iron, M((0, -2.25, z), rot=(35, 0, 0)))
+    # the scoop guard: a heavy steel lip under the furnace with five short teeth, like a lower jaw
+    lip, lip_at = cap_plate(1.85, 0.62, bulge=(0.03, 0.06), thick=0.11, nu=6, nv=2, corner=0.35)
+    LP = M((0, -2.45, 0.33), rot=(22, 0, 0))
+    add("scoop", lip, plate, LP)
+    rivets(on(LP, lip_at, ((-0.75, 0.3), (-0.25, 0.3), (0.25, 0.3), (0.75, 0.3))), brs, 0.045)
+    for j in range(5):
+        x = -0.72 + 0.36 * j
+        r0 = LP @ Vector((x, -0.22, 0.02))
+        tip = r0 + Vector((0, -0.3, -0.12))
+        add("scoop", section_loft([r0 + Vector((0, 0.12, 0.05)), r0, r0.lerp(tip, 0.5), tip],
+                                  lambda t: blade_profile(0.2 - 0.12 * t, 0.12 - 0.08 * t), (0, 0.3, 1), rings=3), blade, crease=35)
 
     # ---- front legs: a great pauldron, thick arm with a piston, and a shovel claw of three heavy blades ---------
     for sx in (-1, 1):
@@ -864,12 +1027,12 @@ def build():
         add("pistons", kit.tube([p0.lerp(p1, 0.5), p1], [0.055, 0.055], segs=8, rings=1), drill)
         pauldron, pat = cap_plate(1.25, 1.15, bulge=(0.16, 0.1), thick=0.14, nu=6, nv=4, taper=0.85, corner=0.5)
         P = basis(S + Vector((sx * 0.35, 0.05, 0.28)), (0, -1, 0), (sx * 0.8, -0.12, 0.6))
-        add("pauldrons", pauldron, plate, P)
+        add("pauldrons", pauldron, yellow, P)
         rivets(on(P, pat, ((-0.85, 0.5), (-0.85, -0.5))))
         over, oat = cap_plate(0.82, 0.98, bulge=(0.12, 0.08), thick=0.12, nu=5, nv=4, taper=0.85, corner=0.55)
         P2 = P @ M((0.24, 0.0, 0.11))
         add("pauldrons", over, plate, P2)
-        rivets(on(P2, oat, ((-0.6, 0.6), (0.6, 0.6), (-0.6, -0.6), (0.6, -0.6))))
+        rivets(on(P2, oat, ((-0.6, 0.6), (0.6, 0.6), (-0.6, -0.6), (0.6, -0.6))), brs)
 
         # the hand: a thick mitt turned out like a mole's, its back plated with hazard stripes, three blades
         f = Vector((sx * 0.15, -0.78, -0.6)).normalized()
@@ -879,7 +1042,7 @@ def build():
         Hm = basis(W + f * 0.25, across, u)
         add("claws", block((1.2, 0.85, 0.38), bevel=0.06, top=(0.9, 0.85)), steel, Hm)
         add("claws", block((1.0, 0.66, 0.07), bevel=0.025), haz, Hm @ M((0, -0.03, 0.21)))
-        rivets(on(Hm, lambda uu, vv: (Vector((uu * 0.55, vv * 0.38, 0.215)), Vector((0, 0, 1))), ((-1, -1), (1, -1), (-1, 1), (1, 1))))
+        rivets(on(Hm, lambda uu, vv: (Vector((uu * 0.55, vv * 0.38, 0.215)), Vector((0, 0, 1))), ((-1, -1), (1, -1), (-1, 1), (1, 1))), brs)
         for kk in (-1, 0, 1):
             R = Hm @ Vector((kk * 0.38, 0.42, -0.04))
             T = Vector((R.x + (R - W).x * 0.35 * abs(kk) + sx * 0.08, -3.3 + 0.08 * abs(kk), -0.05))
@@ -905,12 +1068,12 @@ def build():
             add("feet", section_loft(path, lambda t: blade_profile(0.24 - 0.14 * t, 0.15 - 0.09 * t), (0, 0, 1), rings=6), blade, crease=35)
         haunch, hat = cap_plate(1.4, 1.2, bulge=(0.14, 0.1), thick=0.14, corner=0.5)
         Q = basis(Vector((sx * 1.6, 1.85, 1.3)), (0, 1, 0), (sx * 0.94, 0.0, 0.34))
-        add("haunches", haunch, plate, Q)
+        add("haunches", haunch, yellow, Q)
         rivets(on(Q, hat, ((-0.85, 0.5), (-0.85, -0.5))))
         over, oat = cap_plate(0.95, 0.98, bulge=(0.12, 0.08), thick=0.12, nu=5, nv=4, corner=0.55)
         Q2 = Q @ M((0.24, 0.0, 0.11))
         add("haunches", over, plate, Q2)
-        rivets(on(Q2, oat, ((-0.6, 0.6), (0.6, 0.6), (-0.6, -0.6), (0.6, -0.6))))
+        rivets(on(Q2, oat, ((-0.6, 0.6), (0.6, 0.6), (-0.6, -0.6), (0.6, -0.6))), brs)
 
     # ---- pipes along the flanks, clamped to the skirt of the shell ---------------------------------------------
     for sx in (-1, 1):
@@ -945,9 +1108,17 @@ def build():
     add("engine", block((1.3, 1.15, 0.62), bevel=0.05, top=(0.84, 0.82)), dark, E)
     add("engine", block((1.38, 1.22, 0.1), bevel=0.025), brs, E @ M((0, 0, -0.1)))
     eng_top = lambda uu, vv: (E @ Vector((uu * 0.42, vv * 0.36, 0.31)), (E.to_3x3() @ Vector((0, 0, 1))).normalized())
-    rivets([eng_top(uu, vv) for uu, vv in ((-1, -1), (1, -1), (-1, 1), (1, 1))], dark, 0.04)
+    rivets([eng_top(uu, vv) for uu, vv in ((-1, -1), (1, -1), (-1, 1), (1, 1))], brs, 0.045)
     for j in range(4):
-        add("engine", block((0.05, 0.5, 0.05), bevel=0.012), iron, E @ M((-0.18 + 0.12 * j, -0.12, 0.31)))
+        add("engine", block((0.05, 0.5, 0.05), bevel=0.012), iron, E @ M((-0.18 + 0.12 * j, 0.02, 0.31)))
+    # a warning beacon at the front of the housing: an amber lamp in a wire cage on a brass foot
+    bz = E @ Vector((0, -0.36, 0.31))
+    up = (E.to_3x3() @ Vector((0, 0, 1))).normalized()
+    add("beacon", cylinder(0.15, 0.1, segs=10, bevel=0.025), brs, aim(bz + up * 0.04, up))
+    add("beacon", cylinder(0.11, 0.2, segs=10, bevel=0.03, r2=0.09), glow, aim(bz + up * 0.19, up), crease=0)
+    add("beacon", cylinder(0.125, 0.035, segs=10, bevel=0.01), iron, aim(bz + up * 0.31, up))
+    for j in range(4):
+        add("beacon", block((0.025, 0.025, 0.24), bevel=0.0), iron, aim(bz + up * 0.2, up) @ M(rot=(0, 0, 45 + 90 * j)) @ M((0.12, 0, 0)))
     for sx, high in ((-1, STACK_TOP), (1, STACK_TOP - 0.28)):
         sdir = Vector((sx * 0.05, math.sin(math.radians(24)), math.cos(math.radians(24)))).normalized()
         foot = E @ Vector((sx * 0.27, 0.3, 0.12))
@@ -975,11 +1146,13 @@ def build():
         rnd = random.Random(seed)
         out = (nrm + Vector((0, 0.4, 0))).normalized()
         for j in range(n):
-            ln = rnd.uniform(0.42, 0.55) * (1.0 if j == 0 else 0.68)
+            ln = rnd.uniform(0.5, 0.64) * (1.0 if j == 0 else 0.7)
             off = Vector((rnd.uniform(-0.1, 0.1), rnd.uniform(-0.1, 0.1), 0)) if j else Vector()
             ax = (out + Vector((rnd.uniform(-0.45, 0.45), rnd.uniform(-0.3, 0.3), 0))).normalized()
             add("gems", crystal(ln, ln * 0.26, seed=seed * 10 + j), mat, aim(p + off, ax, rnd.uniform(0, 60)), crease=30)
 
+    cut = cull_hidden(d.parts)
+    print("  hidden faces removed: %d triangles" % cut)
     d.build()
     for ob in d.objects:
         print("  %-26s %6d triangles" % (ob.name, sum(len(p.vertices) - 2 for p in ob.data.polygons)))

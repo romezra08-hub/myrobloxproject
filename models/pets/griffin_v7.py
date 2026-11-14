@@ -17,6 +17,14 @@ never cute, never creepy, never plastic. Must-haves, checked in every review:
   5. Not plastic: streaked fur and drawn feather vanes, small scales on the shanks, colour that
      changes along every feather, soft shading in the creases baked into one image.
 
+Round 7: soft plumage on the breast: single rounded feathers laid in staggered, jittered rows,
+small at the throat and longer lower down, in a warm off-white with cool grey shadows between the
+rows and a faint pale gold at the tips (it held no detail in strong light). A smaller, darker beak
+of horn fading to a pale tip, behind a defined golden cere. Muscles on the lion: shoulder, ribcage,
+flank hollow, the back muscles either side of a darker spine and a grooved thigh, in the shape and
+painted into the coat, which now has strands combed back and down in clumps. A thicker tail ending
+in a full navy tuft with lightning-blue glints. Shorter eagle shanks, arched toes, gripping talons.
+
 Round 6: the tail end now lifts off the ground so the tuft stands up in the outline, its locks
 splay open and the glowing core shows between them and at the tip (it was hidden before). A
 slightly shorter beak and lower crest feathers. The breast no longer reads as a regular lattice:
@@ -51,6 +59,7 @@ import argparse
 import bisect
 import math
 import os
+import random
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -295,12 +304,13 @@ def blade(widths, W, h, cup=0.14, thin=0.35):
 
 
 def row(place, count, closed=False, cols=2, rows=3, depth=0.6, lift=0.08, sink=0.04, ridge=0.03, thick=0.03,
-        g=(0.1, 0.4), gpow=1.0, L=0.6, point=1.0):
+        g=(0.1, 0.4), gpow=1.0, L=0.6, point=1.0, crisp=True):
     """A row of pointed feathers as one closed sheet. place(u, v) gives the point and the outward
     normal of the surface the row lies on: u runs across the row (feather j spans j to j + 1), v
     from the roots (0) to the tips (1). Between two feathers the tips are cut back by `depth`, so
     each one ends in a sharp point. Each has a raised shaft (`ridge`), stands `lift` proud of the
-    surface at its tip and is buried `sink` at its root, so the next row up covers its root."""
+    surface at its tip and is buried `sink` at its root, so the next row up covers its root.
+    Without `crisp` the tips are shaded round instead of knife-edged."""
     bm = bmesh.new()
     lg, lx, ld, lf = _layers(bm)
     ncol = count * cols + (0 if closed else 1)
@@ -329,9 +339,102 @@ def row(place, count, closed=False, cols=2, rows=3, depth=0.6, lift=0.08, sink=0
         for r in range(rows):
             bm.faces.new((top[c][r], top[d][r], top[d][r + 1], top[c][r + 1]))
             bm.faces.new((bot[c][r + 1], bot[d][r + 1], bot[d][r], bot[c][r]))
-        bm.edges.get((top[c][rows], top[d][rows])).smooth = False
+        if crisp:
+            bm.edges.get((top[c][rows], top[d][rows])).smooth = False
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     return bm
+
+
+BREAST_L, BREAST_W = (0.4, 0.66), (0.13, 0.11)    # feather length and half width at the throat, and added lower down
+BREAST_STEP = 0.5                                  # row to row, in feather lengths
+def soft_row(skin, s0, lo, hi, W_of, L_of, rnd, stagger=0.0, closed=False, jitter=0.22, tilt=6.0, **kw):
+    """A row of soft feathers joined side by side round the skin at s0, from angle lo to hi (a whole
+    ring when `closed`), pointing towards the rump. Each feather is about 2 * W_of(th) studs wide and
+    L_of(th) long, but every one gets its own width, length and slant, so that the rows never line
+    up into a lattice. Four columns a feather with a soft pointed-round tip, 32 triangles each."""
+    steps = max(int(hi - lo), 8)
+    cum = [0.0]
+    for i in range(steps):
+        th = lo + (hi - lo) * (i + 0.5) / steps
+        per = (skin.bare(s0, th + 0.5) - skin.bare(s0, th - 0.5)).length * (hi - lo) / steps
+        cum.append(cum[-1] + per / (2.0 * W_of(th)))
+    count = max(2, round(cum[-1]))
+
+    def angle_at(x):                                      # x in feathers from lo
+        x = min(max(x * cum[-1] / count, 0.0), cum[-1])
+        i = min(bisect.bisect_right(cum, x) - 1, steps - 1)
+        f = (x - cum[i]) / max(cum[i + 1] - cum[i], 1e-9)
+        return lo + (hi - lo) * (i + f) / steps
+    if closed:
+        B = [angle_at(j + stagger + (rnd.uniform(-jitter, jitter) if 0 < j + stagger < count else 0.0)) for j in range(count)]
+        B.append(B[0] + 360.0)
+    else:
+        B = [lo] + [angle_at(j + stagger + rnd.uniform(-jitter, jitter)) for j in range(1, count)] + [hi]
+    n = len(B) - 1
+    Ls = [L_of(0.5 * (B[j] + B[j + 1])) * rnd.uniform(0.86, 1.14) for j in range(n)]
+    Ts = [rnd.uniform(-tilt, tilt) for j in range(n)]
+    cache = {}
+
+    def place(u, v):
+        key = round(u * 8)
+        if key not in cache:
+            j, f = int(u), u - int(u)
+            if j >= n:
+                j, f = n - 1, 1.0
+            th = B[j] + f * (B[j + 1] - B[j])
+            if f < 1e-6 or f > 1 - 1e-6:                      # a column two feathers share
+                i0, i1 = (j - 1, j) if f < 0.5 else (j, j + 1)
+                i0, i1 = i0 % n if closed else max(i0, 0), i1 % n if closed else min(i1, n - 1)
+                L, tl = 0.5 * (Ls[i0] + Ls[i1]), 0.5 * (Ts[i0] + Ts[i1])
+            else:
+                L, tl = Ls[j], Ts[j]
+            cache[key] = (th, tl, skin.toward(s0, th, L))
+        th, tl, s1 = cache[key]
+        s = s0 + (s1 - s0) * v
+        return skin.bare(s, th + tl * v), skin.normal(s, th + tl * v)
+    kw.setdefault("L", sum(Ls) / n)
+    return row(place, n, closed=closed, cols=4, crisp=False, **kw)
+
+
+# Muscles of the lion, for the +X side (mirrored to the other): centre, radii, a lean about X in
+# degrees (the long axis tips back as it rises), how far the surface swells out in studs (negative:
+# a groove) and how strongly it is painted (lighter on a muscle, darker in a groove).
+BODY_MUSCLES = [
+    ((0.86, -0.95, 3.55), (0.36, 0.42, 0.55), 0, 0.075, 0.0),     # shoulder, under the breast feathers
+    ((0.95, 0.12, 3.42), (0.34, 0.6, 0.5), 0, 0.06, 0.12),        # ribcage
+    ((0.94, 1.0, 3.2), (0.34, 0.32, 0.42), 0, -0.075, -0.22),     # flank hollow in front of the thigh
+    ((0.42, 1.0, 4.42), (0.24, 1.15, 0.2), 0, 0.035, 0.09),       # long back muscles either side of the spine
+    ((0.62, 2.15, 4.38), (0.26, 0.3, 0.24), 0, 0.045, 0.1),       # point of the hip
+    ((0.5, 2.75, 4.25), (0.32, 0.32, 0.3), 0, 0.035, 0.08),       # rump
+]
+PAINTED = [                                                       # painted only: too fine for the mesh
+    ((0.98, -0.42, 3.35), (0.32, 0.08, 0.5), 15, 0.0, -0.22),    # back edge of the shoulder
+    ((0.97, -0.05, 3.3), (0.3, 0.055, 0.36), 20, 0.0, -0.12),     # ribs
+    ((0.97, 0.25, 3.28), (0.3, 0.055, 0.36), 20, 0.0, -0.12),
+    ((0.96, 0.55, 3.26), (0.3, 0.055, 0.34), 20, 0.0, -0.1),
+    ((0.6, 0.7, 2.98), (0.3, 0.9, 0.09), 0, 0.0, -0.1),          # line of the belly
+]
+THIGH_MUSCLES = [
+    ((1.22, 1.92, 3.25), (0.34, 0.075, 0.78), -25, -0.045, -0.32),  # groove between the front and back of the thigh
+    ((1.18, 1.55, 2.95), (0.32, 0.3, 0.5), -25, 0.05, 0.14),         # front of the thigh
+    ((1.2, 2.32, 3.35), (0.32, 0.32, 0.6), -25, 0.05, 0.14),         # back of the thigh
+    ((1.06, 1.45, 2.38), (0.3, 0.26, 0.11), 0, -0.02, -0.2),         # crease over the knee
+]
+
+
+def field(muscles):
+    """The swelling, in studs, of a list of muscles at a point (mirrored)."""
+    mats = [(Vector(c), Vector(r), Matrix.Rotation(math.radians(tilt), 3, 'X').transposed(), geo)
+            for c, r, tilt, geo, _ in muscles if geo]
+
+    def f(p):
+        q = Vector((abs(p.x), p.y, p.z))
+        total = 0.0
+        for c, r, Ri, geo in mats:
+            d = Ri @ (q - c)
+            total += geo * math.exp(-((d.x / r.x) ** 2 + (d.y / r.y) ** 2 + (d.z / r.z) ** 2))
+        return total
+    return f
 
 
 def lens(outline, thick, rows=((0.55, 0.8), (1.0, 0.0)), centre=(0.0, 0.0)):
@@ -458,7 +561,8 @@ class Skin:
     along the path from its first section (the rump), the angle goes round the section in degrees,
     90 on the back (the back of the neck), -90 underneath (the breast), 0 on the +X side."""
 
-    def __init__(self, sections, samples=24):
+    def __init__(self, sections, samples=24, swell=None):
+        self.swell = swell
         k = len(sections) - 1
         centres = [Vector(sec[:3]) for sec in sections]
         self.samples = samples
@@ -492,7 +596,10 @@ class Skin:
     def bare(self, s, th):
         c, t, u, side, w, a, b, n = self.at(s)
         x, y = _super(math.radians(th), n)
-        return c + side * (w * x) + u * ((a if y > 0 else b) * y)
+        p = c + side * (w * x) + u * ((a if y > 0 else b) * y)
+        if self.swell:
+            p = p + (p - c).normalized() * self.swell(p)
+        return p
 
     def normal(self, s, th):
         ds = self.bare(min(s + 0.02, self.L), th) - self.bare(max(s - 0.02, 0.0), th)
@@ -627,28 +734,85 @@ def plumage(name, stops, rough=0.8, streak=None, edge=None, edge_mix=0.0, edge_d
     return m
 
 
-def fur_material(name, stops, streak, up=0.78, down=1.16, down_sat=0.75, keep=0.6):
-    """The lion's coat: a ramp read from g (tawny body to the dark tuft), short streaks, darker on
-    the back and paler and less saturated underneath (only where g is below `keep`)."""
+STRAND_ANGLE = 126.87   # turns the strand pattern so the coat is combed back and down
+
+
+def coat_material(name, stops, muscles, up=0.62, down=1.24, down_sat=0.55, keep=0.6, dorsal=0.3):
+    """The lion's coat: a ramp read from g (tawny body to the dark end of the tail), painted strands
+    combed back and down in clumps, the muscles painted in (lighter on a muscle, darker in the
+    grooves), a darker line down the spine, a darker back and a paler, greyer belly."""
     m = kit.material(name, stops[0][1], rough=0.85)
-    kit.furry(m, **streak)
     tree = m.node_tree
     new, link, attr, op, remap, ramp, mix = _node_ops(tree)
-    hsv = next(n for n in tree.nodes if n.type == 'HUE_SAT')
+    b = kit.principled(m)
     g = attr("g")
+    hsv = new("ShaderNodeHueSaturation")
     link(ramp(g, stops), hsv.inputs["Color"])
-    geo = new("ShaderNodeNewGeometry")
+    link(hsv.outputs["Color"], b.inputs["Base Color"])
+    obj = new("ShaderNodeTexCoord").outputs["Object"]
     sep = new("ShaderNodeSeparateXYZ")
-    link(geo.outputs["Normal"], sep.inputs[0])
-    nz = sep.outputs[2]
+    link(obj, sep.inputs[0])
+    ax = op('ABSOLUTE', sep.outputs[0])
+    comb = new("ShaderNodeCombineXYZ")
+    link(ax, comb.inputs[0])
+    link(sep.outputs[1], comb.inputs[1])
+    link(sep.outputs[2], comb.inputs[2])
+    rot = new("ShaderNodeVectorRotate")
+    rot.rotation_type = 'X_AXIS'
+    rot.inputs["Angle"].default_value = math.radians(STRAND_ANGLE)
+    link(obj, rot.inputs["Vector"])
+
+    def stretched(scale, length):
+        mp = new("ShaderNodeMapping")
+        mp.inputs["Scale"].default_value = (scale, scale, scale / length)
+        link(rot.outputs["Vector"], mp.inputs["Vector"])
+        return mp.outputs["Vector"]
+    fine = new("ShaderNodeTexNoise")
+    fine.inputs["Scale"].default_value, fine.inputs["Detail"].default_value = 1.0, 4.0
+    link(stretched(15.0, 7.0), fine.inputs["Vector"])
+    streak = remap(fine.outputs[0], 0.32, 0.68, 0.0, 1.0, smooth=True)
+    clump = new("ShaderNodeTexVoronoi")
+    clump.feature = 'DISTANCE_TO_EDGE'
+    clump.inputs["Scale"].default_value = 1.0
+    link(stretched(4.2, 3.2), clump.inputs["Vector"])
+    edge = remap(clump.outputs["Distance"], 0.0, 0.2, 0.0, 1.0, smooth=True)
+    blotch = new("ShaderNodeTexNoise")
+    blotch.inputs["Scale"].default_value, blotch.inputs["Detail"].default_value = 1.6, 1.0
+    link(obj, blotch.inputs["Vector"])
+    val = op('MULTIPLY_ADD', streak, 0.28, 0.84)
+    val = op('MULTIPLY', val, op('MULTIPLY_ADD', edge, 0.18, 0.86))
+    val = op('MULTIPLY', val, op('MULTIPLY_ADD', blotch.outputs[0], 0.16, 0.92))
+    total = None
+    for c, r, tilt, _geo, amount in muscles:
+        if not amount:
+            continue
+        mp = new("ShaderNodeMapping")
+        mp.vector_type = 'TEXTURE'
+        mp.inputs["Location"].default_value = c
+        mp.inputs["Rotation"].default_value = (math.radians(tilt), 0.0, 0.0)
+        mp.inputs["Scale"].default_value = r
+        link(comb.outputs[0], mp.inputs["Vector"])
+        dot = new("ShaderNodeVectorMath")
+        dot.operation = 'DOT_PRODUCT'
+        link(mp.outputs[0], dot.inputs[0])
+        link(mp.outputs[0], dot.inputs[1])
+        term = op('MULTIPLY', op('EXPONENT', op('MULTIPLY', dot.outputs["Value"], -1.0)), amount)
+        total = term if total is None else op('ADD', total, term)
+    if total is not None:
+        val = op('MULTIPLY', val, op('ADD', total, 1.0))
+    geo = new("ShaderNodeNewGeometry")
+    sn = new("ShaderNodeSeparateXYZ")
+    link(geo.outputs["Normal"], sn.inputs[0])
+    nz = sn.outputs[2]
     body = remap(g, keep, keep + 0.15, 1.0, 0.0)
     upf = op('MULTIPLY', remap(nz, 0.1, 0.9, 0.0, 1.0 - up, smooth=True), body)
     dnf = op('MULTIPLY', remap(nz, -0.1, -0.85, 0.0, down - 1.0, smooth=True), body)
-    shade = op('ADD', op('SUBTRACT', 1.0, upf), dnf)
-    old = hsv.inputs["Value"].links[0].from_socket
-    link(op('MULTIPLY', old, shade), hsv.inputs["Value"])
+    val = op('MULTIPLY', val, op('ADD', op('SUBTRACT', 1.0, upf), dnf))
+    spine = op('MULTIPLY', remap(ax, 0.34, 0.06, 0.0, 1.0, smooth=True), remap(nz, 0.35, 0.8, 0.0, 1.0, smooth=True))
+    val = op('MULTIPLY', val, op('MULTIPLY_ADD', spine, -dorsal, 1.0))
+    link(val, hsv.inputs["Value"])
     sat = op('SUBTRACT', 1.0, op('MULTIPLY', remap(nz, -0.1, -0.85, 0.0, 1.0 - down_sat, smooth=True), body))
-    link(sat, hsv.inputs["Saturation"])
+    link(op('MULTIPLY_ADD', spine, 0.15, sat), hsv.inputs["Saturation"])
     return m
 
 
@@ -661,10 +825,18 @@ def build():
     wing = plumage("Wing", [(0.0, "#D4DCE4"), (0.14, "#A8B6C8"), (0.3, "#6C84A6"), (0.48, "#435C86"),
                             (0.68, "#263860"), (0.86, "#172446"), (1.0, "#10182F")], 0.85,
                    dict(strength=0.12, mottle=0.08, fine=36.0, length=5.0), edge="#C4D0DE", edge_mix=0.8, edge_dark=1.0)
-    fur = fur_material("Fur", [(0.0, "#B8955E"), (0.6, "#B08C58"), (0.75, "#6E5034"), (0.88, "#2C2A30"), (1.0, "#151B2E")],
-                       dict(strength=0.34, mottle=0.18, fine=9.0, length=6.0), up=0.62, down=1.24, down_sat=0.55)
-    beak = plumage("Beak", [(0.0, "#E8B440"), (0.3, "#D89A30"), (0.52, "#B07020"), (0.7, "#5E3614"), (0.85, "#2A170A"), (1.0, "#140C06")],
-                   0.5, dict(strength=0.07, mottle=0.05, fine=70.0, length=3.0), vane=False)
+    fur = coat_material("Fur", [(0.0, "#B8955E"), (0.6, "#B08C58"), (0.75, "#6E5034"), (0.88, "#2C2A30"), (1.0, "#151B2E")],
+                        BODY_MUSCLES + PAINTED + THIGH_MUSCLES)
+    # the breast: warm off-white tips, cool grey where each feather goes under the row above, pale gold at the very tip
+    breast = plumage("Breast", [(0.0, "#87909C"), (0.32, "#A4ABB5"), (0.56, "#C6C9CC"), (0.78, "#DDDAD2"), (0.92, "#E3DCCB"),
+                                (1.0, "#DDD0AE")], 0.85, dict(strength=0.1, mottle=0.07, fine=40.0, length=5.0),
+                     edge="#E6D6AE", edge_mix=0.35, edge_dark=0.9, period=0.08, slant=0.22, shaft=0.06)
+    # horn: dark at the base, fading to a pale tip; a golden cere behind it
+    beak = plumage("Beak", [(0.0, "#2A2420"), (0.4, "#3A302A"), (0.65, "#5E5244"), (0.82, "#9C8C70"), (0.93, "#CFC3A3"), (1.0, "#E2D8BC")],
+                   0.45, dict(strength=0.06, mottle=0.05, fine=70.0, length=3.0), vane=False)
+    cere = kit.scaly(kit.material("Cere", "#D2A440"), size=0.03, joins=0.25, vary=0.1, rough=0.6)
+    tuft = plumage("Tuft", [(0.0, "#2A2830"), (0.28, "#1C2644"), (0.6, "#2A3E6C"), (0.85, "#46669E"), (1.0, "#7EA2DA")], 0.8,
+                   dict(strength=0.14, mottle=0.08, fine=40.0, length=5.0), edge="#9CC2FF", edge_mix=0.45, edge_dark=1.0, period=0.09)
     talon = plumage("Talon", [(0.0, "#3A3530"), (0.5, "#221F22"), (1.0, "#0B0B0E")], 0.5,
                     dict(strength=0.1, mottle=0.06, fine=50.0, length=2.0), vane=False)
     shank = kit.scaly(kit.material("Shank", "#C99A40"), size=0.065, joins=0.45, vary=0.18, rough=0.7)
@@ -693,44 +865,52 @@ def build():
 
     # ---- trunk and neck: one skin; white under the feathers in front, tawny fur behind ------------------
     sections = BODY + [(*hs(NECK_TOP[0]), *NECK_TOP[1]), (*hs(NECK_TOP[2]), *NECK_TOP[3])]
-    skin = Skin(sections)
+    skin = Skin(sections, swell=field(BODY_MUSCLES))
     s_fur = skin.s_of(4.75)
     bm = skin.mesh(segs=20)
     lay = bm.faces.layers.float.get("s")
     front, back = kit.split(bm, lambda f: f[lay] > s_fur)
-    add("skin", paint(front, 0.5), plume)
+    add("skin", paint(front, 0.42), breast)
     add("skin", paint(back, 0.1), fur)
 
-    def ring_of(s0, count, L_of, stagger=0.0):
-        """place() for a ring of feathers right round the skin from s0 towards the rump."""
-        dth = 360.0 / count
+    def arc_of(s0, lo, hi, count, L_of, stagger=0.0):
+        """place() for an open row of feathers round the skin from angle lo to hi at s0, pointing
+        towards the rump."""
+        dth = (hi - lo) / count
         cache = {}
 
         def place(u, v):
-            th = 90.0 + (u - 0.5 + stagger) * dth
+            th = lo + (u + stagger) * dth
             if th not in cache:
                 cache[th] = skin.toward(s0, th, L_of(th))
             s = s0 + (cache[th] - s0) * v
             return skin.bare(s, th), skin.normal(s, th)
         return place
 
-    def front_of(th):
-        return max(0.0, -math.sin(math.radians(th)))                 # 1 on the breast, 0 on the back
-
-    # neck hackles: long pointed feathers ringed round the neck, flaring like a mane
-    for i, idx in enumerate((9.55, 9.1, 8.6, 8.1, 7.6)):
+    # neck hackles: long pointed feathers round the back and sides of the neck, framing the face
+    for i, idx in enumerate((9.55, 9.0, 8.4, 7.8)):
         s = skin.s_of(idx)
-        L = 0.62 + 0.06 * i
-        add("hackles", row(ring_of(s, 11, lambda th, L=L, i=i: L * (1 + 0.07 * math.sin(math.radians(th) * 3 + i)), 0.5 * (i % 2)), 11, closed=True, rows=3, depth=0.5,
-                           lift=0.06 + 0.012 * i, sink=0.05, ridge=0.03, thick=0.035, g=(0.52, 0.9), gpow=1.2, L=L, point=0.85), plume)
-    # breast and shoulders: rings of broader feathers; the last ring lies over the lion's coat
-    s, k = skin.s_of(7.15), 0
-    while s > s_fur - 0.05:
-        L_of = lambda th, k=k: (0.7 + 0.2 * front_of(th)) * (1 + 0.09 * math.sin(math.radians(th) * 3 + 1.7 * k))
-        count = (15, 14, 16)[k % 3]
-        add("breast", row(ring_of(s, count, L_of, 0.37 * k), count, closed=True, rows=2, depth=0.42, point=0.8,
-                          lift=0.03, sink=0.05, ridge=0.025, thick=0.03, g=(0.6 + 0.025 * (k % 3), 0.84), L=0.75), plume)
-        s -= 0.32
+        L = 0.64 + 0.07 * i
+        add("hackles", row(arc_of(s, -34.0, 214.0, 8, lambda th, L=L, i=i: L * (1 + 0.07 * math.sin(math.radians(th) * 3 + i)),
+                                  0.5 * (i % 2) - 0.25), 8, rows=2, depth=0.5, lift=0.06 + 0.012 * i, sink=0.05, ridge=0.03,
+                           thick=0.035, g=(0.52, 0.9), gpow=1.2, L=L, point=0.85), plume)
+    # throat and breast: soft rounded feathers, small under the beak and longer lower down, in staggered,
+    # jittered rows so that they overlap like plumage and never line up into a lattice
+    rnd = random.Random(7)
+    s_top, s_bot, s_chest = skin.s_of(9.2), s_fur - 0.1, skin.s_of(7.25)
+    s, k = s_top, 0
+    while s > s_bot:
+        t = min((s_top - s) / (s_top - s_bot), 1.0)
+        L, W = BREAST_L[0] + BREAST_L[1] * t, BREAST_W[0] + BREAST_W[1] * t
+        W_of = lambda th, W=W: W * (1.0 + 0.7 * max(0.0, math.sin(math.radians(th))))     # broader on the back, under the wings
+        L_of = lambda th, L=L: L * (1.0 + 0.15 * max(0.0, math.sin(math.radians(th))))
+        common = dict(rows=2, depth=0.45, point=1.6, lift=0.032, sink=0.045, ridge=0.012, thick=0.022,
+                      g=(0.0, 0.94 + 0.03 * (k % 3)))
+        if s > s_chest:
+            add("breast", soft_row(skin, s, -214.0, 34.0, W_of, L_of, rnd, stagger=0.5 * (k % 2), **common), breast)
+        else:
+            add("breast", soft_row(skin, s, -270.0, 90.0, W_of, L_of, rnd, stagger=0.5 * (k % 2), closed=True, **common), breast)
+        s = skin.toward(s, -90.0, BREAST_STEP * L)
         k += 1
 
     # ---- wings: raised in a proud V, broad, with long fingered primaries ----------------------------------
@@ -773,13 +953,13 @@ def build():
         S, E, Wr, Hd = (Vector(p) for p in ARM)
         for i, (phi, L) in enumerate(PRIMARIES):
             r = Hd.lerp(Wr, i / (len(PRIMARIES) - 1))
-            flight(r.x, r.y, phi, L, 0.3, -0.025 * i, (0.42, 1.0), widths=FINGER, n=12, bolt=i in (1, 3, 5))
+            flight(r.x, r.y, phi, L, 0.3, -0.025 * i, (0.42, 1.0), widths=FINGER, n=10, bolt=i in (1, 3, 5))
         for j, (phi, L) in enumerate(SECONDARIES):
             r = Wr.lerp(E, (j + 0.4) / len(SECONDARIES))
-            flight(r.x, r.y, phi, L, 0.3, -0.19 + 0.02 * j, (0.38, 0.92))
+            flight(r.x, r.y, phi, L, 0.3, -0.19 + 0.02 * j, (0.38, 0.92), n=7)
         for j, (phi, L) in enumerate(TERTIALS):
             r = E.lerp(S, 0.15 + 0.3 * j)
-            flight(r.x, r.y, phi, L, 0.27, -0.05 + 0.02 * j, (0.32, 0.8), n=7)
+            flight(r.x, r.y, phi, L, 0.27, -0.05 + 0.02 * j, (0.32, 0.8), n=6)
 
         def arm_row(line, phis, lengths, c0, count, lift, g, depth=0.55, rows=2, back=False, P=P, Nw=Nw):
             """A row of coverts whose roots run along `line` (points of the drawing), pointing at the
@@ -816,40 +996,42 @@ def build():
     # ---- forelegs: an eagle's, white feathered trousers over golden scaled shanks and big dark talons -----
     for sx in (-1, 1):
         top = Vector((0.62 * sx, -1.15, 3.15))
-        knee = Vector((0.86 * sx, -1.42, 1.58))
+        knee = Vector((0.86 * sx, -1.42, 1.36))
         upper = [top, top.lerp(knee, 0.5) + Vector((0.04 * sx, 0.06, 0.0)), knee]
-        add("legs", paint(loft(upper, 6, fixed([0.5, 0.42, 0.3], round_shape(12)), up=(0, -1, 0)), 0.5), plume)
+        add("legs", paint(loft(upper, 6, fixed([0.5, 0.42, 0.3], round_shape(10)), up=(0, -1, 0)), 0.5), breast)
         for k, (u0, L) in enumerate(((0.0, 0.64), (0.34, 0.62), (0.66, 0.6))):
 
             def place(u, v, u0=u0, k=k, upper=upper):
                 C = Curve(upper)
                 t = min(u0 + 0.42 * v, 1.0)
                 c, T = C.at(t), C.tangent(t)
-                ang = 2 * math.pi * (u + 0.5 * k) / 9
+                ang = 2 * math.pi * (u + 0.5 * k) / 6
                 x0 = T.cross(Vector((0, 1, 0))).normalized()
                 y0 = x0.cross(T).normalized()
                 radial = x0 * math.cos(ang) + y0 * math.sin(ang)
                 rad = 0.5 + (0.3 - 0.5) * t + 0.08 * v
                 return c + radial * rad, (radial - T * 0.35).normalized()
-            add("trousers", row(place, 9, closed=True, rows=2, depth=0.5, lift=0.08, sink=0.03, ridge=0.03, thick=0.03,
-                                g=(0.52, 0.76), L=L), plume)
-        shin = [Vector((0.86 * sx, -1.45, 1.75)), Vector((0.88 * sx, -1.58, 0.95)), Vector((0.9 * sx, -1.70, 0.25))]
-        add("legs", paint(loft(shin, 6, fixed([0.25, 0.22, 0.24], round_shape(10)), up=(0, -1, 0)), 0.0), shank)
-        for k in range(4):                                             # scutes down the front of the shank
-            t = 0.2 + 0.2 * k
+            add("trousers", row(place, 6, closed=True, cols=3, rows=2, depth=0.42, point=1.7, lift=0.07, sink=0.03, ridge=0.02,
+                                thick=0.03, g=(0.3, 0.97), L=L), breast)
+        shin = [Vector((0.86 * sx, -1.45, 1.5)), Vector((0.88 * sx, -1.58, 0.86)), Vector((0.9 * sx, -1.70, 0.25))]
+        add("legs", paint(loft(shin, 6, fixed([0.27, 0.235, 0.255], round_shape(10)), up=(0, -1, 0)), 0.0), shank)
+        for k in range(3):                                             # scutes down the front of the shank
+            t = 0.3 + 0.21 * k
             C = Curve(shin)
             c = C.at(t)
-            plate = [(math.cos(math.pi * j / 6) * 0.2, -0.04 + 0.12 * math.sin(math.pi * j / 6)) for j in range(7)] + [(-0.12, -0.09), (0.12, -0.09)]
-            add("legs", lens(plate, 0.07), shank, seat(c + Vector((0, -0.21, 0.0)), (0, -1, 0.1)))
+            plate = [(math.cos(math.pi * j / 4) * 0.2, -0.04 + 0.12 * math.sin(math.pi * j / 4)) for j in range(5)] + [(-0.12, -0.09), (0.12, -0.09)]
+            add("legs", lens(plate, 0.07, rows=((1.0, 0.0),)), shank, seat(c + Vector((0, -0.225, 0.0)), (0, -1, 0.1)))
         foot = Vector((0.9 * sx, -1.74, 0.0))
         add("feet", kit.ball((0.56, 0.56, 0.34), cuts=2), shank, M(foot + Vector((0, 0, 0.16))))
-        for yaw, size in ((-30 + 6 * sx, 1.05), (6 * sx, 1.2), (30 + 6 * sx, 1.05), (180, 0.66)):
+        for yaw, size in ((-34 + 6 * sx, 1.05), (6 * sx, 1.2), (34 + 6 * sx, 1.05), (180, 0.8)):
             F = M(foot, rot=(0, 0, yaw), scale=(1.12, size * 1.08, 1.12))
-            toe = [(0, 0, 0.15), (0, -0.28, 0.15), (0, -0.52, 0.125), (0, -0.68, 0.1)]
-            add("feet", loft(toe, 5, fixed([0.155, 0.145, 0.125, 0.105], round_shape(8)), up=(0, 0, 1)), shank, F)
-            claw = [(0, -0.62, 0.13), (0, -0.84, 0.17), (0, -1.0, 0.11), (0, -1.06, 0.0)]
-            add("talons", loft(claw, 6, fixed([0.1, 0.078, 0.046, 0.008], P_CLAW), up=(0, -0.3, 1), g=(0.0, 1.0),
+            toe = [(0, 0, 0.15), (0, -0.26, 0.2), (0, -0.5, 0.16), (0, -0.66, 0.11)]            # arched over the knuckles
+            add("feet", loft(toe, 4, fixed([0.16, 0.15, 0.13, 0.11], round_shape(8)), up=(0, 0, 1)), shank, F)
+            claw = [(0, -0.6, 0.14), (0, -0.82, 0.2), (0, -0.99, 0.12), (0, -1.05, -0.03)]     # hooked down into the ground
+            add("talons", loft(claw, 5, fixed([0.115, 0.088, 0.05, 0.008], P_CLAW), up=(0, -0.3, 1), g=(0.0, 1.0),
                                tip=True), talon, F, crease=50)
+
+    thigh = field(THIGH_MUSCLES)
 
     # ---- hind legs: a lion's, powerful haunches, the hock high and back, padded paws ---------------------
     for sx in (-1, 1):
@@ -857,9 +1039,14 @@ def build():
         leg = [(0.66 * sx, 2.12, 4.05), (0.98 * sx, 1.66, 3.05), (1.06 * sx, 1.32, 2.1), (1.08 * sx, 1.86, 1.52),
                (1.08 * sx, 2.42, 1.1), (1.06 * sx, 2.32, 0.62), (1.04 * sx, 2.2, 0.28)]
         add("legs", limb(leg, [(0.6, 1.12), (0.58, 1.04), (0.44, 0.56), (0.39, 0.48), (0.29, 0.33), (0.25, 0.28), (0.27, 0.3)],
-                         P_LEG, 26, up=(0, -1, 0.05)), fur)
-        # the big thigh muscle rounds the haunch out, so the hindquarters read as powerful, not as a flat panel
-        add("haunch", paint(kit.ball((0.62, 1.3, 1.45), cuts=3), 0.05), fur, M((0.96 * sx, 1.95, 3.18), rot=(-26, 0, 6 * sx)))
+                         P_LEG, 20, up=(0, -1, 0.05)), fur)
+        # the big thigh muscle rounds the haunch out; a groove parts its front from its back
+        hb = paint(kit.ball((0.62, 1.3, 1.45), cuts=3), 0.05)
+        hb.transform(M((0.96 * sx, 1.95, 3.18), rot=(-26, 0, 6 * sx)))
+        hb.normal_update()
+        for v in hb.verts:
+            v.co += v.normal * thigh(v.co)
+        add("haunch", hb, fur)
         paw = Vector((1.04 * sx, 2.02, 0.0))
         add("paws", paint(rounded_box((0.72, 0.8, 0.5), n=3.0, cuts=2), 0.05), fur, M(paw + Vector((0, 0, 0.24))))
         for k, ox in enumerate((-0.27, -0.09, 0.09, 0.27)):
@@ -869,24 +1056,39 @@ def build():
             add("talons", loft(claw, 4, fixed([0.05, 0.034, 0.006], P_CLAW), up=(0, -0.3, 1), g=(0.3, 1.0), tip=True),
                 talon, M(paw), crease=50)
 
-    # ---- tail: long, lying on the ground, the end lifting in a dark tuft with a glowing core -------------
-    tail = [(0, 2.95, 3.72), (0.05, 3.45, 3.46), (0.17, 3.95, 2.78), (0.28, 4.3, 1.88), (0.28, 4.56, 0.98), (0.13, 4.88, 0.32),
-            (-0.25, 5.33, 0.18), (-0.62, 5.7, 0.55), (-0.82, 5.9, 1.08), (-0.88, 5.98, 1.5)]
-    add("tail", loft(tail, 28, fixed([0.28, 0.23, 0.2, 0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.125], round_shape(10)), up=(0, 0, 1),
-                     g=(0.05, 0.64)), fur)
+    # ---- tail: a thick lion's tail lying on the ground, the end lifting in a full navy tuft that glows inside
+    tail = [(0, 2.95, 3.72), (0.05, 3.45, 3.46), (0.17, 3.95, 2.78), (0.28, 4.3, 1.88), (0.28, 4.56, 0.98), (0.13, 4.88, 0.36),
+            (-0.25, 5.33, 0.21), (-0.62, 5.7, 0.55), (-0.82, 5.9, 1.08), (-0.88, 5.98, 1.45)]
+    add("tail", loft(tail, 24, fixed([0.36, 0.3, 0.26, 0.23, 0.215, 0.205, 0.195, 0.185, 0.18, 0.19], round_shape(10)), up=(0, 0, 1),
+                     g=(0.05, 0.7)), fur)
     C = Curve(tail)
     end, T = C.at(1.0), C.tangent(1.0)
     X = T.cross(Vector((0, 0, 1))).normalized()
     Y = X.cross(T).normalized()
-    for k in range(7):
-        ang = 2 * math.pi * k / 7
+    frame = Matrix((X, Y, T)).transposed().to_4x4()
+    frame.translation = end + T * 0.22
+    add("tuft", paint(kit.ball((0.4, 0.4, 0.6), cuts=2), 0.3), tuft, frame)
+    for k in range(11):
+        outer = k >= 5
+        ang = 2 * math.pi * ((k - 5 + 0.5) / 6 if outer else k / 5) + 0.15 * math.sin(3.1 * k)
         rad = X * math.cos(ang) + Y * math.sin(ang)
-        Lk = 0.92 if k % 2 == 0 else 0.78
-        pts = [end - T * 0.24 + rad * 0.07, end + T * 0.14 + rad * 0.27, end + T * (0.45 * Lk / 0.7) + rad * 0.27,
-               end + T * Lk + rad * 0.12]
-        add("tuft", loft(pts, 8, blade(LOCK, 0.12, 0.05, cup=0.25), up=rad, g=(0.84, 1.0), feather=True, tip=True, root=True,
-                         sharp=(0, 2)), fur)
-    add("glow", loft([end - T * 0.05, end + T * 0.4, end + T * 0.8, end + T * 1.08], 8, fixed([0.08, 0.15, 0.11, 0.01], round_shape(6)),
+        Lk = (1.1 + 0.12 * (k % 2)) if outer else (0.78 + 0.08 * (k % 2))
+        spread, Wk = (0.36, 0.16) if outer else (0.2, 0.13)
+        pts = [end - T * 0.22 + rad * 0.05, end + T * 0.16 + rad * spread * 0.85, end + T * 0.55 * Lk + rad * spread,
+               end + T * Lk + rad * spread * 0.45]
+        add("tuft", loft(pts, 8, blade(LOCK, Wk, 0.05, cup=0.25), up=rad, g=(0.0, 1.0), feather=True, tip=True, root=True,
+                         sharp=(0, 2)), tuft)
+        if k in (5, 8):                                                 # a lightning glint along two of the outer locks
+            Ck = Curve(pts)
+            bp, bn = [], []
+            for sv, off in ((0.36, 0.0), (0.46, 0.45), (0.56, -0.3), (0.66, 0.35), (0.76, -0.2), (0.84, 0.05)):
+                c, Tk = Ck.at(sv), Ck.tangent(sv)
+                N = (rad - Tk * rad.dot(Tk)).normalized()
+                Wd = Tk.cross(N)
+                bp.append(c + Wd * off * Wk * _table(LOCK, sv) + N * 0.02)
+                bn.append(N)
+            add("glow", ribbon(bp, bn, 0.016, 0.03, taper=(0.4, 1.0, 1.0, 0.85, 0.6, 0.3)), glow)
+    add("glow", loft([end - T * 0.05, end + T * 0.45, end + T * 0.9, end + T * 1.2], 8, fixed([0.08, 0.17, 0.12, 0.01], round_shape(6)),
                      up=Y, tip=True), glow)
 
     # ---- head: placed in its own space, then turned as one ---------------------------------------------
@@ -895,26 +1097,35 @@ def build():
 
     # the beak: deep and sharply hooked, gold going dark at the hook, over a smaller lower bill
     def bill(t):
-        w = 0.112 * (1 - t) ** 0.5 + 0.008
-        hh = 0.26 * (1 - 0.85 * t) + 0.01
+        w = 0.096 * (1 - t) ** 0.55 + 0.005
+        hh = 0.228 * (1 - 0.9 * t) + 0.007
         return [(0.0, hh * 0.62), (0.4 * w, hh * 0.46), (w, 0.0), (0.82 * w, -hh * 0.38), (0.0, -hh * 0.28),
                 (-0.82 * w, -hh * 0.38), (-w, 0.0), (-0.4 * w, hh * 0.46)]
-    upper = [(0, -0.33, 0.025), (0, -0.47, 0.02), (0, -0.6, -0.015), (0, -0.69, -0.07), (0, -0.74, -0.155),
-             (0, -0.735, -0.24), (0, -0.69, -0.29)]
-    add("beak", loft(upper, 16, bill, side=(1, 0, 0), ref=(0, 0, 1), g=(0.0, 1.0), gpow=1.3, sharp=(0, 3, 5), tip=True), beak, H)
+    upper = [(0, -0.33, 0.025), (0, -0.45, 0.02), (0, -0.555, -0.008), (0, -0.63, -0.056), (0, -0.667, -0.13),
+             (0, -0.66, -0.2), (0, -0.625, -0.247)]
+    add("beak", loft(upper, 16, bill, side=(1, 0, 0), ref=(0, 0, 1), g=(0.0, 1.0), gpow=2.2, sharp=(0, 3, 5), tip=True), beak, H)
 
     def jaw(t):
-        w = 0.072 * (1 - t) ** 0.6 + 0.01
-        hh = 0.07 * (1 - 0.6 * t) + 0.008
+        w = 0.066 * (1 - t) ** 0.6 + 0.008
+        hh = 0.064 * (1 - 0.6 * t) + 0.007
         return [(0.0, hh * 0.3), (w, 0.0), (0.6 * w, -hh * 0.6), (-0.6 * w, -hh * 0.6), (-w, 0.0)]
-    lower = [(0, -0.3, -0.1), (0, -0.43, -0.12), (0, -0.54, -0.13), (0, -0.6, -0.13)]
-    add("beak", loft(lower, 6, jaw, side=(1, 0, 0), ref=(0, 0, 1), g=(0.1, 0.6), sharp=(1, 4), tip=True), beak, H)
+    lower = [(0, -0.3, -0.092), (0, -0.42, -0.108), (0, -0.505, -0.114), (0, -0.555, -0.114)]
+    add("beak", loft(lower, 6, jaw, side=(1, 0, 0), ref=(0, 0, 1), g=(0.05, 0.5), sharp=(1, 4), tip=True), beak, H)
+
+    # the cere: a waxy golden band where the beak leaves the face, a little proud of the horn so its edge is crisp
+    def cere_ring(t):
+        w = 0.11 - 0.009 * t
+        hh = 0.236 - 0.022 * t
+        return [(0.0, hh * 0.64), (0.42 * w, hh * 0.49), (w, 0.0), (0.84 * w, -hh * 0.36), (0.0, -hh * 0.26),
+                (-0.84 * w, -hh * 0.36), (-w, 0.0), (-0.42 * w, hh * 0.49)]
+    add("beak", loft([(0, -0.39, 0.024), (0, -0.45, 0.018), (0, -0.505, 0.009)], 3, cere_ring, side=(1, 0, 0), ref=(0, 0, 1)),
+        cere, H, crease=50)
 
     for sx in (-1, 1):
         # brow: a heavy ridge from the root of the beak back over the eye, casting it into shadow
         brow = [(0.08 * sx, -0.46, 0.15), (0.17 * sx, -0.34, 0.205), (0.255 * sx, -0.2, 0.225), (0.29 * sx, -0.05, 0.215),
                 (0.26 * sx, 0.1, 0.18)]
-        add("brows", paint(loft(brow, 10, fixed([(0.03, 0.025), (0.065, 0.045), (0.09, 0.062), (0.075, 0.055), (0.035, 0.03)], P_BROW),
+        add("brows", paint(loft(brow, 8, fixed([(0.03, 0.025), (0.065, 0.045), (0.09, 0.062), (0.075, 0.055), (0.035, 0.03)], P_BROW),
                                 up=(0.75 * sx, 0, 1)), 0.6), plume, H, crease=38)
         # a dark slate stripe through the eye and back along the side of the head
         stripe = []
@@ -932,11 +1143,11 @@ def build():
         add("eyes", lens([(a * 0.22, b * 0.34) for a, b in eye], 0.05, rows=((0.6, 0.85), (1.0, 0.0)), centre=(0.0, 0.03)),
             glow, H @ facing(p + nrm * 0.006, nrm, Vector((0, 1, 0.05))))
         # the gape: a dark line from the hook of the beak back to under the eye
-        gape = [(0.075 * sx, -0.57, -0.095), (0.105 * sx, -0.47, -0.085), (0.155 * sx, -0.33, -0.075), (0.2 * sx, -0.2, -0.06)]
+        gape = [(0.064 * sx, -0.52, -0.088), (0.098 * sx, -0.455, -0.082), (0.155 * sx, -0.33, -0.075), (0.2 * sx, -0.2, -0.06)]
         add("mouth", loft(gape, 6, fixed([0.012, 0.014, 0.012, 0.008], round_shape(5)), up=(0, 0, 1)), dark, H)
         # nostril on the cere
         add("mouth", lens([(-0.5, 0), (0, 0.2), (0.5, 0.05), (0, -0.15)], 0.03), dark,
-            H @ facing(Vector((0.085 * sx, -0.47, 0.09)), Vector((sx, -0.2, 0.3)), Vector((0, 1, 0.1))) @ M(scale=(0.07, 1, 0.08)))
+            H @ facing(Vector((0.08 * sx, -0.455, 0.075)), Vector((sx, -0.2, 0.45)), Vector((0, 1, 0.1))) @ M(scale=(0.06, 1, 0.07)))
         # a crest of long feathers swept flat back over the nape: a regal outline to the head
         crest = (((0.11, 0.02, 0.27), ((0.02, 0.36, -0.02), (0.04, 0.7, -0.07), (0.06, 0.98, -0.08)), 0.085, (0.35, 0, 1)),
                  ((0.19, 0.08, 0.18), ((0.03, 0.34, -0.06), (0.05, 0.62, -0.12), (0.07, 0.86, -0.15)), 0.075, (0.75, 0, 0.75)),
@@ -944,7 +1155,7 @@ def build():
         for r0, path, Wp, upv in crest:
             base = Vector((r0[0] * sx, r0[1], r0[2]))
             pts = [base] + [base + Vector((d[0] * sx, d[1], d[2])) for d in path]
-            add("plumes", loft(pts, 9, blade(PLUME, Wp, 0.04, cup=0.12), up=Vector((upv[0] * sx, upv[1], upv[2])), g=(0.5, 0.98),
+            add("plumes", loft(pts, 7, blade(PLUME, Wp, 0.04, cup=0.12), up=Vector((upv[0] * sx, upv[1], upv[2])), g=(0.5, 0.98),
                                feather=True, tip=True, root=True, sharp=(0, 2)), plume, H)
 
         # a row of small swept feathers over each cheek, below and behind the eye
@@ -1014,8 +1225,11 @@ def main():
         rig.cams["face"] = review._camera("C_face", head + Vector((-0.62, -1.0, 0.16)).normalized() * 4.6, head + Vector((0, 0.3, -0.05)), 30)
         chest = Vector((-0.05, -1.75, 4.55))
         rig.cams["breast"] = review._camera("C_breast", chest + Vector((-0.5, -1.0, 0.25)).normalized() * 6.2, chest, 30)
+        rig.cams["head"] = review._camera("C_head", head + Vector((-0.75, -1.0, 0.12)).normalized() * 3.0, head + Vector((0, 0.32, -0.08)), 30)
+        coat = Vector((-0.95, 1.0, 3.05))
+        rig.cams["coat"] = review._camera("C_coat", coat + Vector((-1.0, 0.12, 0.04)).normalized() * 5.2, coat, 42)
         flank = Vector((0.0, 1.0, 2.9))
-        rig.cams["flank"] = review._camera("C_flank", flank + Vector((-1.0, 0.25, 0.3)).normalized() * 8.5, flank, 34)
+        rig.cams["flank"] = review._camera("C_flank", flank + Vector((-1.0, 0.25, 0.3)).normalized() * 12.5, flank, 34)
         return rig, review
 
     if a.peek:
