@@ -10,10 +10,16 @@ Must-haves, checked in every review:
      forward, short rounded ears.
   3. A calm face: gold-green almond eyes under dark lids, mouth closed, no teeth, no snarl.
   4. Dark charcoal fur with faint rosettes that show in the light, a softer grey muzzle.
-  5. A small glowing violet flame on the tip of the tail (the original's pink tip).
+  5. A small glowing violet flame on the tip of the tail (the original's pink tip) and a violet collar gem.
   6. Matte painted fur with roughness variation; about 3-3.5 studs tall; Body under 12k triangles.
 
-Final: round 4.
+Final: round 7.
+
+Round 7: the sheen widened halfway back and made bluer, so the back, head and legs catch it at game distance (as a thin rim it vanished); a slightly shallower muzzle with wider whisker pads (from the front the long muzzle foreshortened into a round disc).
+
+Round 6: the sheen narrowed to a true rim along the top and the outer legs (spread wide it turned the whole cat purple-grey); the head tipped further down, a broad flat nose bridge and pad, flatter whisker pads set wider and a smaller chin, so the muzzle stops pouting from the front; a smaller, deeper violet collar gem and tail flame.
+
+Round 5: a big cat, not a house cat: a longer, lower body, heavier shoulders and forelegs, a broader, longer muzzle with a nose pad and a strong chin, smaller ears set wider, a thick long tail; a blue-violet sheen painted along the top of the back, head and tail and the outsides of the legs so the form reads on the dark fur (it was a dark blob at game distance); stronger rosettes; a slim dark collar with a glowing violet gem.
 
 Round 4: darker charcoal; a smaller chin and flatter whisker pads (the muzzle pouted from the front), wider cheeks and a broader nose for a big-cat face; a teardrop flame on the tail (it ended in a needle).
 
@@ -364,16 +370,16 @@ def rough_map(body, texture, base, vary=0.1):
 
 NAME = "ShadowPanther"
 COL = {"fur": hexc("#18171C"), "sheen": hexc("#302E37"), "under": hexc("#151418"), "rosette": hexc("#0A090C"),
-       "rosette_in": hexc("#2E2A31"), "muzzle": hexc("#33313A"), "line": hexc("#0C0B0E"), "nose": hexc("#17151A"),
+       "rosette_in": hexc("#3A3446"), "muzzle": hexc("#33313A"), "line": hexc("#0C0B0E"), "nose": hexc("#17151A"),
        "pupil": hexc("#0A0806"), "white": hexc("#FFFFFF"), "ear_in": hexc("#4A3E48"), "whisker": hexc("#B8B4C0"),
-       "lid": hexc("#1A191E")}
+       "lid": hexc("#1A191E"), "rim": hexc("#7A7CB6"), "collar": hexc("#2A2236"), "collar_lt": hexc("#4A3E5E")}
 SCALE = 1.12
 BAKE = {"shade": 0.4, "rough": 0.86, "vary": 0.12}
-HEAD = Vector((0, -1.5, 2.08))
-HEAD_M = M(HEAD, rot=(-12, 0, 6))
-NECK = [Vector((0, -0.78, 1.62)), Vector((0, -1.1, 1.86)), Vector((0, -1.34, 2.0))]
-TAIL = [Vector((0, 1.3, 1.62)), Vector((0.05, 1.75, 1.5)), Vector((0.1, 2.08, 1.78)), Vector((0.08, 2.14, 2.3)),
-        Vector((-0.02, 1.98, 2.68))]
+HEAD = Vector((0, -1.66, 1.92))
+HEAD_M = M(HEAD, rot=(-13, 0, 6))
+NECK = [Vector((0, -0.85, 1.5)), Vector((0, -1.2, 1.7)), Vector((0, -1.48, 1.84))]
+TAIL = [Vector((0, 1.45, 1.48)), Vector((0.06, 1.98, 1.32)), Vector((0.14, 2.42, 1.52)), Vector((0.14, 2.6, 1.98)),
+        Vector((0.04, 2.48, 2.42))]
 FACE = HEAD + Vector((0, -0.32, -0.04))
 FOCUS = FACE * SCALE
 FACE_DIST = 4.0
@@ -466,9 +472,9 @@ def spot_layer(bm, fn):
 
 
 def build():
-    fur_m = rosettes(painted("Fur", dict(strength=0.26, mottle=0.1, fine=46.0, length=5.0), rough=0.88), cell=0.3, strength=0.8)
+    fur_m = rosettes(painted("Fur", dict(strength=0.26, mottle=0.1, fine=46.0, length=5.0), rough=0.88), cell=0.3, strength=0.95)
     eye_m = kit.material("Eyes", "#C4B446", rough=0.06)
-    glow = kit.material("GLOW_Tail", "#9A5CFF", rough=0.4, emit=1.5)
+    glow = kit.material("GLOW_Tail", "#8A4CFF", rough=0.4, emit=1.3)
     c = Prop(NAME)
     c.tally = {}
     R = HEAD_M.to_3x3()
@@ -483,33 +489,34 @@ def build():
         return HEAD_M @ Vector(p)
 
     # ---- one fused skin: a long muscular body mid-stride, neck, broad head, long tail ------------------
-    clay = [ell((0, 0.15, 1.45), (0.5, 1.0, 0.46)),
-            ell((0, -0.58, 1.5), (0.54, 0.52, 0.6)),                          # chest
-            ell((0, 0.88, 1.5), (0.5, 0.5, 0.5)),                             # hips
-            loft(NECK, lambda t: lerp(0.38, 0.3, t), segs=16, rings=8),
-            loft(TAIL, lambda t: lerp(0.1, 0.075, t), segs=10, rings=24),
+    clay = [ell((0, 0.2, 1.32), (0.52, 1.15, 0.44)),
+            ell((0, -0.62, 1.38), (0.58, 0.55, 0.6)),                         # chest
+            ell((0, 1.05, 1.36), (0.5, 0.5, 0.48)),                           # hips
+            loft(NECK, lambda t: lerp(0.42, 0.33, t), segs=16, rings=8),
+            loft(TAIL, lambda t: lerp(0.14, 0.09, t), segs=12, rings=26),
             ell(hd((0, 0.04, 0.0)), (0.34, 0.36, 0.27)),                      # cranium
-            ell(hd((0, -0.15, 0.08)), (0.29, 0.22, 0.12)),                    # brow
-            ell(hd((0, -0.3, -0.1)), (0.2, 0.24, 0.15)),                      # muzzle
-            ell(hd((0, -0.24, -0.2)), (0.12, 0.14, 0.06))]                    # chin
+            ell(hd((0, -0.15, 0.08)), (0.3, 0.22, 0.12)),                     # brow
+            ell(hd((0, -0.32, -0.11)), (0.24, 0.26, 0.15)),                   # broad, longer muzzle
+            ell(hd((0, -0.42, -0.02)), (0.13, 0.08, 0.07)),                   # broad nose bridge and pad
+            ell(hd((0, -0.26, -0.22)), (0.15, 0.18, 0.075))]                  # strong chin
     for s in (-1, 1):
-        clay += [ell(hd((0.075 * s, -0.39, -0.11)), (0.085, 0.09, 0.065)),      # whisker pads
+        clay += [ell(hd((0.11 * s, -0.41, -0.11)), (0.1, 0.075, 0.06)),        # whisker pads
                  ell(hd((0.23 * s, -0.06, -0.08)), (0.18, 0.18, 0.16)),       # cheeks
-                 ell((0.3 * s, -0.6, 1.3), (0.26, 0.36, 0.5)),                # shoulders
-                 ell((0.33 * s, 0.92, 1.28), (0.28, 0.46, 0.52))]             # thighs
+                 ell((0.33 * s, -0.62, 1.16), (0.3, 0.42, 0.55)),             # heavy shoulders
+                 ell((0.34 * s, 1.08, 1.18), (0.29, 0.48, 0.5))]              # thighs
     # legs mid-stride: left fore and right hind reach forward
-    fore = {-1: [(-0.3, -0.66, 1.1), (-0.3, -0.86, 0.62), (-0.3, -1.0, 0.14)],
-            1: [(0.3, -0.6, 1.1), (0.3, -0.56, 0.62), (0.3, -0.44, 0.14)]}
-    hind = {-1: [(-0.33, 1.02, 1.0), (-0.34, 1.32, 0.56), (-0.33, 1.24, 0.14)],
-            1: [(0.33, 0.96, 1.0), (0.34, 1.08, 0.52), (0.33, 0.84, 0.14)]}
+    fore = {-1: [(-0.33, -0.68, 1.0), (-0.33, -0.9, 0.56), (-0.33, -1.06, 0.15)],
+            1: [(0.33, -0.62, 1.0), (0.33, -0.58, 0.56), (0.33, -0.46, 0.15)]}
+    hind = {-1: [(-0.34, 1.15, 0.92), (-0.35, 1.45, 0.52), (-0.34, 1.38, 0.15)],
+            1: [(0.34, 1.1, 0.92), (0.35, 1.22, 0.48), (0.34, 0.98, 0.15)]}
     paws = []
     for s in (-1, 1):
-        clay.append(loft(fore[s], lambda t: lerp(0.21, 0.155, t), segs=12, rings=8))
-        clay.append(loft(hind[s], lambda t: lerp(0.2, 0.145, t), segs=12, rings=8))
+        clay.append(loft(fore[s], lambda t: lerp(0.25, 0.17, t), segs=12, rings=8))
+        clay.append(loft(hind[s], lambda t: lerp(0.21, 0.15, t), segs=12, rings=8))
         for leg in (fore[s], hind[s]):
             p = Vector(leg[-1])
             paws.append(p)
-            clay.append(ell(p + Vector((0, -0.07, -0.03)), (0.18, 0.23, 0.11)))
+            clay.append(ell(p + Vector((0, -0.07, -0.03)), (0.2, 0.25, 0.12)))
     skin = fuse(join(clay), voxel=0.024, iterations=3)
     tree = BVHTree.FromBMesh(skin)
 
@@ -518,7 +525,7 @@ def build():
         return loc, nrm
     fwd = R @ Vector((0, 1, 0))
     eyes = [hit(hd((0.14 * s, -1.5, 0.03)), fwd) for s in (-1, 1)]
-    nose_at, _ = hit(hd((0, -1.5, -0.05)), fwd)
+    nose_at, _ = hit(hd((0, -1.5, -0.04)), fwd)
     mouth = [[hit(hd((0, -1.5, -0.08)), fwd)[0], hit(hd((0, -1.5, -0.15)), fwd)[0]]]
     for s in (-1, 1):
         mouth.append([hit(hd((0, -1.5, -0.15)), fwd)[0], hit(hd((0.05 * s, -1.5, -0.17)), fwd)[0], hit(hd((0.11 * s, -1.5, -0.155)), fwd)[0]])
@@ -547,6 +554,12 @@ def build():
         col = mix(COL["fur"], COL["sheen"], 0.8 * smooth(n.z, 0.0, 1.0))
         col = mix(col, COL["under"], 0.5 * smooth(-n.z, 0.2, 0.9))
         col = mix(col, COL["sheen"], 0.25 * smooth(noise.noise(Vector((co.x * 6, co.y * 6, co.z * 2))), 0.15, 0.6))
+        # a soft blue-violet sheen along the top of the back, head and tail and down the outsides of the legs,
+        # like a rim light, so the form reads on the dark fur
+        rim = 0.65 * smooth(n.z, 0.62, 0.97)
+        if co.z < 1.05:
+            rim = max(rim, 0.45 * smooth(abs(n.x), 0.7, 0.98) * smooth(n.z, -0.25, 0.15))
+        col = mix(col, COL["rim"], rim * (0.75 + 0.25 * noise.noise(co * 8.0)))
         if (co - HEAD).length < 0.55:
             p = HEAD_M.inverted() @ co
             col = mix(col, COL["muzzle"], 0.7 * smooth(p.y, -0.2, -0.3) * smooth(p.z, 0.0, -0.06))
@@ -598,7 +611,7 @@ def build():
         low.transform(place)
         add("lids", low, fur_m, COL["lid"])
 
-    nose = ell((0, 0, 0), (0.085, 0.045, 0.05), cuts=2)
+    nose = ell((0, 0, 0), (0.1, 0.05, 0.055), cuts=2)
     for v in nose.verts:
         v.co.x *= 0.5 + 0.5 * smooth(v.co.z, -0.045, 0.045)
     nose.transform(M(nose_at) @ R.to_4x4())
@@ -606,9 +619,9 @@ def build():
 
     # ---- short rounded ears ---------------------------------------------------------------------------
     for s in (-1, 1):
-        root = hd((0.22 * s, 0.1, 0.17))
-        pts = [root, root + Vector((0.04 * s, 0.0, 0.07)), root + Vector((0.07 * s, 0.02, 0.13)), root + Vector((0.075 * s, 0.03, 0.16))]
-        ear = loft(pts, lambda t: 0.115 * (1 - t ** 2) ** 0.6 + 0.02, segs=12, rings=10, flat=0.42)
+        root = hd((0.26 * s, 0.12, 0.14))
+        pts = [root, root + Vector((0.05 * s, 0.0, 0.06)), root + Vector((0.08 * s, 0.02, 0.11)), root + Vector((0.085 * s, 0.03, 0.135))]
+        ear = loft(pts, lambda t: 0.095 * (1 - t ** 2) ** 0.6 + 0.018, segs=12, rings=10, flat=0.42)
         for v in ear.verts:
             gg = v[ear.verts.layers.float["g"]]
             off = v.co - kit._spline(pts, gg * 3)
@@ -634,6 +647,22 @@ def build():
     flame = loft([tip - tan * 0.06, tip + tan * 0.07 + Vector((0, 0.01, 0)), tip + tan * 0.17 - Vector((0, 0.02, 0)), tip + tan * 0.27 - Vector((0, 0.05, 0))],
                  lambda t: 0.1 * math.sin(math.pi * (0.25 + 0.75 * t)) ** 0.8 + 0.002, segs=12, rings=12)
     add("glow", flame, glow)
+
+    # ---- a slim dark collar with a glowing violet gem --------------------------------------------------
+    ctr = kit._spline(NECK, 0.75)
+    axis = (kit._spline(NECK, 0.85) - kit._spline(NECK, 0.65)).normalized()
+    ring = lathe([(0.4 + 0.028 * math.cos(t), 0.032 * math.sin(t)) for t in (2 * math.pi * j / 8 for j in range(8))], segs=28, closed=True)
+    facing(ring, ctr, axis)
+    add("collar", glossy(ring, 0.4), fur_m, lambda co, n, g: mix(COL["collar"], COL["collar_lt"], smooth(n.z, 0.0, 0.8)))
+    front = Vector((0, -1, 0)) - axis * axis.dot(Vector((0, -1, 0)))
+    front.normalize()
+    gem = ell((0, 0, 0), (0.04, 0.03, 0.055), cuts=3)
+    for v in gem.verts:
+        k = 0.55 + 0.45 * smooth(v.co.z, 0.055, -0.02)
+        v.co.x *= k
+        v.co.y *= k
+    gem.transform(M(ctr + front * 0.44 + Vector((0, 0, -0.05))))
+    add("glow", gem, glow)
 
     lowest = min(v.co.z for bm, _ in c.parts.values() for v in bm.verts)
     for bm, _ in c.parts.values():
