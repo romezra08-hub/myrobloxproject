@@ -1190,7 +1190,7 @@ def main():
     st = numbers(h, a.size)
     print("triangles %s total %d; %.2f wide, %.2f deep, %.2f tall studs, lowest z %.3f; texture %.0f%% used, %.0f px per stud"
           % (st["tris"], st["total"], st["size"][0], st["size"][1], st["size"][2], st["low"], st["used"] * 100, st["px_per_stud"]), flush=True)
-    print("egg spot: %s" % tuple(round(c, 3) for c in h.egg_spot.location), flush=True)
+    print("egg spot: (%.3f, %.3f, %.3f)" % tuple(h.egg_spot.location), flush=True)
     if not a.no_export:
         export(h, os.path.abspath(a.export))
         print("exported", a.export, flush=True)
