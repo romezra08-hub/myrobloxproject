@@ -15,6 +15,8 @@ Must-haves, checked in every review:
      collar with a lapis drop.
   5. Matte painted fur with roughness variation; about 3 studs tall; Body under 12k triangles.
 
+Final: round 10.
+
 Round 10: the dark cat-eye line from each outer corner now sweeps up and back instead of down (sloping down it read as a sad brow), for the kohl-lined look of a temple cat.
 
 Round 9: the eyes tilted up further and the lid edge rising gently towards the outer corner, for a level, regal gaze (round the curve of the skull the outer corners still read as drooping, which looked worried).

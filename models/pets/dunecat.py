@@ -15,7 +15,13 @@ Must-haves, checked in every review:
      collar with a lapis drop.
   5. Matte painted fur with roughness variation; about 3 studs tall; Body under 12k triangles.
 
-Final: round 7.
+Final: round 10.
+
+Round 10: the dark cat-eye line from each outer corner now sweeps up and back instead of down (sloping down it read as a sad brow), for the kohl-lined look of a temple cat.
+
+Round 9: the eyes tilted up further and the lid edge rising gently towards the outer corner, for a level, regal gaze (round the curve of the skull the outer corners still read as drooping, which looked worried).
+
+Round 8: a calmer, regal face: narrower almond eyes tilted up a little more, smaller pupils, a relaxed lash-line lid, a slightly narrower head; shaped legs, with a shoulder and forearm mass over a slim lower foreleg, a thigh mass over a hock and slim shank, and toe grooves on the paws; softer sand-brown tips on the tail and ears.
 
 Round 7: the upper lid painted as a dark kohl lash line over the top quarter (a fur-coloured lid caught grey shadow and looked like a metal hood).
 
@@ -372,7 +378,7 @@ def rough_map(body, texture, base, vary=0.1):
 
 NAME = "DuneCat"
 COL = {"sand": hexc("#D8AE74"), "sand_lt": hexc("#E8C793"), "sand_dk": hexc("#B48650"), "stripe": hexc("#9C6C3E"),
-       "cream": hexc("#F4E6CC"), "ear_in": hexc("#E8B8A0"), "tip": hexc("#4A3222"), "line": hexc("#3A271A"),
+       "cream": hexc("#F4E6CC"), "ear_in": hexc("#E8B8A0"), "tip": hexc("#6E4A2C"), "line": hexc("#3A271A"),
        "nose": hexc("#C77D6A"), "pupil": hexc("#120C08"), "white": hexc("#FFFFFF"), "gold": hexc("#E2B04A"),
        "gold_dk": hexc("#9E7428"), "lapis": hexc("#2D5BB0"), "lapis_lt": hexc("#5C8CDA"), "whisker": hexc("#EDE2CC")}
 SCALE = 1.0
@@ -412,18 +418,21 @@ def build():
             ell((0, 0.6, 1.14), (0.37, 0.37, 0.37)),                           # hips
             loft(NECK, lambda t: lerp(0.25, 0.19, t), segs=14, rings=8),
             loft(TAIL, lambda t: lerp(0.085, 0.07, t) * (1 - 0.3 * t ** 4), segs=10, rings=20),
-            ell(hd((0, 0.02, 0.02)), (0.35, 0.31, 0.29)),                      # cranium
+            ell(hd((0, 0.02, 0.02)), (0.325, 0.31, 0.3)),                      # cranium
             ell(hd((0, -0.2, -0.1)), (0.15, 0.15, 0.11)),                      # muzzle
             ell(hd((0, -0.17, -0.19)), (0.1, 0.11, 0.06))]                     # chin
     for s in (-1, 1):
         clay += [ell(hd((0.065 * s, -0.27, -0.12)), (0.085, 0.08, 0.07)),      # whisker pads
-                 ell(hd((0.18 * s, -0.08, -0.08)), (0.16, 0.15, 0.14)),        # cheeks
-                 ell((0.21 * s, -0.42, 1.0), (0.19, 0.24, 0.32)),              # shoulders
-                 loft([(0.21 * s, -0.46, 0.88), (0.21 * s, -0.52, 0.48), (0.21 * s, -0.56, 0.14)], lambda t: lerp(0.145, 0.115, t), segs=12, rings=8),
-                 ell((0.21 * s, -0.64, 0.08), (0.13, 0.17, 0.08)),             # fore paws
-                 ell((0.24 * s, 0.62, 0.94), (0.19, 0.32, 0.35)),              # thighs
-                 loft([(0.25 * s, 0.72, 0.76), (0.26 * s, 0.86, 0.42), (0.24 * s, 0.76, 0.14)], lambda t: lerp(0.14, 0.11, t), segs=12, rings=8),
-                 ell((0.24 * s, 0.7, 0.08), (0.125, 0.17, 0.08))]              # hind paws
+                 ell(hd((0.165 * s, -0.08, -0.08)), (0.145, 0.15, 0.14)),      # cheeks
+                 ell((0.21 * s, -0.42, 0.98), (0.2, 0.26, 0.36)),              # shoulder mass
+                 ell((0.21 * s, -0.46, 0.66), (0.14, 0.15, 0.2)),              # forearm
+                 loft([(0.21 * s, -0.45, 0.88), (0.21 * s, -0.5, 0.5), (0.21 * s, -0.54, 0.26), (0.21 * s, -0.57, 0.12)],
+                      lambda t: 0.082 + 0.06 * (1 - smooth(t, 0.15, 0.7)), segs=12, rings=10),          # slim lower leg
+                 ell((0.21 * s, -0.63, 0.075), (0.12, 0.16, 0.075)),           # fore paws
+                 ell((0.24 * s, 0.62, 0.92), (0.21, 0.36, 0.38)),              # thigh mass
+                 loft([(0.25 * s, 0.74, 0.74), (0.26 * s, 0.9, 0.42), (0.25 * s, 0.82, 0.26), (0.24 * s, 0.76, 0.12)],
+                      lambda t: 0.08 + 0.065 * (1 - smooth(t, 0.1, 0.5)), segs=12, rings=10),         # hock and slim shank
+                 ell((0.24 * s, 0.7, 0.075), (0.115, 0.16, 0.075))]            # hind paws
     skin = fuse(join(clay), voxel=0.02, iterations=3)
     tree = BVHTree.FromBMesh(skin)
 
@@ -444,6 +453,11 @@ def build():
             d -= en * 0.02 * (1 - smooth((co - e).length, 0.07, 0.12))
         if (co - nose_at).length < 0.3:
             d -= n * 0.012 * (1 - smooth(min(poly_dist(co, m) for m in mouth), 0.005, 0.016))
+        if co.z < 0.16 and n.y < 0.3:                                          # toe grooves on the paws
+            for px, py in ((0.21, -0.63), (-0.21, -0.63), (0.24, 0.7), (-0.24, 0.7)):
+                if abs(co.y - py) < 0.2 and abs(co.x - px) < 0.13:
+                    for dx in (-0.04, 0.04):
+                        d -= n * 0.018 * (1 - smooth(abs(co.x - px - dx), 0.003, 0.014)) * smooth(co.z, 0.15, 0.08)
         return d
     sculpt(skin, carve)
     skin = decimate(skin, 7000, keep=lambda co: max(0.8 * (1 - smooth((Vector(co) - hd((0, -0.2, -0.05))).length, 0.2, 0.42)),
@@ -492,7 +506,7 @@ def build():
                 ring = math.hypot(u / 0.085, v / 0.064)
                 # the "mascara" line from the outer corner, an Egyptian cat's marking
                 if u > 0.04:
-                    vm = v + 0.25 * (u - 0.06)
+                    vm = v - 0.03 - 0.3 * (u - 0.06)
                     col = mix(col, COL["line"], 0.85 * (1 - smooth(abs(vm), 0.008, 0.02)) * smooth(u, 0.06, 0.09) * smooth(u, 0.2, 0.15))
             # forehead marks: a few dark lines up the brow (the original's dark crown, made into tabby marks)
             if p.z > 0.08 and p.y < 0.05:
@@ -505,7 +519,7 @@ def build():
     add("skin", skin, fur_m, fur_colour)
 
     # ---- almond eyes, tilted up at the outer corners, with a soft upper lid ------------------------------
-    EW, EH, ED = 0.145, 0.11, 0.045
+    EW, EH, ED = 0.15, 0.088, 0.042
 
     def almond(w, h, d, cuts=4):
         bm = kit.ball((w, h, d), cuts=cuts)
@@ -515,7 +529,7 @@ def build():
         return bm
 
     for (e, en, ex, ey), s in zip(eye_frames, (-1, 1)):
-        tilt = Matrix.Rotation(math.radians(10 * s), 4, en)
+        tilt = Matrix.Rotation(math.radians(17 * s), 4, en)
         basis = Matrix((ex, ey, en)).transposed().to_4x4()
         place = Matrix.Translation(e - en * 0.018) @ tilt @ basis
         eb = almond(EW, EH, ED * 2)
@@ -525,20 +539,20 @@ def build():
         rim.transform(place)
         add("rims", rim, fur_m, COL["line"])
         front = e - en * 0.018 + en * (ED - 0.008)
-        pupil = kit.ball((0.058, 0.09, 0.02), cuts=3)
+        pupil = kit.ball((0.04, 0.072, 0.02), cuts=3)
         pupil.transform(Matrix.Translation(front) @ tilt @ basis)
         add("pupils", pupil, fur_m, COL["pupil"])
         add("glints", ell(front + en * 0.006 + ey * 0.03 - ex * 0.025 * s, (0.02, 0.02, 0.008), cuts=2), fur_m, COL["white"])
         lid = almond(EW * 1.1, EH * 1.14, ED * 2.25, cuts=10)
-        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < EH * 0.24 or v.co.z < -0.004], context='VERTS')
+        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < EH * 0.17 + 0.15 * v.co.x or v.co.z < -0.004], context='VERTS')
         lid.transform(place)
-        top = e + ey * EH * 0.24
+        top = e + ey * EH * 0.2
 
         def lid_col(co, nn, g, top=top, ey=ey):
             return mix(COL["line"], COL["sand_dk"], 0.4 * smooth((co - top).dot(ey), 0.02, 0.05))
         add("lids", lid, fur_m, lid_col)
         low = almond(EW * 1.08, EH * 1.1, ED * 2.2, cuts=10)                # a little lift from below, so the eyes smile
-        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.y > -EH * 0.3 or v.co.z < -0.004], context='VERTS')
+        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.y > -EH * 0.34 or v.co.z < -0.004], context='VERTS')
         low.transform(place)
         add("lids", low, fur_m, COL["cream"])
 

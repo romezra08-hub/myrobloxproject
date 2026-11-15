@@ -265,6 +265,8 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | DuskBat | Purple bat with a cat-like face | Fluffy dusk-purple fruit bat with big ears, a cream chest, lilac wing membranes and gentle eyes | 10,859 |
 | MagmaCrown | Blocky lava lump with crystal spikes | Little basalt magma king with glowing cracks and face, an orange crystal crown and amethyst shoulder shards | 8,076 |
 | Grizzly | Brown bear with back spikes and long claws | Calm grizzly with a shoulder hump, layered fur ridges, short claws and small mossy stones on its back | 11,840 |
+| DuneCat | Hunched bony tan cat with a ridged spine | Slender sandy desert cat with calm kohl-lined almond eyes, shaped legs, darker ear and tail tips and a gold collar with a blue gem | 10,596 |
+| ShadowPanther | Black panther with an open red snarl | Long, low charcoal panther with a blue-violet sheen, faint rosettes, calm gold-green eyes, a glowing violet collar gem and tail flame | 11,656 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

@@ -13,6 +13,9 @@ Must-haves, checked in every review:
   5. A wide, relaxed smile and a squat sitting pose with folded hind legs and round-tipped toes.
   6. Matte painted textures with crease shading; about 3 studs tall; Body under 12k triangles.
 
+Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
+mipmapping would bleed into the seams as gloss).
+
 Round 3: the half lids made deeper so they actually cover the top of each eye (they showed as a thin line).
 
 Round 2: relaxed half lids over the eyes for a chill look; the irises flatter (they stood out like coins); clearer dark spots; a bolder pebbled grain and a little more roughness (the skin read as glossy rubber).
@@ -414,6 +417,9 @@ def bake_rough(body, grain=()):
     px = np.empty(size * size * 4, dtype=np.float32)
     img.pixels.foreach_get(px)
     px = px.reshape(size, size, 4)
+    used = px[..., 0] > 1e-4                              # texels the bake reached, with its margin
+    rough = px[..., 0]
+    rough[~used] = float(np.median(rough[used])) if used.any() else 0.6     # so mipmaps do not bleed gloss into the seams
     px[..., :3] = np.clip(px[..., :1], 0.05, 1.0)
     px[..., 3] = 1.0
     bpy.data.images.remove(img)

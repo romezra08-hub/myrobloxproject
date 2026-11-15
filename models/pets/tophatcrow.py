@@ -13,6 +13,9 @@ Must-haves, checked in every review:
   5. A rakish top hat with a pink ribbon and a violet feather in the band.
   6. Matte painted textures with crease shading; about 3 studs tall; Body under 12k triangles.
 
+Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
+mipmapping would bleed into the seams as gloss).
+
 Round 5: the breast feathers taken off again; the plumage painted with streaks, soft patch-to-patch shade changes and mottling instead, without dark joins.
 
 Round 4: four staggered rows of breast feathers (they stuck out like thorns) and stronger streaks.
@@ -418,6 +421,9 @@ def bake_rough(body, grain=()):
     px = np.empty(size * size * 4, dtype=np.float32)
     img.pixels.foreach_get(px)
     px = px.reshape(size, size, 4)
+    used = px[..., 0] > 1e-4                              # texels the bake reached, with its margin
+    rough = px[..., 0]
+    rough[~used] = float(np.median(rough[used])) if used.any() else 0.6     # so mipmaps do not bleed gloss into the seams
     px[..., :3] = np.clip(px[..., :1], 0.05, 1.0)
     px[..., 3] = 1.0
     bpy.data.images.remove(img)

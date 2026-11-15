@@ -12,6 +12,9 @@ Must-haves, checked in every review:
   5. A small gold halo-crown floating over the head (GLOW).
   6. Matte painted fur with crease shading; about 3-3.5 studs tall; Body under 12k triangles.
 
+Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
+mipmapping would bleed into the seams as gloss).
+
 Round 4: round shoulders and fewer, downward arm clumps (the shoulders read square); slimmer flight feathers.
 
 Round 3: the feathers were built mirrored (inside out), which baked them grey; fixed so the wings are white; the body clumps shorter and fatter.
@@ -415,6 +418,9 @@ def bake_rough(body, grain=()):
     px = np.empty(size * size * 4, dtype=np.float32)
     img.pixels.foreach_get(px)
     px = px.reshape(size, size, 4)
+    used = px[..., 0] > 1e-4                              # texels the bake reached, with its margin
+    rough = px[..., 0]
+    rough[~used] = float(np.median(rough[used])) if used.any() else 0.6     # so mipmaps do not bleed gloss into the seams
     px[..., :3] = np.clip(px[..., :1], 0.05, 1.0)
     px[..., 3] = 1.0
     bpy.data.images.remove(img)

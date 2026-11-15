@@ -11,6 +11,9 @@ Must-haves, checked in every review:
   4. Small paws, round ears peeking out, an autumn leaf and a small mushroom caught in the spines.
   5. Matte painted textures with crease shading; about 3 studs tall; Body under 12k triangles.
 
+Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
+mipmapping would bleed into the seams as gloss).
+
 Round 5: fatter spines and a few more clumps, so the coat closes up (the skin showed between them).
 
 Round 4: fewer clumps to come back under budget; spines swept further back (beside the face they stuck out sideways like a mane).
@@ -416,6 +419,9 @@ def bake_rough(body, grain=()):
     px = np.empty(size * size * 4, dtype=np.float32)
     img.pixels.foreach_get(px)
     px = px.reshape(size, size, 4)
+    used = px[..., 0] > 1e-4                              # texels the bake reached, with its margin
+    rough = px[..., 0]
+    rough[~used] = float(np.median(rough[used])) if used.any() else 0.6     # so mipmaps do not bleed gloss into the seams
     px[..., :3] = np.clip(px[..., :1], 0.05, 1.0)
     px[..., 3] = 1.0
     bpy.data.images.remove(img)
