@@ -161,6 +161,24 @@ and an egg hopper on the right.
 - Weak points: the empty dome looks plain until an egg is in it, the hopper reads only from the right,
   and painted detail is soft up close (about 30 px per stud).
 
+## Remakes of the game's own pets
+
+The pets already in the Mine an Egg place (screenshots in `reference/ingame_pets_*.png`) that looked
+creepy or crude, rebuilt as the same creature with the same colours so they can replace the originals.
+Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.png` and a side-by-side
+`preview/<name>_before_after.png`. Set them up with `SetupPets.lua` like the other pets.
+
+| Remake | Was | Now | Triangles |
+|---|---|---|---|
+| InfernoBat | Red bat with a devil-like human face | Fluffy crimson fire bat, amber eyes, flame wings with glowing edges | 11,192 |
+| Gargoyle | Snarling grey stone gargoyle | Crouching stone guardian with a calm lion-dog face, moss and a glowing chest rune | 10,768 |
+| Raven | Black crow with red eyes | Glossy black raven with a blue-violet sheen and warm amber eyes | 10,300 |
+| Salamander | Black lava lizard | See the pets table | 11,460 |
+
+Weak points: InfernoBat's chest ruff looks a little like a shaggy beard up close; the Gargoyle's stone is
+fairly smooth up close and it is crouched where the original stood; the Raven's body below the neck is
+a plain dark column and its legs are thin.
+
 ## Why they do not look like plastic
 
 Smooth shapes in one flat colour read as cheap plastic. Three things in `kit.py` work against that,
