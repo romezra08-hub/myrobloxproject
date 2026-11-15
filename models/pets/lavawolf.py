@@ -1,5 +1,5 @@
-"""LavaWolf pet, hero-quality remake: a heavy wolf of cooled lava, dark basalt plates and coarse fur
-with magma glowing in the seams, and a mane and tail of flame-shaped locks whose tips run hot.
+"""LavaWolf pet, hero-quality remake: a heavy wolf of cooled lava, black basalt with a network of glowing
+magma cracks, a flaming mane that frames the head and a tail that smoulders into flame.
 Built from scratch by script, on the methods of the Dragon (models/pets/dragon.py) and the FrostWolf
 (models/pets/frostwolf.py), which is its sibling.
 
@@ -10,18 +10,51 @@ Style: a believable fantasy creature in the same family as the Dragon and FrostW
 not a recolour of FrostWolf. Must-haves:
   1. A heavier, more powerful build than FrostWolf: broad shoulders, a low head carriage, a thick neck, a
      deep chest; legs with upper muscle, wrists, hocks, dewclaws, big paws with claws.
-  2. Surface: dark basalt. Rock plates down the back and on the shoulders and thighs, coarse short fur
-     clumps with rough edges elsewhere. Plates are darkest in their middles and warm towards their rims;
-     magma glows in the seams between them (the Dragon's ember seams). Restrained: seams and a few hot
-     spots, not a lit-up body.
-  3. A mane and tail of flame-shaped locks whose tips heat to orange and yellow; a smouldering tail tip.
-  4. A calm, confident face: small glowing ember eyes in sockets (no whites, lids or irises), thin brows
-     set above the eye with a gap, a mouth line level or a little raised at the back.
-  5. Charcoal and basalt blacks with warm brown-grey, magma orange to yellow in the seams. Matte rock with
-     baked roughness variation. Body up to about 16k triangles, about 3 to 3.5 studs tall, under 5 long.
+  2. Black and orange, read as lava at game distance: near-black basalt plates (a cracked crust over the
+     back, shoulders and hips, cracked plates on the forehead and bridge), coarse fur with a fine magma
+     crack network on the legs and body, warm red-orange in the crevices between locks, heat glowing
+     underneath (belly, inner legs, under the jaw). Still matte rock, not a lit-up toy.
+  3. A proper flaming mane: big flame tongues rising behind the head and sweeping back along the neck in
+     layers, dark red at the root to orange-yellow at the tip, flaring behind the cheeks so they frame the
+     face from the front. The tail smoulders into flame tongues at its tip.
+  4. An angular, powerful wolf head (FrostWolf's sections, scaled 1.08): sloped forehead, cheekbone planes,
+     a jaw line, a narrow tapered muzzle, a firm brow ridge with a gap above the eye, coarse cheek and jaw
+     fur, thick ears with a glowing cup. Small glowing ember eyes in sockets (no whites, lids or irises);
+     the mouth line level or a little raised at the back. Calm and confident.
+  5. Body up to about 16k triangles, GLOW small; about 3 to 3.5 studs tall, under 5 long.
 
-Final: round 15 (rounds are kept as lavawolf_hq_v1.py ... lavawolf_hq_v15.py; the previous remake, which the
+Final: round 20 (rounds are kept as lavawolf_hq_v1.py ... lavawolf_hq_v20.py; the previous remake, which the
 owner turned down as low quality, is lavawolf_v7_old.py).
+
+Round 20: the flames did not show in the silhouette: the tongues at the top of the neck are taller (up to
+0.8) and rise more steeply behind the head; the side ones stay low and swept back.
+
+Round 19: the head plates read as a honeycomb of separate tiles: two larger forehead plates and two down
+the bridge that nearly touch, so the seams are shared cracks, a little dimmer. One fewer outline point per
+flame tongue (budget).
+
+Round 18: a lone bridge plate read as a scab and the forehead pair as a skull cap: the plates moved onto the
+brow slope and the bridge; the red belly glow softer up the chest front; crown locks and a ring of tail-root
+locks removed (budget).
+
+Round 17: the muzzle 7% narrower and a little lower towards the tip, a smaller nose; no Voronoi cracks inside
+the head plates (only their seams); the Body back near budget (skull and jaw with fewer outline points, the
+muscles 8-sided, the top mane locks and first ring of mane locks replaced by the tongues, fewer flank and tail
+locks).
+
+Round 16 (after the coordinator's review: the head read as a smooth grey rubber dog or hippo, the colour as
+a grey dog, the mane as a few red shards):
+  - Head rebuilt on FrostWolf's accepted sections, scaled 1.08: a sloped forehead, a cheekbone corner
+    standing out over the eye region, a firmer angular jaw (the outlines bow far less), a brow ridge half as
+    high again, cracked basalt plates on the forehead and bridge with magma seams, coarse jaw tufts, thicker
+    ears whose cups glow from the base.
+  - Colour: near-black plates, a wider gap between crust cells and a brighter, hotter seam colour that
+    starts in shallower crevices; a fine magma crack network in the fur of the legs, body and tail (a
+    Voronoi edge network in patches); fur crevices glow red (a weak ember mask turns red, not orange); heat
+    underneath on the belly, inner legs and under the jaw.
+  - Mane: big standalone flame tongues (flat S-swaying blades, narrow root, long point) stand in four
+    layered rings round the neck, rising and sweeping back, flaring behind the cheeks; five tongues rise
+    from the tail tip, and the tail locks are hotter along their whole length.
 
 Round 15: the head was a smooth helmet next to the furred body: short coarse tufts on each cheek, behind and
 below the eye, sweep back into the ruff.
@@ -102,41 +135,42 @@ NAME = "LavaWolf"
 SCALE = 1.0
 HEAD_AT = (-0.04, -1.74, 2.6)     # the back of the skull: lower and further forward than FrostWolf's
 HEAD_ROT = (9, 2, -13)             # nose a little down, a slight tilt, turned towards -X (where the cameras are)
-HEAD_SIZE = 1.04
+HEAD_SIZE = 1.08
 THREADS = 4
 LEG_DROP = 0.14                    # the lower legs are shortened by this much after building
 
 # The upper head as sections from the back of the skull to the nose (nose towards -y):
 # y, top z, half width of the top plane, cheek z, cheek half width, lip z, lip half width.
 SKULL = [
-    (0.12, 0.10, 0.08, 0.00, 0.20, -0.14, 0.13),
-    (0.02, 0.27, 0.15, 0.04, 0.33, -0.19, 0.24),
-    (-0.12, 0.33, 0.18, 0.03, 0.375, -0.20, 0.27),
-    (-0.28, 0.31, 0.175, 0.00, 0.33, -0.20, 0.25),
-    (-0.41, 0.235, 0.14, -0.03, 0.245, -0.185, 0.205),
-    (-0.56, 0.195, 0.113, -0.05, 0.175, -0.175, 0.165),
-    (-0.73, 0.168, 0.095, -0.06, 0.14, -0.17, 0.135),
-    (-0.87, 0.148, 0.08, -0.065, 0.113, -0.165, 0.108),
-    (-0.955, 0.113, 0.06, -0.065, 0.086, -0.155, 0.08),
-    (-0.995, 0.06, 0.035, -0.07, 0.05, -0.135, 0.045),
+    (0.12, 0.10, 0.07, 0.00, 0.19, -0.14, 0.12),
+    (0.02, 0.27, 0.13, 0.04, 0.31, -0.19, 0.22),
+    (-0.12, 0.325, 0.16, 0.03, 0.385, -0.20, 0.25),
+    (-0.28, 0.295, 0.15, 0.0, 0.34, -0.19, 0.225),
+    (-0.41, 0.24, 0.115, -0.03, 0.225, -0.17, 0.175),
+    (-0.55, 0.195, 0.088, -0.05, 0.14, -0.16, 0.128),
+    (-0.71, 0.162, 0.072, -0.06, 0.11, -0.15, 0.102),
+    (-0.85, 0.14, 0.058, -0.065, 0.09, -0.145, 0.084),
+    (-0.93, 0.11, 0.046, -0.065, 0.07, -0.135, 0.064),
+    (-0.97, 0.058, 0.028, -0.07, 0.042, -0.12, 0.037),
 ]
 # The lower jaw: y, top z, top half width, jaw-corner z, jaw-corner half width, chin-keel z.
 JAW = [
-    (0.02, -0.16, 0.23, -0.31, 0.23, -0.35),
-    (-0.10, -0.175, 0.25, -0.335, 0.23, -0.385),
-    (-0.33, -0.18, 0.2, -0.305, 0.17, -0.335),
-    (-0.57, -0.175, 0.14, -0.265, 0.115, -0.29),
-    (-0.75, -0.168, 0.1, -0.235, 0.082, -0.25),
-    (-0.85, -0.163, 0.072, -0.21, 0.055, -0.222),
-    (-0.89, -0.16, 0.036, -0.19, 0.028, -0.198),
+    (0.02, -0.16, 0.22, -0.31, 0.23, -0.35),
+    (-0.10, -0.17, 0.24, -0.345, 0.235, -0.39),
+    (-0.33, -0.17, 0.19, -0.31, 0.165, -0.34),
+    (-0.56, -0.16, 0.125, -0.262, 0.1, -0.285),
+    (-0.74, -0.15, 0.095, -0.228, 0.076, -0.246),
+    (-0.85, -0.145, 0.072, -0.203, 0.054, -0.216),
+    (-0.9, -0.14, 0.036, -0.18, 0.027, -0.188),
 ]
 
 # colours (sRGB) along the coat: 0 the spine, 1 the belly
-PAL = [(0.0, "#181517"), (0.3, "#221E1E"), (0.55, "#312927"), (0.8, "#4F4035"), (1.0, "#6E5A49"), (1.15, "#7A6452")]
+PAL = [(0.0, "#121012"), (0.3, "#1A1617"), (0.55, "#2A211E"), (0.8, "#48332A"), (1.0, "#64412E"), (1.15, "#7A5236")]
 DARK = "#0B0909"
 GLOW_HEX = "#FF8A1E"
-ROCK_MID, ROCK_RIM = "#161314", "#4E3628"      # a plate darkest in its middle, warm towards its rim
+ROCK_MID, ROCK_RIM = "#0B0A0B", "#2E1C14"      # a plate darkest in its middle, warm towards its rim
 # the heat ramp of the flame tips: (position, sRGB, alpha = how much it covers the coat colour)
+GLOW_BELLY = Vector(kit.srgb("#8E3614"))     # the heat showing underneath: belly, inner legs, under the jaw
 HEAT = [(0.0, "#3A1208", 0.0), (0.22, "#5E1A0A", 0.8), (0.45, "#9C2C0C", 1.0), (0.66, "#E0560F", 1.0), (0.84, "#FF9426", 1.0), (1.0, "#FFCF5A", 1.0)]
 
 # ---- small helpers ----------------------------------------------------------------------------------
@@ -283,7 +317,7 @@ def loft(points, radii, profile, up=(0, 0, 1), rings=None):
 
 def mass(points, radii, up, rings=None):
     """A muscle: a smooth teardrop mass along `points`."""
-    return loft(points, radii, profile_round(10, 2.2), up=up, rings=rings or (len(points) - 1) * 3)
+    return loft(points, radii, profile_round(8, 2.2), up=up, rings=rings or (len(points) - 1) * 3)
 
 
 def lens(outline, thick, rows=((0.55, 0.8), (1.0, 0.0)), centre=(0.0, 0.0)):
@@ -477,7 +511,9 @@ def skull_at(y):
 def skull_corners(sec):
     y, zt, wt, zc, wc, zb, wb = sec
     furrow = 0.045 * smooth(y, -0.1, -0.24) * smooth(y, -0.52, -0.38)       # a furrow down the forehead between the brows
-    return [(0, zt + 0.035 - furrow), (-wt, zt), (-wc, zc), (-wb, zb), (0, zb - 0.01), (wb, zb), (wc, zc), (wt, zt)]
+    bone = smooth(y, -0.02, -0.16) * smooth(y, -0.56, -0.36)
+    bw, bz = wt + (wc - wt) * 0.8 + 0.035 * bone, zt + (zc - zt) * 0.5
+    return [(0, zt + 0.035 - furrow), (-wt, zt), (-bw, bz), (-wc, zc), (-wb, zb), (0, zb - 0.01), (wb, zb), (wc, zc), (bw, bz), (wt, zt)]
 
 
 def jaw_corners(sec):
@@ -521,6 +557,31 @@ def _clump_width(u):
 
 def _flame_width(u):
     return (0.5 + 0.5 * math.sin(0.5 * math.pi * min(u / 0.33, 1.0))) * (1.0 if u <= 0.33 else ((1.0 - u) / 0.67) ** 1.15)
+
+
+def flame_tongue(h, w, curl=1.0, seed=0.0, thick=0.06):
+    """A big flame tongue standing on its own: a flat blade with a narrow root, widest low down, its centre
+    line swaying in an S to a long point at height h. Base on z=0 (bury it a little), x across, y thickness.
+    Vertex layers fu (0 root to 1 tip), fq (-1 to 1 across) and fs as the flame locks have, so the flame
+    material heats it towards the tip."""
+    ts = (0.0, 0.2, 0.42, 0.64, 0.84)
+
+    def xc(t):
+        return curl * h * 0.14 * math.sin(math.pi * 1.5 * t) * t
+
+    def wf(t):
+        return w * 0.5 * (0.55 + 0.45 * math.sin(0.5 * math.pi * min(t / 0.3, 1.0))) * (1.0 if t <= 0.3 else ((1.0 - t) / 0.7) ** 1.1)
+    left = [(xc(t) - wf(t), t * h) for t in ts]
+    right = [(xc(t) + wf(t), t * h) for t in reversed(ts)]
+    outline = left + [(xc(1.0), h)] + right
+    bm = lens(outline, thick, rows=((0.5, 0.85), (1.0, 0.0)), centre=(xc(0.35), 0.35 * h))
+    lu, lq, ls = (bm.verts.layers.float[k] for k in ("fu", "fq", "fs"))
+    for v in bm.verts:
+        t = min(max(v.co.z / h, 0.0), 1.0)
+        v[lu] = t
+        v[lq] = max(-1.0, min(1.0, (v.co.x - xc(t)) / max(wf(t), 1e-3)))
+        v[ls] = seed
+    return bm
 
 
 def clump(surf, p, n, flow, length, width, lift=0.07, thick=0.045, tuck=0.03, bend=0.0, seed=0.0, hug=1.0, groove=0.45, jag=0.0, wave=0.0,
@@ -650,7 +711,36 @@ def _attr(tree, name, out="Fac"):
     return a.outputs[out]
 
 
-def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9, lip=None):
+def magma_cracks(t, coord, colour, scale=6.0, width=0.02, cover=0.45):
+    """Shader nodes: a network of thin glowing cracks over `colour` (a Voronoi edge network in object space),
+    shown in patches (`cover`, 0 to 1, of the surface) and only as strongly as the vertex value "crack"."""
+    new, link = t.nodes.new, t.links.new
+    cr = new("ShaderNodeTexVoronoi")
+    cr.feature = 'DISTANCE_TO_EDGE'
+    cr.inputs["Scale"].default_value = scale
+    link(coord.outputs["Object"], cr.inputs["Vector"])
+    patch = new("ShaderNodeTexNoise")
+    patch.inputs["Scale"].default_value, patch.inputs["Detail"].default_value = 1.8, 1.0
+    link(coord.outputs["Object"], patch.inputs["Vector"])
+    mask = _math(t, 'MULTIPLY', _attr(t, "crack"),
+                 _math(t, 'MINIMUM', _math(t, 'MAXIMUM', _math(t, 'MULTIPLY_ADD', patch.outputs["Fac"], 6.0, -3.0 + 6.0 * (cover - 0.5)), 0.0), 1.0))
+    d = cr.outputs["Distance"]
+    line = _math(t, 'MULTIPLY', mask, _math(t, 'MAXIMUM', _math(t, 'MULTIPLY_ADD', d, -1.0 / width, 1.0), 0.0))
+    halo = _math(t, 'MULTIPLY', mask, _math(t, 'MAXIMUM', _math(t, 'MULTIPLY_ADD', d, -1.0 / (width * 3.2), 1.0), 0.0))
+    m1 = new("ShaderNodeMix")
+    m1.data_type = 'RGBA'
+    link(_math(t, 'MULTIPLY', halo, 0.6), m1.inputs[0])
+    link(colour, m1.inputs[6])
+    m1.inputs[7].default_value = (*kit.srgb("#5A1A0A"), 1.0)
+    m2 = new("ShaderNodeMix")
+    m2.data_type = 'RGBA'
+    link(_math(t, 'MINIMUM', _math(t, 'MULTIPLY', line, 1.5), 1.0), m2.inputs[0])
+    link(m1.outputs[2], m2.inputs[6])
+    m2.inputs[7].default_value = (*kit.srgb("#FF7E1E"), 1.0)
+    return m2.outputs[2]
+
+
+def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9, lip=None, cracks=False):
     """Short fur: the vertex colour 'col' under fine streaks running along the axis with the smallest scale.
     With `lip` (see lip_line) a short soft dark line is painted along each upper lip, per pixel, so it is
     a crisp colour change and not a groove in the mesh."""
@@ -669,6 +759,8 @@ def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9, lip=No
     t.links.new(_attr(t, "col", "Color"), hsv.inputs["Color"])
     t.links.new(v, hsv.inputs["Value"])
     out = hsv.outputs["Color"]
+    if cracks:
+        out = magma_cracks(t, coord, out)
     if lip:
         out = lip_line(t, coord, out, **lip)
     t.links.new(out, b.inputs["Base Color"])
@@ -980,7 +1072,7 @@ CRUST_FROM, CRUST_TO = 3.45, 8.75
 CRUST_HALF = [(3.45, 54.0), (3.9, 80.0), (4.6, 88.0), (5.4, 76.0), (6.2, 66.0), (7.0, 78.0), (7.8, 82.0), (8.4, 64.0), (8.75, 40.0)]
 
 
-def crust(skin, seed, rows=8, cols=5, gap=0.1, lift=(0.05, 0.095), drop=0.12):
+def crust(skin, seed, rows=8, cols=5, gap=0.16, lift=(0.05, 0.095), drop=0.12):
     """A crust of cooled lava over the back: irregular cells that tile the skin from CRUST_FROM to CRUST_TO
     and CRUST_HALF degrees down each side, each a low domed slab tilted a little, with a narrow gap
     between neighbours (the magma seams). Cells are bounded by jittered lines shared by both neighbours,
@@ -1094,8 +1186,8 @@ def head_band(hl):
     top, cz = skull_at(hl.y)[1], skull_at(hl.y)[3]
     muzzle = smooth(hl.y, -0.36, -0.56)
     v = smooth(hl.z, lerp(top - 0.03, top - 0.07, muzzle), lerp(cz - 0.1, cz + 0.02, muzzle))
-    b_top = lerp(0.05, 0.5, smooth(hl.y, -0.4, -0.92))
-    b = lerp(b_top, lerp(0.8, 0.98, muzzle), v)
+    b_top = lerp(0.03, 0.34, smooth(hl.y, -0.4, -0.92))
+    b = lerp(b_top, lerp(0.74, 0.92, muzzle), v)
     for e in EYE_H:
         if (hl.x > 0) != (e.x > 0):
             continue
@@ -1111,9 +1203,9 @@ def head_band(hl):
 def build():
     global SPINE
     EYE_H[:] = []
-    fur_body = fur_material("FurBody", scale=(26.0, 5.0, 26.0), strength=0.17)       # coarse streaks along the body
-    fur_leg = fur_material("FurLeg", scale=(26.0, 26.0, 5.0), strength=0.15)         # ... and down the legs
-    ya, yb = -0.69, -0.46           # the mouth: short, along the upper lip, level in head space (a touch raised at the back as held)
+    fur_body = fur_material("FurBody", scale=(26.0, 5.0, 26.0), strength=0.17, cracks=True)     # coarse streaks along the body
+    fur_leg = fur_material("FurLeg", scale=(26.0, 26.0, 5.0), strength=0.15, cracks=True)       # ... and down the legs
+    ya, yb = -0.68, -0.47           # the mouth: short, along the upper lip, level in head space (a touch raised at the back as held)
     fur_face = fur_material("FurFace", scale=(44.0, 8.0, 44.0), strength=0.12,
                             lip=dict(H=head_matrix(), a=(ya, skull_at(ya)[5] + 0.013), b=(yb, skull_at(yb)[5] + 0.03), w=(0.007, 0.016)))
     clump_m = clump_material("Clump", strength=0.22, tipdark=0.22, edge=0.12)        # coarse basalt fur
@@ -1139,19 +1231,22 @@ def build():
         if region == "head":
             return band(head_band(Hinv @ co))
         if region == "jaw":
-            return band(lerp(0.93, 0.62, smooth((Hinv @ co).z, -0.2, -0.34)))
+            return band(0.72).lerp(GLOW_BELLY, 0.6 * smooth((Hinv @ co).z, -0.22, -0.36))
         if region == "ruff":
             hl = Hinv @ co
             return band(lerp(0.1, 0.75, smooth(hl.z, 0.02, -0.22)))
         if region == "leg":
-            return band(leg_band(co, n))
+            sx_ = 1.0 if co.x > 0 else -1.0
+            inner = smooth(-n.x * sx_, 0.2, 0.8) * smooth(co.z, 0.25, 0.7)
+            return band(leg_band(co, n)).lerp(GLOW_BELLY, 0.45 * inner)
         if region == "tail":
             return band(tail_band(co))
         if region == "paw":
             return band(0.1)
         if region == "mane":
             return band(0.1)
-        return band(body_band(co))
+        b_ = body_band(co)
+        return band(b_).lerp(GLOW_BELLY, 0.6 * smooth(b_, 0.62, 0.84) * lerp(0.55, 1.0, smooth(co.z, 1.6, 1.2)))
 
     base = []          # (part, bm, material, crease, boost) in world space: the surfaces the fur lies on
 
@@ -1160,6 +1255,9 @@ def build():
         for v in bm.verts:
             v.co.z = max(v.co.z, 0.0)
         paint(bm, colour_fn or (lambda co, n: colour(region, co, n)))
+        lc = bm.verts.layers.float["crack"]            # where the magma crack network shows through the fur
+        for v in bm.verts:
+            v[lc] = {"leg": lerp(0.3, 1.0, smooth(v.co.z, 0.15, 0.8)), "body": 0.85, "tail": 0.5, "paw": 0.2}.get(region, 0.0)
         base.append((part, bm, mat, crease, boost))
 
     def add(part, bm, mat, crease=40.0, boost=0.0):
@@ -1307,9 +1405,9 @@ def build():
     add_base("tail core", tail_bm, fur_body, "tail", crease=0)
 
     # ---- head: built in head space, then turned into place ------------------------------------------------
-    skull = shell(SKULL, skull_corners, per=3, m=3, back_cap=0.05, nose_cap=0.01, soft=0.75)
+    skull = shell(SKULL, skull_corners, per=3, m=2, back_cap=0.05, nose_cap=0.01, soft=0.45)
     face = Surface(skull)
-    jaw = shell(JAW, jaw_corners, per=2, m=3, back_cap=0.04, nose_cap=0.01, soft=0.7)
+    jaw = shell(JAW, jaw_corners, per=2, m=2, back_cap=0.04, nose_cap=0.01, soft=0.4)
     head_parts = [("head", skull, fur_face, "head"), ("head", jaw, fur_face, "jaw")]
     brows = []
     EYE_RAY = ((0.55, -0.62, 0.15), (-0.75, 0.6, -0.04))
@@ -1344,13 +1442,28 @@ def build():
         lift = 0.0
         for line in brows:
             d = min(_seg(v.co, a_, b_) for a_, b_ in zip(line, line[1:]))
-            lift = max(lift, 0.024 * math.exp(-(d / 0.04) ** 2))
+            lift = max(lift, 0.034 * math.exp(-(d / 0.034) ** 2))
         if lift > 1e-4:
             v.co += v.normal * lift
-    nose = rounded_box((0.125, 0.105, 0.088), n=2.6, cuts=2)
+    face2 = Surface(skull)
+    head_plates = []
+    for cx, cy, L, Wd, out in ((-0.062, -0.3, 0.25, 0.112, -1), (0.064, -0.285, 0.26, 0.112, 1),
+                               (0.004, -0.5, 0.2, 0.07, 0), (-0.003, -0.68, 0.17, 0.058, 0)):
+        p, nrm = face2.hit((cx, cy, 1.0), (0, 0, -1))
+        rj = random.Random(int(cy * 1000 + cx * 100))
+        shape = [(0.5, 0.0), (0.3, 0.45), (-0.1, 0.5), (-0.45, 0.38), (-0.5, 0.0), (-0.42, -0.4), (0.0, -0.5), (0.32, -0.42)]
+        outline = [(a * L * rj.uniform(0.9, 1.08), b * Wd * 2 * rj.uniform(0.85, 1.1)) for a, b in shape]
+        fp = lens(outline, 0.045, rows=((0.45, 1.0), (1.0, 0.0)))
+        lpr = fp.verts.layers.float["pr"]
+        for v in fp.verts:
+            v[lpr] = 1.0 if abs(v.co.y) < 1e-6 else 0.4
+        fp.transform(facing(p, nrm, Vector((0, -1, 0.1))))
+        drape(fp, face2, p, nrm, -0.006)
+        head_plates.append(fp)
+    nose = rounded_box((0.11, 0.094, 0.08), n=2.6, cuts=2)
     for v in nose.verts:
         v.co.x *= 1.0 - 0.25 * smooth(v.co.z, 0.04, -0.04)
-    nose.transform(M((0, -0.978, 0.07), rot=(-12, 0, 0)))
+    nose.transform(M((0, -0.955, 0.075), rot=(-12, 0, 0)))
     set_layer(nose, "gloss", 0.5)
     head_parts.append(("nose", nose, nose_m, None))
     ears = []
@@ -1360,6 +1473,12 @@ def build():
         ear.transform(E)
         head_parts.append(("ears", ear, fur_face, "earcol"))
         ears.append((sx, E))
+    for fp in head_plates:
+        fp.transform(H)
+        rock_colour(fp, rnd=rnd, warm=0.6)
+        set_layer(fp, "ember", 0.75)
+        set_layer(fp, "crack", 0.0)
+        add("plates", fp, rock, crease=35, boost=HEAD_BOOST)
     for part, bm, mat, region in head_parts:
         ensure_layers(bm)
         bm.transform(H)
@@ -1433,7 +1552,7 @@ def build():
         add("plates", bm, rock, crease=35)
 
     # ---- the mane: flame locks round the neck, rising and sweeping back, their tips hot ----------------------
-    rings = [(1.95, 0.5, 11), (2.6, 0.6, 12), (3.25, 0.62, 12), (3.9, 0.52, 11)]
+    rings = [(2.6, 0.6, 12), (3.25, 0.62, 12), (3.9, 0.52, 11)]
     for r, (idx, L, m) in enumerate(rings):
         for j in range(m):
             th = 90.0 + 360.0 * (j + 0.5 * (r % 2)) / m + rnd.uniform(-5, 5)
@@ -1445,11 +1564,46 @@ def build():
                         lift=0.006, thick=0.034, tuck=0.012, jag=0.12, groove=0.35, ember=0.0, var=0.03, mat=chest_m, soft=1.0)
                 continue
             top = smooth(-low, 0.0, 0.9)
+            if top > 0.3:
+                continue
             Lk = L * (1.0 + 0.3 * top) * rnd.uniform(0.85, 1.12) * lerp(1.0, 0.72, smooth(low, -0.1, 0.5))
             hot = 1.0 if rnd.random() < 0.3 else 0.75
             on_skin(idx + rnd.uniform(-0.06, 0.06), th, Lk, 0.2 * rnd.uniform(0.88, 1.12), region="mane",
                     lift=0.07 + 0.06 * top, thick=0.065, bend=rnd.uniform(-0.1, 0.1), mat=flame_m, groove=0.5,
                     heat=lerp(0.56, 0.98, top) * hot * lerp(1.0, 0.75, smooth(low, 0.0, 0.5)), ember=0.45, wave=rnd.choice((-1, 1)) * rnd.uniform(0.08, 0.12), hug=1.0)
+
+    def stand_tongue(root, up, out, h, w, heat, seed, curl):
+        """Stand a flame tongue at `root`, rising along `up`, its flat face turned towards `out`."""
+        z = up.normalized()
+        y = out - z * out.dot(z)
+        y = y.normalized() if y.length > 1e-4 else z.orthogonal().normalized()
+        x = y.cross(z)
+        T = Matrix((x, y, z)).transposed().to_4x4()
+        T.translation = root
+        bm = flame_tongue(h, w, curl=curl, seed=seed)
+        bm.transform(T)
+        paint(bm, lambda co, n: band(0.05))
+        set_layer(bm, "heat", heat)
+        set_layer(bm, "ember", 0.6)
+        set_layer(bm, "gloss", 0.08)
+        add("tongues", bm, flame_m, crease=55)
+
+    # ---- the flaming mane: big tongues rising behind the head and sweeping back along the neck, in layers,
+    # the outer ones flaring out behind the cheeks so they frame the face from the front ---------------------
+    for r, (idx, hmax, m, spread) in enumerate(((1.75, 0.58, 9, 112.0), (2.3, 0.78, 9, 104.0), (2.85, 0.8, 8, 92.0), (3.4, 0.6, 7, 78.0))):
+        for j in range(m):
+            f = (j + 0.5 * (r % 2)) / (m - 1 + 0.5 * (r % 2)) * 2.0 - 1.0 if m > 1 else 0.0
+            f = max(-1.0, min(1.0, f))
+            th = 90.0 + spread * f + rnd.uniform(-5, 5)
+            s_ = skin.s_of(idx + rnd.uniform(-0.05, 0.05))
+            c_, t_, u_ = skin.at(s_)[:3]
+            n_ = skin.normal(s_, th)
+            root = skin.point(s_, th, -0.04)
+            side = abs(f)
+            up = (n_ * lerp(0.42, 0.5, side) + t_ * lerp(0.8, 0.85, side) + V((0, 0, 1)) * lerp(0.62, 0.05, side))
+            h = hmax * lerp(1.0, 0.6, side ** 1.2) * rnd.uniform(0.88, 1.1)
+            stand_tongue(root, up, n_, h, h * 0.52, lerp(0.98, 0.85, side) * rnd.uniform(0.92, 1.0), rnd.random(),
+                         rnd.choice((-1, 1)) * rnd.uniform(0.9, 1.3))
 
     # ---- coarse fur on the flanks and belly, under the plates ------------------------------------------------
     for th0 in (14.0, -12.0, -38.0):
@@ -1458,8 +1612,8 @@ def build():
             idx = 4.3 + (0.2 if th0 == 0.0 else 0.0)
             while idx < 8.5:
                 on_skin(idx + rnd.uniform(-0.05, 0.05), th + rnd.uniform(-5, 5), 0.32 * rnd.uniform(0.85, 1.15), 0.115, lift=0.012, thick=0.045,
-                        jag=0.2, groove=0.4, ember=0.1, var=0.06, bend=rnd.uniform(-0.1, 0.1))
-                idx += 0.42
+                        jag=0.2, groove=0.4, ember=0.45, var=0.06, bend=rnd.uniform(-0.1, 0.1))
+                idx += 0.5
 
     # legs: coarse tufts behind the elbows, britches behind the thighs, tufts behind wrists and hocks
     for sx, front, a, b in legs:
@@ -1484,7 +1638,7 @@ def build():
             for y in ys:
                 o = V((1.4 * sx, y, z))
                 put(o, V((0.2 * sx, y, z)), (0, 0.25 if front else 0.45, -1), 0.3 * rnd.uniform(0.9, 1.1), 0.11, "leg",
-                    lift=0.015, thick=0.04, bend=rnd.uniform(-0.1, 0.1), jag=0.2, groove=0.45, ember=0.08)
+                    lift=0.015, thick=0.04, bend=rnd.uniform(-0.1, 0.1), jag=0.2, groove=0.45, ember=0.4)
 
     # ---- head: cheek ruff of flame locks sweeping back, a few short locks on the crown ----------------------
     for sx in (-1, 1):
@@ -1503,14 +1657,13 @@ def build():
             o = H @ V((0.8 * sx, yy, zz))
             put(o, H @ V((0.0, yy, zz)), HR @ V((0.18 * sx, 1.0, -0.3)), L, 0.07, "head", lift=0.012, thick=0.024, boost=HEAD_BOOST,
                 var=0.03, jag=0.15, groove=0.5, tuck=0.015)
-    # a few short coarse locks lying flat on the crown, swept back between the ears
-    for k, (xx, yy, L) in enumerate(((-0.06, -0.3, 0.2), (0.06, -0.28, 0.2), (0.0, -0.17, 0.22))):
-        o = H @ V((xx, yy, 0.9))
-        put(o, H @ V((xx, yy, 0.0)), HR @ V((xx * 1.2, 1.0, -0.3)), L * 0.85, 0.08, "head", lift=0.0, thick=0.022, boost=HEAD_BOOST,
-            var=0.03, jag=0.12, groove=0.5, wave=0.03 * (1 if k % 2 else -1))
-
+    for sx in (-1, 1):
+        for yy, L in ((-0.22, 0.17), (-0.06, 0.2), (0.1, 0.2)):
+            o = H @ V((0.55 * sx, yy, -0.75))
+            put(o, H @ V((0.12 * sx, yy, -0.2)), HR @ V((0.15 * sx, 0.8, -0.6)), L, 0.08, "jaw", lift=0.02, thick=0.03, boost=HEAD_BOOST,
+                var=0.03, jag=0.18, groove=0.5, tuck=0.015, ember=0.3)
     # ---- tail: rings of flame locks, hotter towards the tip, the last ones closing into a smouldering point -
-    rings_t = 9
+    rings_t = 8
     for r in range(rings_t):
         t = 0.04 + 0.74 * r / (rings_t - 2) if r < rings_t - 1 else 0.84
         i = t * (len(TAIL) - 1)
@@ -1519,7 +1672,7 @@ def build():
         ref = V((0, 0, 1)) - tan * tan.z
         ref.normalize()
         sd = tan.cross(ref)
-        m = 7 if r < rings_t - 1 else 6
+        m = 6
         tip = r == rings_t - 1
         for j in range(m):
             a = 2 * math.pi * (j + 0.5 * (r % 2)) / m + rnd.uniform(-0.15, 0.15)
@@ -1527,11 +1680,22 @@ def build():
             L = 0.2 if tip else 0.34 + 0.08 * math.sin(math.pi * t)
             put(c + out * 0.8, c, tan, L, 0.11 if tip else 0.14, "tail", lift=0.0 if tip else 0.04 + 0.02 * math.sin(math.pi * t),
                 thick=0.04 if tip else 0.05, bend=rnd.uniform(-0.1, 0.1), hug=0.85 if tip else 1.0, mat=flame_m,
-                heat=lerp(0.25, 1.0, smooth(t, 0.2, 0.85)) * (0.88 + 0.12 * max(out.z, 0.0)), ember=0.6, wave=rnd.uniform(-0.06, 0.06))
-    for idx in (8.35, 8.75):
+                heat=lerp(0.5, 1.0, smooth(t, 0.1, 0.8)) * (0.88 + 0.12 * max(out.z, 0.0)), ember=0.6, wave=rnd.uniform(-0.06, 0.06))
+    for idx in (8.5,):
         for th in (40.0, 70.0, 110.0, 140.0, 90.0):
             on_skin(idx + rnd.uniform(-0.05, 0.05), th + rnd.uniform(-6, 6), 0.3, 0.11, region="tail", lift=0.02, thick=0.045, jag=0.25)
-    # the smouldering tip: a small glowing coal inside the last locks
+    # the smouldering tip: flame tongues rising from the end of the tail, and a small glowing coal inside
+    for k, (t, h) in enumerate(((0.72, 0.32), (0.8, 0.38), (0.86, 0.42), (0.9, 0.36), (0.94, 0.3))):
+        i = t * (len(TAIL) - 1)
+        c = _cr([V(p) for p in TAIL], i)
+        tan = (_cr([V(p) for p in TAIL], min(i + 0.05, len(TAIL) - 1)) - c).normalized()
+        a = 2 * math.pi * k / 5 + 0.4
+        sd = tan.cross(V((0, 0, 1))).normalized()
+        out = (sd * math.cos(a) + V((0, 0.5, 0)) * math.sin(a)).normalized()
+        root = c + out * 0.05
+        up = (V((0, 0.55, 1.0)) + out * 0.45).normalized()
+        stand_tongue(root, up, out, h, h * 0.45, 1.0, rnd.random(), rnd.choice((-1, 1)) * 0.8)
+
     c = _cr([V(p) for p in TAIL], 0.88 * (len(TAIL) - 1))
     tan = (_cr([V(p) for p in TAIL], 0.95 * (len(TAIL) - 1)) - c).normalized()
     cr = crystal(0.06, 0.2, seed=3, sides=5)
@@ -1562,7 +1726,7 @@ def tail_band(co):            # replaced in build()
 def ear_shape(W=0.25, Hh=0.44):
     """A pointed ear in its own space: base on z=0, x across, front facing -y, cupped."""
     outline = [(-0.5, 0.0), (-0.47, 0.32), (-0.32, 0.66), (0.0, 1.0), (0.24, 0.7), (0.42, 0.36), (0.5, 0.0), (0.0, -0.06)]
-    rings = [(1.0, 0.0, 0.0), (0.85, -0.016, 0.034), (0.6, 0.016, 0.056), (0.3, 0.032, 0.07)]
+    rings = [(1.0, 0.0, 0.0), (0.85, -0.018, 0.05), (0.6, 0.016, 0.082), (0.3, 0.032, 0.1)]
     cx, cz = 0.0, 0.33
     bm = ensure_layers(bmesh.new())
     lg = bm.verts.layers.float["grad"]
@@ -1581,7 +1745,7 @@ def ear_shape(W=0.25, Hh=0.44):
             b.append(vb)
         fronts.append(f)
         backs.append(b)
-    for loops, cy, gv in ((fronts, 0.035, 0.0), (backs, 0.075, 1.0)):
+    for loops, cy, gv in ((fronts, 0.035, 0.0), (backs, 0.11, 1.0)):
         c = bm.verts.new((cx * W, cy, cz * Hh))
         c[lg] = gv
         for a, b in zip(loops, loops[1:]):
@@ -1600,13 +1764,14 @@ EAR_H = 0.43
 def ear_colour(H, ears):
     """Ears: charcoal on the back and rim, a dark warm red-brown in the cup, darker towards the tip."""
     inv = [((H @ E).inverted(), (H @ E).to_3x3().normalized().inverted()) for sx, E in ears]
-    cup = Vector(kit.srgb("#4A2418"))
+    hot, deep = Vector(kit.srgb("#E8601C")), Vector(kit.srgb("#6A1C0A"))
 
     def fn(co, n):
         loc, nl = min(((m @ co, r @ n) for m, r in inv), key=lambda ln: abs(ln[0].x) + abs(ln[0].y))
         h = loc.z / EAR_H
-        inner = smooth(-nl.y, 0.25, 0.7) * smooth(loc.y, -0.012, 0.012) * (1.0 - smooth(h, 0.6, 0.9))
-        return band(0.05).lerp(cup, inner) * (1.0 - 0.3 * smooth(h, 0.7, 1.0))
+        inner = smooth(-nl.y, 0.25, 0.7) * smooth(loc.y, -0.012, 0.012) * (1.0 - smooth(h, 0.7, 0.95))
+        cup = hot.lerp(deep, smooth(h, 0.1, 0.75))          # the cup glows from its base, cooling towards the tip
+        return band(0.04).lerp(cup, inner) * (1.0 - 0.3 * smooth(h, 0.75, 1.0) * (1.0 - inner))
     return fn
 
 
@@ -1730,11 +1895,12 @@ def soften_chest(ob, size, shade, soft_shade, soften=3):
 
 
 
-EMBER = "#FF6A14"             # the magma in the seams between plates and locks
-EMBER_HOT = "#FFB845"         # ... the deepest, hottest part of a seam
+EMBER = "#FF7A1A"             # the magma in the seams between plates and locks
+EMBER_HOT = "#FFC650"
+EMBER_RED = "#B42E0C"         # a seam on fur (a weak mask) glows red rather than orange         # ... the deepest, hottest part of a seam
 EMBER_WARM = "#3E2116"        # the rock warms to this just beside a seam
 EMBER_REACH = 0.13
-EMBER_FROM, EMBER_TO, EMBER_MAX = 0.16, 0.6, 0.9
+EMBER_FROM, EMBER_TO, EMBER_MAX = 0.12, 0.5, 1.0
 
 
 def ember_seams(ob, path, size):
@@ -1790,6 +1956,9 @@ def ember_seams(ob, path, size):
     k = mask * EMBER_MAX * ss(occ, EMBER_FROM, EMBER_TO)
     hot = ss(occ, (EMBER_FROM + EMBER_TO) / 2, EMBER_TO + 0.15)
     glow = np.array(kit.srgb(EMBER), dtype=np.float32) * (1 - hot) + np.array(kit.srgb(EMBER_HOT), dtype=np.float32) * hot
+    redness = 1.0 - ss(mask, 0.3, 0.9)
+    glow = glow * (1 - redness) + np.array(kit.srgb(EMBER_RED), dtype=np.float32) * redness
+    k = np.maximum(k, mask * 0.85 * ss(occ, EMBER_FROM, EMBER_TO) * (mask > 0.05))
     tex = next(n.image for n in baked.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image.size[0] == size)
     px = np.empty(size * size * 4, dtype=np.float32)
     tex.pixels.foreach_get(px)
