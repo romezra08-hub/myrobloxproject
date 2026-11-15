@@ -174,8 +174,12 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Gargoyle | Snarling grey stone gargoyle | Crouching stone guardian with a calm lion-dog face, moss and a glowing chest rune | 10,768 |
 | Raven | Black crow with red eyes | Glossy black raven with a blue-violet sheen and warm amber eyes | 10,300 |
 | Salamander | Black lava lizard | See the pets table | 11,460 |
+| Ghost | White blob with huge bulging purple eyes | Small floating sheet ghost with calm eyes, a tiny smile, lavender glow in the folds | 7,460 |
+| CloudSpirit | Cloud head with tentacle-like white wisps | Puffy cumulus with a friendly face, raining blue drops and a small spark | 7,154 |
+| KingSlime | Yellow blob with staring eyes and a crown | Golden honey slime with a content smirk, trapped bubbles and a jewelled crown | 7,740 |
 
-Weak points: InfernoBat's chest ruff looks a little like a shaggy beard up close; the Gargoyle's stone is
+Weak points: the Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
+orange than the original's lemon); the CloudSpirit's wisps became rain streaks. InfernoBat's chest ruff looks a little like a shaggy beard up close; the Gargoyle's stone is
 fairly smooth up close and it is crouched where the original stood; the Raven's body below the neck is
 a plain dark column and its legs are thin.
 
