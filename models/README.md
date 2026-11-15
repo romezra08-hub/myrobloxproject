@@ -109,10 +109,10 @@ dragon more studs than a fox, and bigger pets also stride more slowly.
 
 | Style | Pets |
 |---|---|
-| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip), tophatcrow, hedgehog |
+| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip), tophatcrow, hedgehog, bearcub |
 | `hopper` (arcs with a pause; the odd hop in place) | bunny, gargoyle (slower, lower stone hops: it is modelled crouched on its hands), drumdevil, mushroom, snowbunny, frog |
-| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog, cerberus, piggy, dunecat, shadowpanther, frostwolf, nightunicorn |
-| `heavy` (slow stomp and roll; rare look round) | turtle, dragon, golem, driller, spikecrab, highlandbull, magmacrown, grizzly, redrex, armordino, irongolem |
+| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog, cerberus, piggy, dunecat, shadowpanther, frostwolf, nightunicorn, lavawolf, boar, sheep, stag, redpanda, treedeer |
+| `heavy` (slow stomp and roll; rare look round) | turtle, dragon, golem, driller, spikecrab, highlandbull, magmacrown, grizzly, redrex, armordino, irongolem, sundragon, ankylo |
 | `flyer` (hover, figure eight, bank; flies pitched down) | phoenix, griffin, infernobat, raven, firedemon, moth, duskbat, angelyeti |
 | `floater` (slow drift, sway and turn) | ghost, cloudspirit, reaper, spiritblob, skyjelly, halosprite |
 | `slither` (body swings side to side; raises its head) | salamander, snailrider, emberserpent, goldslug, sailback, croc |
@@ -280,6 +280,15 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | FrostWolf | Blue blocky wolf with a white spiky crest | Fluffy midnight-blue arctic wolf with a pale ruff, a ridge of ice crystals along its back and a round tail tip | 11,062 |
 | IronGolem | Brown block golem with yellow lights | Friendly mining golem of dark stone under rusty riveted iron plates, big fists, a horned helmet and a glowing lantern heart | 11,702 |
 | NightUnicorn | Black and white horse with a pale horn | Night-purple unicorn with a starry coat, a lilac mane and tail, silver hooves and a glowing spiral horn | 11,516 |
+| SunDragon | Yellow long-legged dragon with a red spiky crest | Golden sun dragon on a low stance, with a wedge head, swept-back horns, big folded wings with warm membranes and a flame-tipped tail | 11,724 |
+| LavaWolf | Dark orange crumbly wolf | Wolf of cooled lava: broken basalt plates with glowing cracks, ember eyes and a mane of flat flame locks that glow at the tips | 11,192 |
+| BearCub | Brown blocky bear with a bump on its head | Chubby honey-brown plush cub sitting up, with a cream belly, pale paw pads and a cowlick tuft | 10,648 |
+| Boar | Brown blocky pig with a stick tail | Bristly wild boar piglet with a dark mane, small tusks, faint piglet stripes and dark hooves | 11,760 |
+| Sheep | White cloud of wool with a grey face | Round fleece of fused curl clumps with a painted curl pattern, a soft grey face and a curled topknot | 10,608 |
+| Stag | Brown blocky deer with branch antlers | Graceful young stag with a spotted fawn coat, a pale throat and wide tan antlers | 11,696 |
+| RedPanda | Orange and black blocky animal with a tall tail | Red panda with a white face mask, cupped rimmed ears, dark legs and a soft ringed tail | 10,138 |
+| Ankylo | Sandy flat dinosaur with a club tail | Low, wide sandy ankylosaur with rows of domed scutes, side spikes, a dark beak, a smile and a bone club | 11,344 |
+| TreeDeer | Brown deer with tree branches and leaves on its back | Forest-spirit deer of grooved bark, with leafy branch antlers, a mossy back with red berries and glowing green spots | 11,992 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

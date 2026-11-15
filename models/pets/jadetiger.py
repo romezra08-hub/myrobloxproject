@@ -14,7 +14,17 @@ Must-haves, checked in every review:
      a red silk collar with gold trim and a gold coin.
   5. About 3 studs tall; Body under 12k triangles.
 
-Final: round 4.
+Final: round 9.
+
+Round 9: shallow eye sockets with a pale ring instead of dark shading, and the brow marks moved high on the forehead (the dark smudges over the eyes read as worried brows).
+
+Round 8: the eye tilt turned the other way, checked in a close crop of the front view: the outer corners now rise (the previous sign still drooped them); the lower lid in jade, not pale.
+
+Round 7: only a sliver of upper lid and a pale lift from below, so each eye has a round top and a flatter bottom and reads alert (a level lid over a round bottom looked sleepy and sad).
+
+Round 6: almond eyes under a level carved lid, the catchlight lower and pupils a little smaller, for a calm, alert gaze (big round eyes still looked surprised); two short brow marks that splay outward instead of three lines (they read as frown lines); bigger, taller ears.
+
+Round 5 (after review: "a rubbery green cat with a sad, droopy face"): the eyes tilted about the line of sight so they sit level with the outer corners a touch up, under a thinner lid, for an alert gaze (tilted about their own axis they drooped and looked pleading); upright rounded ears (the low tilted ones read as a fold-eared house cat); one smooth tapered tail with bands painted along its length (cut-in rings read as a chain); stripes cut much shallower; shaped legs with shoulders and thighs, slim wrists and ankles and bigger paws; matter, deeper-green jade.
 
 Round 4: bigger pupils (small pupils in big amber eyes stared); a softer rim round the eyes (the dark rim read as a sly look); a little less saturated jade.
 
@@ -400,17 +410,21 @@ def aim(bm, at, d, up=(0, 0, 1)):
 # ---- the jade tiger -------------------------------------------------------------------------------
 
 NAME = "JadeTiger"
-COL = {"jade": hexc("#3E8262"), "jade_lt": hexc("#82B996"), "jade_dk": hexc("#1C4A36"), "jade_pale": hexc("#C6E0CC"),
+COL = {"jade": hexc("#2E7350"), "jade_lt": hexc("#6CAA84"), "jade_dk": hexc("#133B29"), "jade_pale": hexc("#B4D8BE"),
        "stripe": hexc("#0B3221"), "cream": hexc("#A8DDB8"), "red": hexc("#A8242A"), "red_dk": hexc("#6E1418"),
        "gold": hexc("#D9AE4C"), "gold_lt": hexc("#F2D58A"), "gold_dk": hexc("#8E6A24"), "pupil": hexc("#1A0E06"),
        "white": hexc("#FFFFFF"), "nose": hexc("#174A33")}
 SCALE = 1.32
-BAKE = {"shade": 0.42, "rough": 0.62, "vary": 0.16}
+BAKE = {"shade": 0.42, "rough": 0.74, "vary": 0.18}
 HEAD = Vector((0, -0.74, 1.5))
 HEAD_M = M(HEAD, rot=(4, 0, -5))
 NECK = [Vector((0, -0.4, 1.14)), Vector((0, -0.58, 1.34))]
 TAIL = [Vector((0, 0.62, 1.12)), Vector((0, 0.9, 1.3)), Vector((0, 0.98, 1.7)), Vector((0, 0.8, 1.96)), Vector((0, 0.56, 1.88)),
         Vector((0, 0.52, 1.66)), Vector((0, 0.66, 1.58)), Vector((0, 0.76, 1.7))]
+TAIL_S = [kit._spline(TAIL, i / 80 * (len(TAIL) - 1)) for i in range(81)]
+TAIL_ARC = [0.0]
+for _a, _b in zip(TAIL_S, TAIL_S[1:]):
+    TAIL_ARC.append(TAIL_ARC[-1] + (_b - _a).length)
 FACE = HEAD + Vector((0, -0.34, -0.04))
 FOCUS = FACE * SCALE
 FACE_DIST = 3.2
@@ -463,7 +477,7 @@ def veined(name, rough=0.55):
 
 
 def build():
-    jade_m = veined("Jade", rough=0.5)
+    jade_m = veined("Jade", rough=0.66)
     silk_m = painted("Silk", dict(strength=0.12, mottle=0.06, fine=60.0, length=1.0), rough=0.7)
     eye_m = kit.material("Eyes", "#E0A030", rough=0.06)
     c = Prop(NAME)
@@ -492,9 +506,15 @@ def build():
         clay += [ell(hd((0.085 * s, -0.33, -0.1)), (0.1, 0.09, 0.09)),            # whisker pads
                  ell(hd((0.25 * s, -0.04, -0.1)), (0.13, 0.13, 0.13))]            # cheeks
     for x, y, front in LEGS:
-        clay += [ell((x * 1.08, y, 0.8), (0.17, 0.22, 0.3)),
-                 loft([Vector((x, y, 0.75)), Vector((x, y - 0.02, 0.4)), Vector((x, y - 0.04, 0.12))], lambda t: lerp(0.13, 0.12, t), segs=12, rings=8),
-                 ell((x, y - 0.07, 0.085), (0.15, 0.18, 0.09))]                  # big cub paws
+        if front:
+            clay += [ell((x * 1.1, y + 0.02, 0.86), (0.19, 0.24, 0.3)),          # shoulders
+                     loft([Vector((x * 1.05, y, 0.78)), Vector((x, y - 0.02, 0.48)), Vector((x, y - 0.03, 0.24)), Vector((x, y - 0.05, 0.12))],
+                          lambda t: 0.135 - 0.04 * smooth(t, 0.2, 0.75) + 0.01 * smooth(t, 0.8, 1.0), segs=12, rings=10)]   # forearm to a slim wrist
+        else:
+            clay += [ell((x * 1.1, y, 0.86), (0.21, 0.3, 0.32)),                # thighs
+                     loft([Vector((x * 1.05, y + 0.06, 0.76)), Vector((x, y + 0.14, 0.46)), Vector((x, y + 0.06, 0.24)), Vector((x, y + 0.0, 0.12))],
+                          lambda t: 0.14 - 0.045 * smooth(t, 0.2, 0.75) + 0.01 * smooth(t, 0.8, 1.0), segs=12, rings=10)]  # hock to a slim ankle
+        clay.append(ell((x, y - 0.08, 0.09), (0.17, 0.21, 0.095)))             # big cub paws
     skin = fuse(join(clay), voxel=0.019, iterations=4)
     tree = BVHTree.FromBMesh(skin)
 
@@ -516,16 +536,16 @@ def build():
             p = HEAD_M.inverted() @ co
             if p.z > 0.12 and p.y < 0.1:                                                    # three marks on the brow
                 k = 0.0
-                for xm, top in ((-0.09, 0.24), (0.0, 0.3), (0.09, 0.24)):
-                    k = max(k, (1 - smooth(abs(p.x - xm), 0.015, 0.03)) * smooth(p.z, 0.12, 0.16) * smooth(p.z, top + 0.04, top))
-                return k
+                for xm, top in ((-0.06, 0.3), (0.0, 0.32), (0.06, 0.3)):                        # short marks high on the brow
+                    k = max(k, (1 - smooth(abs(p.x - xm), 0.01, 0.022)) * smooth(p.z, 0.22, 0.25) * smooth(p.z, top + 0.03, top))
+                return 0.6 * k
             if abs(p.x) > 0.22 and p.z < 0.06 and p.y < 0.05:                                # cheek stripes
                 w = 0.5 + 0.5 * math.sin(p.z * 40 + abs(p.x) * 12)
                 return smooth(w, 0.72, 0.85) * smooth(abs(p.x), 0.22, 0.3)
             return 0.0
-        if poly_dist(co, TAIL) < 0.12:                                                       # rings on the tail
-            t = (co - TAIL[0]).length
-            return smooth(0.5 + 0.5 * math.sin(t * 20), 0.7, 0.82)
+        if poly_dist(co, TAIL) < 0.13:                                                       # bands along the tail
+            i = min(range(len(TAIL_S)), key=lambda j: (TAIL_S[j] - co).length)
+            return 0.7 * smooth(0.5 + 0.5 * math.sin(TAIL_ARC[i] * 13.0), 0.72, 0.8) * smooth(TAIL_ARC[i], 0.15, 0.25)
         if co.z < 0.25:
             return 0.0
         side = smooth(n.z, -0.4, 0.1)
@@ -539,16 +559,17 @@ def build():
 
     def carve(co, n):
         d = n * 0.006 * noise.noise(co * 4.0)
-        d -= n * 0.024 * stripe(co, n) * (0 if (co - HEAD).length < 0.5 else 1)              # stripes cut in (painted only on the face)
+        shallow = 0 if (co - HEAD).length < 0.5 or poly_dist(co, TAIL) < 0.13 else 1
+        d -= n * 0.009 * stripe(co, n) * shallow                                             # stripes cut in shallow (painted only on the face and tail)
         for e, en in eyes:
-            d -= en * 0.03 * (1 - smooth((co - e).length, 0.075, 0.115))
+            d -= en * 0.014 * (1 - smooth((co - e).length, 0.075, 0.11))
         if (co - nose_at).length < 0.3:
             d -= n * 0.014 * (1 - smooth(min(poly_dist(co, m) for m in mouth), 0.005, 0.016))
         if co.z < 0.17 and n.y < 0.3:                                                        # toe grooves on the paws
             for x, y, front in LEGS:
-                if abs(co.y - (y - 0.07)) < 0.2 and abs(co.x - x) < 0.16:
-                    for dx in (-0.05, 0.0, 0.05):
-                        d -= n * 0.016 * (1 - smooth(abs(co.x - x - dx), 0.003, 0.013)) * smooth(co.z, 0.16, 0.09) * (1 if co.y < y - 0.05 else 0)
+                if abs(co.y - (y - 0.08)) < 0.22 and abs(co.x - x) < 0.18:
+                    for dx in (-0.055, 0.0, 0.055):
+                        d -= n * 0.018 * (1 - smooth(abs(co.x - x - dx), 0.003, 0.014)) * smooth(co.z, 0.17, 0.1) * (1 if co.y < y - 0.06 else 0)
         return d
     sculpt(skin, carve)
     skin = decimate(skin, 7400, keep=lambda co: max(0.8 * (1 - smooth((Vector(co) - hd((0, -0.22, -0.02))).length, 0.22, 0.45)),
@@ -566,32 +587,43 @@ def build():
             col = mix(col, COL["jade_pale"], 0.9 * smooth(p.y, -0.22, -0.32) * smooth(p.z, 0.0, -0.07))  # pale muzzle and chin
             col = mix(col, COL["jade_pale"], 0.7 * (1 - smooth((p - Vector((0.13 * (1 if p.x > 0 else -1), -0.24, 0.12))).length, 0.03, 0.07)))  # pale spots over the eyes
             for e, en in eyes:
-                col = mix(col, COL["jade_dk"], 0.6 * (1 - smooth((co - e).length, 0.075, 0.095)))
+                col = mix(col, COL["jade_pale"], 0.35 * (1 - smooth((co - e).length, 0.08, 0.12)))     # a pale ring, not a dark socket
             if (co - nose_at).length < 0.3:
                 col = mix(col, COL["stripe"], 0.85 * (1 - smooth(min(poly_dist(co, m) for m in mouth), 0.005, 0.012)))
         return col
-    add("skin", glossy(skin, 0.45), jade_m, jade_colour)
+    add("skin", glossy(skin, 0.2), jade_m, jade_colour)
 
-    # ---- inset amber eyes --------------------------------------------------------------------------------
+    # ---- inset amber almond eyes ---------------------------------------------------------------------------
+    def almond(w, h, d, cuts=4):
+        bm = kit.ball((w, h, d), cuts=cuts)
+        for v in bm.verts:
+            k = min(abs(v.co.x) / (w / 2), 1.0)
+            v.co.y *= (1 - k ** 2) ** 0.35
+        return bm
+
     for (e, en), s in zip(eyes, (-1, 1)):
         en = (en * 0.4 + R @ Vector((0, -1, 0)) * 0.6).normalized()
         up = (R @ Vector((0, 0, 1)) - en * en.dot(R @ Vector((0, 0, 1)))).normalized()
         ex = up.cross(en).normalized()
         basis = Matrix((ex, up, en)).transposed().to_4x4()
-        tilt = Matrix.Rotation(math.radians(12 * s), 4, en)
+        tilt = Matrix.Rotation(math.radians(-12 * s), 4, Vector((0, -1, 0)))        # outer corners up as seen from the front (checked in the render)
         basis = tilt @ basis
-        eb = kit.ball((0.12, 0.1, 0.08), cuts=3)
+        eb = almond(0.13, 0.088, 0.08)
         eb.transform(Matrix.Translation(e - en * 0.014) @ basis)
         add("eyes", eb, eye_m)
-        lid = kit.ball((0.135, 0.115, 0.095), cuts=6)                                         # a carved upper lid
-        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < 0.036 or v.co.z < -0.004], context='VERTS')
+        lid = almond(0.145, 0.1, 0.095, cuts=8)                                               # a carved upper lid with a level edge
+        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < 0.034 or v.co.z < -0.004], context='VERTS')
         lid.transform(Matrix.Translation(e - en * 0.012) @ basis)
-        add("lids", glossy(lid, 0.45), jade_m, COL["jade"])
+        add("lids", glossy(lid, 0.2), jade_m, COL["jade"])
+        low = almond(0.142, 0.098, 0.094, cuts=8)                                            # a lift from below: a round top, a flatter bottom
+        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.y > -0.022 or v.co.z < -0.004], context='VERTS')
+        low.transform(Matrix.Translation(e - en * 0.012) @ basis)
+        add("lids", glossy(low, 0.2), jade_m, COL["jade"])
         front = e + en * 0.024
-        pu = kit.ball((0.058, 0.066, 0.016), cuts=2)
+        pu = kit.ball((0.05, 0.06, 0.016), cuts=2)
         pu.transform(Matrix.Translation(front) @ basis)
         add("pupils", pu, jade_m, COL["pupil"])
-        add("pupils", ell(front + en * 0.006 + up * 0.015 + ex * 0.018 * s, (0.013, 0.013, 0.005), cuts=2), jade_m, COL["white"])
+        add("pupils", ell(front + en * 0.006 + up * 0.016 + ex * 0.016 * s, (0.013, 0.013, 0.005), cuts=2), jade_m, COL["white"])
 
     for m in mouth:                                                                     # the smile, cut as a fine dark line
         if len(m) > 1:
@@ -604,11 +636,12 @@ def build():
 
     # ---- round cub ears ------------------------------------------------------------------------------------
     for s in (-1, 1):
-        ear = kit.ball((0.2, 0.08, 0.18), cuts=4)
+        ear = kit.ball((0.2, 0.09, 0.25), cuts=4)
         for v in ear.verts:
             if v.co.y < 0:
                 v.co.y *= 0.4                                                                  # a shallow carved hollow
-        ear.transform(M(hd((0.25 * s, 0.06, 0.29)), rot=(-8, 0, -24 * s)))
+            v.co.x *= 1 - 0.25 * smooth(v.co.z, 0.0, 0.1)                                     # rounded, a little narrower at the top
+        ear.transform(M(hd((0.22 * s, 0.05, 0.38)), rot=(-4, 0, -14 * s)))                     # upright
 
         def ear_col(co, n, g):
             col = mix(COL["jade_dk"], COL["jade"], smooth(n.z, -0.3, 0.5))

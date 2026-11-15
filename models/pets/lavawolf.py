@@ -13,7 +13,13 @@ Must-haves, checked in every review:
   5. Clearly not the grey Wolf (silver locks, violet crystals): black and ember, sleek short coat.
      Matte with varied roughness; about 3 studs tall; Body under 12k triangles.
 
-Final: round 4.
+Final: round 7.
+
+Round 7: no locks under the chest (from the front they showed as stray orange flakes between the forelegs).
+
+Round 6: longer, broader flame locks lying flatter, with a stronger flicker and the ember starting halfway up (with only the tips lit they read as thorns); a lower row wrapping under the chest and sweeping down instead of three locks on the throat (they looked like fangs); deeper joins in the basalt crust.
+
+Round 5 (after review: "the tubular spikes read as carrots or a porcupine"): the mane rebuilt as twenty-odd flat flame-shaped locks in three overlapping rows that lie on the neck and sweep back, dark rock at the root and glowing ember only towards the tips, three more down the throat; shorter ears; thicker upper legs and lower legs, bigger paws; the basalt as broken rock (a crust of plates with deep joins and lumpy carving) instead of flat fur.
 
 Round 4: the chest ruff is a few broad flame locks curling out from under the throat (the long strands on the chest hung like a grass skirt).
 
@@ -415,9 +421,40 @@ FACE_DIST = 3.4
 LEGS = [(-0.2, -0.52, True), (0.2, -0.52, True), (-0.22, 0.62, False), (0.22, 0.62, False)]
 
 
+def blade(L, w, th=0.02, cuts=3, curve=0.0):
+    """A pointed leaf along +X from the origin (width along Z, thickness along Y); g runs root 0 to tip 1."""
+    bm = kit.ball((1, 1, 1), cuts=cuts)
+    lg = bm.verts.layers.float.new("g")
+    for v in bm.verts:
+        u = min(max(v.co.x + 0.5, 0.0), 1.0)
+        f = math.sin(math.pi * (0.08 + 0.92 * u ** 0.75)) ** 0.7 * (1 - 0.2 * u) + 0.03
+        v.co = Vector((u * L, v.co.y * 2 * th * (0.4 + 0.6 * f) + curve * L * u * u, v.co.z * 2 * w * f))
+        v[lg] = u
+    return bm
+
+
+def flame(L, w, seed):
+    """A flat flame-shaped lock: a leaf with a flicker to one side near its tip, lifting slightly off the skin."""
+    bm = blade(L, w, th=0.018, cuts=3, curve=0.05)
+    lg = bm.verts.layers.float["g"]
+    side = 1 if _rnd(seed, 2.0) > 0.5 else -1
+    for v in bm.verts:
+        u = v[lg]
+        v.co.z += side * 0.22 * L * math.sin(u * 3.0) * u                                # a flame's flicker
+    return bm
+
+
+def frame_to(bm, at, d, n):
+    """Local X -> d, local Y -> n (made perpendicular), local Z -> their cross."""
+    d = Vector(d).normalized()
+    n = (Vector(n) - d * d.dot(Vector(n))).normalized()
+    bm.transform(M(at) @ Matrix((d, n, d.cross(n))).transposed().to_4x4())
+    return bm
+
+
 def build():
-    fur_m = painted("Basalt", dict(strength=0.22, mottle=0.14, fine=40.0, length=4.0), rough=0.9)
-    lock_m = painted("Mane", dict(strength=0.25, mottle=0.08, fine=50.0, length=6.0), rough=0.86)
+    fur_m = crusted("Basalt", rough=0.92, size=0.085, joins=0.44, vary=0.22)
+    lock_m = painted("Mane", dict(strength=0.12, mottle=0.08, fine=30.0, length=3.0), rough=0.86)
     eye_m = kit.material("Eyes", "#D98A2A", rough=0.06)
     glow = kit.material("GLOW_Lava", "#FF7A22", rough=0.4, emit=2.4)
     c = Prop(NAME)
@@ -448,15 +485,15 @@ def build():
     for x, y, front in LEGS:
         s = 1 if x > 0 else -1
         if front:
-            clay += [ell((x * 1.1, y, 1.2), (0.17, 0.22, 0.32)),
+            clay += [ell((x * 1.1, y, 1.18), (0.2, 0.25, 0.36)),
                      loft([Vector((x, y - 0.02, 1.0)), Vector((x, y - 0.04, 0.55)), Vector((x, y - 0.03, 0.22)), Vector((x, y - 0.06, 0.1))],
-                          lambda t: 0.078 + 0.05 * (1 - smooth(t, 0.1, 0.6)), segs=12, rings=10)]
+                          lambda t: 0.09 + 0.06 * (1 - smooth(t, 0.1, 0.6)), segs=12, rings=10)]
         else:
-            clay += [ell((x * 1.1, y, 1.2), (0.19, 0.32, 0.34)),
+            clay += [ell((x * 1.1, y, 1.18), (0.22, 0.35, 0.37)),
                      loft([Vector((x, y + 0.1, 1.0)), Vector((x, y + 0.26, 0.6)), Vector((x, y + 0.14, 0.3)), Vector((x, y + 0.1, 0.1))],
-                          lambda t: 0.072 + 0.06 * (1 - smooth(t, 0.05, 0.45)), segs=12, rings=10)]
+                          lambda t: 0.085 + 0.07 * (1 - smooth(t, 0.05, 0.45)), segs=12, rings=10)]
         py = y - 0.1 if front else y + 0.04
-        clay.append(ell((x, py, 0.065), (0.1, 0.14, 0.065)))
+        clay.append(ell((x, py, 0.07), (0.12, 0.165, 0.07)))
     skin = fuse(join(clay), voxel=0.02, iterations=3)
     tree = BVHTree.FromBMesh(skin)
 
@@ -502,7 +539,7 @@ def build():
         return min(poly_dist(co, cr) for cr in cracks if len(cr) > 2)
 
     def carve(co, n):
-        d = n * 0.01 * noise.noise(Vector((co.x * 9, co.y * 9, co.z * 3)))
+        d = n * 0.014 * noise.noise(co * 7.0) + n * 0.006 * noise.noise(co * 19.0)        # broken-rock lumps
         for e, en in eyes:
             d -= en * 0.02 * (1 - smooth((co - e).length, 0.06, 0.1))
         d -= n * 0.018 * (1 - smooth(crack_d(co), 0.008, 0.03))
@@ -581,7 +618,7 @@ def build():
     # ---- tall ears with ember insides ------------------------------------------------------------------
     for s in (-1, 1):
         root = hd((0.13 * s, 0.08, 0.17))
-        pts = [root, root + Vector((0.03 * s, 0.01, 0.14)), root + Vector((0.06 * s, 0.03, 0.27)), root + Vector((0.075 * s, 0.05, 0.36))]
+        pts = [root, root + Vector((0.03 * s, 0.01, 0.11)), root + Vector((0.05 * s, 0.03, 0.21)), root + Vector((0.065 * s, 0.045, 0.28))]
         ear = loft(pts, lambda t: 0.13 * (1 - t) ** 0.85 + 0.006, segs=12, rings=12, flat=0.42)
         for v in ear.verts:
             gg = v[ear.verts.layers.float["g"]]
@@ -597,36 +634,32 @@ def build():
 
     # ---- an ember mane: flame-shaped locks round the neck and shoulders ---------------------------------------
     def lock_col(co, n, g):
-        col = mix(COL["basalt"], COL["ember_dk"], smooth(g, 0.0, 0.3))
-        col = mix(col, COL["ember"], smooth(g, 0.3, 0.65))
-        return mix(col, COL["ember_lt"], 0.85 * smooth(g, 0.75, 1.0))
+        col = mix(COL["basalt_dk"], COL["basalt"], smooth(n.z, -0.4, 0.6))
+        col = mix(col, COL["ember_dk"], smooth(g, 0.22, 0.5))                           # dark rock at the root, ember towards the tip
+        col = mix(col, COL["ember"], smooth(g, 0.55, 0.8))
+        return mix(col, COL["ember_lt"], 0.9 * smooth(g, 0.85, 1.0))
     axis = (NECK[2] - NECK[0]).normalized()
-    for k in range(36):
-        a = math.radians(-155 + 310 * _rnd(k, 5.1))           # all round the neck, thickest on top
-        along = 0.1 + 0.95 * _rnd(k, 3.3)
-        base = kit._spline(NECK, along * 2)
-        side = Vector((math.sin(a), 0, math.cos(a)))
-        side = (side - axis * axis.dot(side)).normalized()
-        start, nrm = tree.ray_cast(base + side * 0.8, -side)[:2]
-        if start is None:
-            continue
-        top = smooth(side.z, -0.2, 0.8)
-        L = 0.24 + 0.2 * top + 0.08 * _rnd(k, 7.0)
-        d = (nrm * 0.3 + Vector((0, 1.0, 0.25 + 0.2 * top))).normalized()            # swept back like flames
-        if side.z < -0.3:                                                             # under the throat they hang
-            d = (nrm * 0.35 + Vector((0, 0.35, -0.9))).normalized()
-        bend = Vector((0.04 * math.sin(k * 2.1), 0, 0.05))
-        pts = [start - nrm * 0.04, start + d * L * 0.4 + nrm * 0.03, start + d * L * 0.75 + bend, start + d * L + bend * 2 + nrm * 0.02]
-        lk = loft(pts, lambda tt: 0.075 * (1 - tt) ** 0.8 + 0.006, segs=6, rings=7, flat=0.5)
-        add("mane", lk, lock_m, lock_col)
-    for k, (x, z) in enumerate(((0.0, 1.86), (-0.1, 1.82), (0.1, 1.82), (-0.18, 1.72), (0.18, 1.72), (-0.06, 1.68), (0.06, 1.68))):
-        start, nrm = hit((x, -3, z), (0, 1, 0))                                       # a short flame ruff under the throat
-        if start is None:
-            continue
-        L = 0.26 - 0.04 * (k > 4)
-        d = (nrm * 0.6 + Vector((x * 2.2, 0, -0.75))).normalized()
-        pts = [start - nrm * 0.04, start + d * L * 0.45, start + d * L * 0.85 + nrm * 0.02, start + d * L + nrm * 0.06 + Vector((0, 0, 0.03))]
-        add("mane", loft(pts, lambda tt: 0.09 * (1 - tt) ** 0.8 + 0.006, segs=6, rings=7, flat=0.5), lock_m, lock_col)
+
+    def lay(start, nrm, want, L, w, k):
+        """A flat flame lock lying on the skin at `start`, swept along `want` (kept tangent to the skin)."""
+        d = (want - nrm * nrm.dot(want)).normalized()
+        b = flame(L, w, k)
+        frame_to(b, start - nrm * 0.012, d, nrm)
+        add("mane", b, lock_m, lock_col)
+    k = 0
+    for row, (along, ring, span) in enumerate(((0.04, 7, 128), (0.36, 7, 122), (0.72, 6, 116))):   # three overlapping rows that hug the neck
+        for j in range(ring):
+            a = math.radians(-span + 2 * span * (j + 0.5 * (row % 2)) / (ring - 0.5))
+            base = kit._spline(NECK, along * 2)
+            side = Vector((math.sin(a), 0, math.cos(a)))
+            side = (side - axis * axis.dot(side)).normalized()
+            start, nrm = tree.ray_cast(base + side * 0.8, -side)[:2]
+            if start is None:
+                continue
+            top = smooth(side.z, -0.3, 0.9)
+            want = Vector((0, 1.0, 0.3 + 0.25 * top)) if side.z > -0.4 else Vector((side.x * 0.6, 0.5, -1.0))   # under the chest they sweep down
+            lay(start, nrm, want, 0.38 + 0.14 * top + 0.05 * _rnd(k, 7.0), 0.1 + 0.025 * top, k)
+            k += 1
 
     lowest = min(v.co.z for bm, _ in c.parts.values() for v in bm.verts)
     for bm, _ in c.parts.values():

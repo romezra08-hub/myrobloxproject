@@ -417,6 +417,15 @@ PetAnimator.PETS = {
 	frostwolf = { style = "walker", speed = 1.05, bounce = 0.05, lookTilt = 6 },
 	irongolem = { style = "heavy", speed = 1.0, roll = 5, impact = 3 },
 	nightunicorn = { style = "walker", speed = 1.0, bounce = 0.05, skip = 0.1, lookTilt = 5 },
+	sundragon = { style = "heavy", speed = 1.1, bounce = 0.04, roll = 3 },
+	lavawolf = { style = "walker", speed = 1.05, bounce = 0.05, lookTilt = 6 },
+	bearcub = { style = "sitter", skip = 0.2, bounce = 0.05, speed = 1.2 },
+	boar = { style = "walker", speed = 1.25, bounce = 0.05, skip = 0.15, lookTilt = 5 },
+	sheep = { style = "walker", speed = 1.15, bounce = 0.06, skip = 0.15, lookTilt = 6 },
+	stag = { style = "walker", speed = 0.95, bounce = 0.04, lookTilt = 5 },
+	redpanda = { style = "walker", speed = 1.2, bounce = 0.05, skip = 0.15, lookTilt = 8 },
+	ankylo = { style = "heavy", speed = 1.2, roll = 3 },
+	treedeer = { style = "walker", speed = 0.95, bounce = 0.04, lookTilt = 5 },
 } :: { [string]: { [string]: any } }
 
 -- Fields that `amp` scales, and the periods that `speed` shortens.

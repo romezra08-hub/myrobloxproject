@@ -13,7 +13,13 @@ Must-haves, checked in every review:
   5. Clearly not the obsidian Dragon (black, red, wings raised): gold and red, wings folded, a frill.
      Matte scales with varied roughness; about 3 studs tall; Body under 12k triangles.
 
-Final: round 5.
+Final: round 8.
+
+Round 8: eyes a little more open (the heavy lid looked smug); a narrower snout and smaller cheeks so the head is not a broad bulldog face from the front.
+
+Round 7: level brow ridges and a lighter lid (the angled brows scowled); a slimmer wing arm with five broader membranes hung along its whole length so the folded wing reads as one piece (the arm stood out like a pipe); scaled up 1.3 times to about 2.5 studs now that it stands low.
+
+Round 6 (after review: "reads as a llama or giraffe"): a real dragon head (a long flat-topped wedge snout, sharp angled brow ridges, longer horns swept back behind a smaller crest); a shorter, thicker neck set low on the shoulders; a lower, heavier body; thicker legs with broad clawed feet planted wider; big folded wings rising above the back on a jointed arm with four warm membrane panels and a thumb claw; a longer, heavier tail; smaller, darker-gold scales on the neck; narrower calm eyes under a level lid.
 
 Round 5: a confident smile drawn as a fine line that turns up at the back of the jaw, a lighter lid and bigger pupils (the face read as sleepy and blank).
 
@@ -401,21 +407,21 @@ def aim(bm, at, d, up=(0, 0, 1)):
 # ---- the sun dragon -------------------------------------------------------------------------------
 
 NAME = "SunDragon"
-COL = {"gold": hexc("#EDBB45"), "gold_lt": hexc("#F8D978"), "gold_dk": hexc("#BC8424"), "belly": hexc("#F7E3A6"),
+COL = {"gold": hexc("#E3AA3A"), "gold_lt": hexc("#F4CF6A"), "gold_dk": hexc("#A8721E"), "belly": hexc("#F2D894"),
        "red": hexc("#D2401E"), "red_dk": hexc("#8E2414"), "orange": hexc("#F0782A"), "flame": hexc("#FFC24A"),
        "horn": hexc("#F6E2B0"), "horn_dk": hexc("#B48A50"), "line": hexc("#5A2A12"), "pupil": hexc("#1A0C06"),
        "white": hexc("#FFFFFF"), "claw": hexc("#E8D6B0")}
-SCALE = 1.0
+SCALE = 1.3
 BAKE = {"shade": 0.42, "rough": 0.82, "vary": 0.14}
-HEAD = Vector((0, -1.26, 2.06))
-HEAD_M = M(HEAD, rot=(-4, 0, 0))
-NECK = [Vector((0, -0.4, 1.4)), Vector((0, -0.8, 1.6)), Vector((0, -0.99, 1.82)), Vector((0, -1.13, 1.97))]
-TAIL = [Vector((0, 0.72, 1.26)), Vector((0, 1.12, 1.1)), Vector((0.18, 1.5, 0.8)), Vector((0.42, 1.78, 0.56)), Vector((0.62, 1.92, 0.5)),
-        Vector((0.78, 1.96, 0.6))]
-FACE = HEAD + Vector((0, -0.28, -0.04))
-FOCUS = FACE
-FACE_DIST = 3.2
-LEGS = [(-0.2, -0.42, True), (0.2, -0.42, True), (-0.21, 0.56, False), (0.21, 0.56, False)]
+HEAD = Vector((0, -1.16, 1.6))
+HEAD_M = M(HEAD, rot=(-3, 0, 0))
+NECK = [Vector((0, -0.42, 1.08)), Vector((0, -0.74, 1.28)), Vector((0, -0.94, 1.44)), Vector((0, -1.06, 1.54))]
+TAIL = [Vector((0, 0.8, 1.0)), Vector((0, 1.25, 0.8)), Vector((0.14, 1.75, 0.52)), Vector((0.44, 2.15, 0.33)), Vector((0.8, 2.36, 0.28)),
+        Vector((1.08, 2.36, 0.4))]
+FACE = HEAD + Vector((0, -0.3, -0.02))
+FOCUS = FACE * SCALE
+FACE_DIST = 3.4
+LEGS = [(-0.3, -0.38, True), (0.3, -0.38, True), (-0.31, 0.58, False), (0.31, 0.58, False)]
 
 
 def blade(L, w, th=0.02, cuts=3, curve=0.0, tip=1.0):
@@ -439,7 +445,7 @@ def frame_to(bm, at, d, n):
 
 
 def build():
-    scale_m = crusted("Scales", rough=0.82, size=0.045, joins=0.16, vary=0.1)
+    scale_m = crusted("Scales", rough=0.84, size=0.034, joins=0.22, vary=0.12)
     fin_m = painted("Fins", dict(strength=0.1, mottle=0.08, fine=30.0, length=3.0), rough=0.78)
     eye_m = kit.material("Eyes", "#F0A030", rough=0.06)
     glow = kit.material("GLOW_Sun", "#FFA63A", rough=0.4, emit=2.4)
@@ -457,37 +463,39 @@ def build():
         return HEAD_M @ Vector(p)
 
     def snout():
-        bm = kit.ball((0.25, 0.52, 0.17), cuts=4)
+        bm = kit.ball((0.21, 0.68, 0.16), cuts=5)
         for v in bm.verts:
-            k = smooth(-v.co.y, -0.1, 0.26)                                       # narrower and flatter towards the tip
-            v.co.x *= 1 - 0.4 * k
-            v.co.z *= 1 - 0.25 * k
-        bm.transform(HEAD_M @ M((0, -0.24, -0.04)))
+            k = smooth(-v.co.y, -0.15, 0.33)                                      # narrower and flatter towards the tip
+            v.co.x *= 1 - 0.38 * k
+            v.co.z *= 1 - 0.2 * k
+            if v.co.z > 0:
+                v.co.z *= 0.75                                                    # a flat top, a dragon's wedge
+        bm.transform(HEAD_M @ M((0, -0.32, -0.03)))
         return bm
 
     # ---- one fused skin: slender body, long legs, an S-curved neck, a fine head and a long slim tail ---------
-    clay = [ell((0, 0.12, 1.24), (0.3, 0.62, 0.3)),
-            ell((0, -0.32, 1.28), (0.33, 0.36, 0.37)),                         # chest
-            ell((0, 0.56, 1.24), (0.29, 0.32, 0.31)),                           # hips
-            loft(NECK, lambda t: lerp(0.27, 0.16, t), segs=14, rings=14),
-            loft(TAIL, lambda t: 0.2 * (1 - t) ** 1.1 + 0.035, segs=12, rings=28),
-            ell(hd((0, 0.04, 0.03)), (0.22, 0.25, 0.2)),                        # cranium
-            snout(),                                                             # a flat, tapering wedge of a snout
-            ell(hd((0, -0.24, -0.11)), (0.1, 0.21, 0.05))]                      # lower jaw
+    clay = [ell((0, 0.12, 0.94), (0.36, 0.68, 0.33)),
+            ell((0, -0.32, 0.98), (0.4, 0.4, 0.4)),                            # deep chest
+            ell((0, 0.58, 0.95), (0.35, 0.36, 0.35)),                           # hips
+            loft(NECK, lambda t: lerp(0.31, 0.19, t), segs=14, rings=12),
+            loft(TAIL, lambda t: 0.27 * (1 - t) ** 1.15 + 0.04, segs=12, rings=30),
+            ell(hd((0, 0.05, 0.03)), (0.2, 0.24, 0.17)),                        # cranium
+            snout(),                                                             # a long, flat wedge of a snout
+            ell(hd((0, -0.3, -0.11)), (0.11, 0.27, 0.05))]                      # lower jaw
     for s in (-1, 1):
-        clay += [ell(hd((0.11 * s, -0.05, 0.08)), (0.085, 0.12, 0.06)),          # brow ridges
-                 ell(hd((0.14 * s, 0.02, -0.06)), (0.09, 0.12, 0.1))]             # cheeks
+        clay += [ell(hd((0.105 * s, -0.07, 0.085)), (0.07, 0.16, 0.042), rot=(0, 8 * s, 0)),      # brow ridges, level, not scowling
+                 ell(hd((0.12 * s, 0.03, -0.06)), (0.07, 0.11, 0.08))]            # cheeks
     for x, y, front in LEGS:
         if front:
-            clay += [ell((x * 1.12, y, 1.08), (0.14, 0.18, 0.28)),
-                     loft([Vector((x * 1.1, y, 0.9)), Vector((x * 1.05, y - 0.06, 0.5)), Vector((x, y - 0.02, 0.2)), Vector((x, y - 0.08, 0.07))],
-                          lambda t: 0.06 + 0.04 * (1 - smooth(t, 0.1, 0.6)), segs=12, rings=10)]
+            clay += [ell((x * 0.95, y, 0.8), (0.17, 0.21, 0.27)),               # shoulders
+                     loft([Vector((x * 0.95, y, 0.68)), Vector((x, y - 0.04, 0.4)), Vector((x * 1.04, y - 0.02, 0.18)), Vector((x * 1.06, y - 0.06, 0.08))],
+                          lambda t: 0.09 + 0.045 * (1 - smooth(t, 0.1, 0.6)), segs=12, rings=10)]
         else:
-            clay += [ell((x * 1.12, y, 1.08), (0.16, 0.28, 0.3)),
-                     loft([Vector((x * 1.1, y + 0.08, 0.9)), Vector((x * 1.08, y + 0.24, 0.5)), Vector((x, y + 0.1, 0.22)), Vector((x, y + 0.02, 0.07))],
-                          lambda t: 0.062 + 0.055 * (1 - smooth(t, 0.05, 0.45)), segs=12, rings=10)]
-        py = y - 0.14 if front else y - 0.06
-        clay.append(ell((x, py, 0.055), (0.08, 0.13, 0.055)))
+            clay += [ell((x * 0.95, y, 0.8), (0.19, 0.31, 0.3)),                # thighs
+                     loft([Vector((x * 0.95, y + 0.08, 0.66)), Vector((x, y + 0.2, 0.42)), Vector((x * 1.04, y + 0.08, 0.2)), Vector((x * 1.06, y + 0.02, 0.08))],
+                          lambda t: 0.09 + 0.06 * (1 - smooth(t, 0.05, 0.45)), segs=12, rings=10)]
+        py = y - 0.13 if front else y - 0.05
+        clay.append(ell((x * 1.06, py, 0.06), (0.12, 0.17, 0.06)))            # broad clawed feet
     skin = fuse(join(clay), voxel=0.018, iterations=3)
     tree = BVHTree.FromBMesh(skin)
 
@@ -500,18 +508,18 @@ def build():
         tgt = hd((0.11 * s, -0.08, 0.04))
         o = tgt + R @ Vector((0.9 * s, -0.9, 0.1))
         eyes.append(hit(o, tgt - o))
-    nostrils = [hit(hd((0.04 * s, -1.5, -0.03)), fwd) for s in (-1, 1)]
+    nostrils = [hit(hd((0.045 * s, -1.5, -0.01)), fwd) for s in (-1, 1)]
     mouth = []
     for s in (-1, 1):
         pts = []
         for k in range(6):
-            y = -0.44 + 0.065 * k
-            z = -0.1 + 0.035 * smooth(k, 2.5, 5)
+            y = -0.6 + 0.09 * k
+            z = -0.085 + 0.03 * smooth(k, 2.5, 5)
             p = hit(hd((0.6 * s, y, z)), R @ Vector((-s, 0, 0)))[0]
             if p is not None:
                 pts.append(p)
         mouth.append(pts)
-    SPINE = [kit._spline(NECK, t) for t in (0.4, 1.0, 1.6, 2.2, 2.8)] + [Vector((0, -0.2, 1.62)), Vector((0, 0.2, 1.56)), Vector((0, 0.6, 1.56))]
+    SPINE = [kit._spline(NECK, t) for t in (0.4, 1.0, 1.6, 2.2, 2.8)] + [Vector((0, -0.2, 1.36)), Vector((0, 0.2, 1.28)), Vector((0, 0.6, 1.3))]
 
     def carve(co, n):
         d = n * 0.006 * noise.noise(co * 5.0)
@@ -534,8 +542,9 @@ def build():
         col = mix(COL["gold_dk"], COL["gold"], smooth(n.z, -0.6, 0.2))
         col = mix(col, COL["gold_lt"], 0.45 * smooth(n.z, 0.4, 1.0) * smooth(noise.noise(co * 3.0), -0.2, 0.5))
         col = mix(col, COL["orange"], 0.35 * smooth(poly_dist(co, SPINE), 0.16, 0.05) * smooth(n.z, 0.2, 0.8))   # warmer down the spine
+        col = mix(col, COL["gold_dk"], 0.55 * smooth(poly_dist(co, NECK), 0.4, 0.2) * smooth(n.z + 0.3 * n.y, -0.1, 0.6))   # darker gold neck
         col = mix(col, COL["belly"], 0.85 * smooth(-n.z, 0.15, 0.6) * smooth(co.z, 0.55, 0.8))                 # pale belly and throat
-        col = mix(col, COL["belly"], 0.8 * smooth(-n.y - n.z, 0.6, 1.2) * smooth(co.z, 1.3, 1.6) * smooth(co.y, -0.2, -0.6))
+        col = mix(col, COL["belly"], 0.8 * smooth(-n.y - n.z, 0.6, 1.2) * smooth(co.z, 1.0, 1.3) * smooth(co.y, -0.2, -0.6))
         col = mix(col, COL["orange"], 0.5 * smooth(co.z, 0.3, 0.08))                                           # sun-burnt feet
         tl = poly_dist(co, TAIL)
         if tl < 0.24:
@@ -552,24 +561,24 @@ def build():
     add("skin", glossy(skin, 0.15), scale_m, scale_colour)
 
     # ---- amber eyes with a confident level lid ---------------------------------------------------------
-    EW, EH, ED = 0.1, 0.075, 0.036
+    EW, EH, ED = 0.1, 0.064, 0.034
     for (e, en), s in zip(eyes, (-1, 1)):
         en = (en * 0.5 + R @ Vector((0, -1, 0)) * 0.5).normalized()
         up = (R @ Vector((0, 0, 1)) - en * en.dot(R @ Vector((0, 0, 1)))).normalized()
         ex = up.cross(en).normalized()
-        tilt = Matrix.Rotation(math.radians(14 * s), 4, Vector((0, -1, 0)))       # outer corners up, as seen from the front
+        tilt = Matrix.Rotation(math.radians(10 * s), 4, Vector((0, -1, 0)))       # outer corners up, as seen from the front
         basis = Matrix((ex, up, en)).transposed().to_4x4()
         place = Matrix.Translation(e - en * 0.012) @ tilt @ basis
         eb = kit.ball((EW, EH, ED * 2), cuts=3)
         eb.transform(place)
         add("eyes", eb, eye_m)
         front = e - en * 0.012 + en * (ED - 0.005)
-        pupil = kit.ball((0.034, 0.056, 0.014), cuts=2)
+        pupil = kit.ball((0.03, 0.054, 0.012), cuts=2)
         pupil.transform(Matrix.Translation(front) @ tilt @ basis)
         add("pupils", pupil, scale_m, COL["pupil"])
         add("pupils", ell(front + en * 0.005 + up * 0.018 + ex * 0.014 * s, (0.011, 0.011, 0.005), cuts=2), scale_m, COL["white"])
         lid = kit.ball((EW * 1.14, EH * 1.2, ED * 2.25), cuts=6)
-        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < EH * 0.44 or v.co.z < -0.004], context='VERTS')
+        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < EH * 0.42 or v.co.z < -0.004], context='VERTS')
         lid.transform(place)
         add("lids", lid, scale_m, COL["gold_dk"])
 
@@ -579,22 +588,22 @@ def build():
 
     # ---- swept-back horns ----------------------------------------------------------------------------
     for s in (-1, 1):
-        root = hd((0.09 * s, 0.12, 0.12))
-        pts = [root, root + R @ Vector((0.04 * s, 0.14, 0.06)), root + R @ Vector((0.07 * s, 0.3, 0.06)), root + R @ Vector((0.08 * s, 0.42, 0.12))]
-        horn = loft(pts, lambda t: 0.045 * (1 - t) ** 0.9 + 0.005, segs=10, rings=10)
+        root = hd((0.12 * s, 0.14, 0.1))
+        pts = [root, root + R @ Vector((0.05 * s, 0.16, 0.06)), root + R @ Vector((0.09 * s, 0.36, 0.08)), root + R @ Vector((0.1 * s, 0.56, 0.18))]
+        horn = loft(pts, lambda t: 0.055 * (1 - t) ** 0.9 + 0.006, segs=10, rings=12)
         add("horns", glossy(horn, 0.35), fin_m, lambda co, n, g: mix(COL["horn_dk"], COL["horn"], smooth(g, 0.0, 0.6)))
 
     # ---- a sun-ray frill behind the head ----------------------------------------------------------------------
     def ray_col(co, n, g):
         col = mix(COL["gold"], COL["orange"], smooth(g, 0.1, 0.5))
         return mix(col, COL["red"], 0.85 * smooth(g, 0.55, 0.9))
-    centre = hd((0, 0.16, 0.0))
+    centre = hd((0, 0.18, 0.02))
     back = R @ Vector((0, 1, 0))
-    for k in range(7):
-        a = math.radians(-75 + 150 * k / 6)
+    for k in range(5):
+        a = math.radians(-50 + 100 * k / 4)
         out = R @ Vector((math.sin(a), 0, math.cos(a)))
         d = (out + back * 1.9 + Vector((0, 0, 0.35))).normalized()                 # swept back like a crest, not round the face
-        L = 0.36 + 0.12 * math.cos(a)
+        L = 0.3 + 0.1 * math.cos(a)
         b = blade(L, 0.05, th=0.014, cuts=2, curve=0.05)
         frame_to(b, centre + out * 0.1, d, back)
         add("frill", b, fin_m, ray_col)
@@ -617,29 +626,31 @@ def build():
         sp.transform(M(top - Vector((0, 0, 0.02))))
         add("spines", sp, fin_m, spine_col)
 
-    # ---- small wings folded along the sides -----------------------------------------------------------------
+    # ---- big folded wings rising above the back ---------------------------------------------------------------
     def wing_col(co, n, g):
-        col = mix(COL["red_dk"], COL["red"], smooth(g, 0.0, 0.5))
-        return mix(col, COL["orange"], 0.6 * smooth(g, 0.6, 1.0))
+        col = mix(COL["red_dk"], COL["red"], smooth(g, 0.0, 0.45))
+        return mix(col, COL["orange"], 0.7 * smooth(g, 0.55, 1.0))
     for s in (-1, 1):
-        shoulder, sn = hit(Vector((0.6 * s, -0.25, 1.52)), Vector((-s, 0, -0.25)))
-        add("wings", loft([shoulder - sn * 0.03, shoulder + Vector((0.07 * s, 0.25, 0.13)), shoulder + Vector((0.09 * s, 0.75, 0.08))],
-                          lambda t: 0.055 - 0.025 * t, segs=8, rings=8), scale_m, COL["gold_dk"])              # the folded arm
-        for k, (L, droop) in enumerate(((0.8, 0.12), (0.7, 0.32), (0.58, 0.52))):
-            root = shoulder + Vector((0.08 * s, 0.2 + 0.12 * k, 0.07 - 0.03 * k))
-            d = Vector((0.08 * s, 1.0, -droop))
-            b = blade(L, 0.14, th=0.012, cuts=3, curve=0.0, tip=0.7)
-            frame_to(b, root, d, Vector((s, 0, 0.15)))
+        shoulder, sn = hit(Vector((0.7 * s, -0.22, 1.2)), Vector((-s, 0, -0.3)))
+        elbow = shoulder + Vector((0.06 * s, 0.12, 0.42))
+        wrist = shoulder + Vector((0.04 * s, 0.62, 0.6))
+        add("wings", loft([shoulder - sn * 0.04, elbow, wrist], lambda t: 0.05 - 0.025 * t, segs=8, rings=12), scale_m, COL["gold_dk"])   # the folded arm
+        add("wings", loft([wrist, wrist + Vector((0.02 * s, -0.05, 0.1))], lambda t: 0.03 * (1 - t) + 0.004, segs=6, rings=4), fin_m, COL["claw"])  # thumb claw
+        for k, (L, ang) in enumerate(((0.95, 0.3), (0.88, 0.62), (0.76, 0.95), (0.62, 1.25), (0.5, 1.55))):
+            root = wrist + (elbow - wrist) * (0.2 * k)                                    # membranes hung along the whole arm
+            d = Vector((0.03 * s, math.cos(ang), -math.sin(ang) * 0.9))                 # spars fanning back and down to the body
+            b = blade(L, 0.2, th=0.012, cuts=3, curve=0.0, tip=0.5)
+            frame_to(b, root, d, Vector((s, 0, 0.1)))
             add("wings", b, fin_m, wing_col)
 
     # ---- three-toed feet with pale claws ----------------------------------------------------------------
     for x, y, front in LEGS:
-        py = y - 0.14 if front else y - 0.06
-        for dx in (-0.05, 0.0, 0.05):
-            p, nrm = hit((x + dx, py - 1, 0.05), (0, 1, 0))
+        py = y - 0.13 if front else y - 0.05
+        for dx in (-0.07, 0.0, 0.07):
+            p, nrm = hit((x * 1.06 + dx, py - 1, 0.05), (0, 1, 0))
             if p is None:
                 continue
-            cl = lathe([(0.0, 0.0), (0.022, 0.0), (0.0, 0.07)], segs=6)
+            cl = lathe([(0.0, 0.0), (0.03, 0.0), (0.0, 0.1)], segs=6)
             cl.transform(M(p + Vector((0, 0.005, -0.01)), rot=(100, 0, 0)))
             add("claws", glossy(cl, 0.4), fin_m, COL["claw"])
 
