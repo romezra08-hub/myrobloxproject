@@ -10,6 +10,16 @@ Must-haves, checked in every review:
   3. Big frosted claws held up, ready but not threatening.
   4. Calm, determined eyes on short stalks (level lids, no angry frown) and a small calm mouth.
   5. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 5: a deeper ice blue, icy mottling and a blue wrist band on the white claws, a wider calm mouth.
+
+Round 4: thicker legs; the eyelids fitted to the eyes (they sat on top like caps).
+
+Round 3: legs splayed out sideways with high knees; ice veins and a darker rim band; frosted tubercles on the shell.
+
+Round 2: more saturated blue; the crab lowered on shorter legs (the long thin ones read spidery); bigger, clearer pincers; a calm mouth line.
+
+Round 1: first build.
 """
 import argparse
 import math
