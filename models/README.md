@@ -14,6 +14,7 @@ review and exports a file for Roblox Studio. Nothing is copied from other games.
 | `pets/<name>.py` | The current best version of a pet |
 | `pets/<name>_v1.py`, `_v2.py`, ... | Every practice round, kept so a change can be undone |
 | `eggs/eggs.py` | All six hatching eggs (`--only storm` builds one); `eggs_v1.py`... are its rounds |
+| `props/hatchery.py` | The Hatchery, where eggs are hatched |
 | `props/ores.py` | All seven mineable ore rocks (`--only gold` builds one); `ores_v1.py`... are its rounds |
 | `tools/pickaxes.py` | All five pickaxes (`--only gold` builds one); `pickaxes_v1.py`... are its rounds |
 | `export/<name>.fbx` and `<name>_colour.png` | What goes into Roblox Studio |
@@ -145,6 +146,20 @@ Weak points: the gold veins read as gold bars bent over the rock rather than set
 gold slabs look a little like buns. Up close the geode's rim crystals are still a spiky crown. The
 ember crack glows as a broad flat band, and the iron lumps look stuck on rather than grown. The
 gloss on coal, gold and obsidian is painted into the texture, so it will not move in game.
+
+## The Hatchery
+
+The machine where players hatch the eggs they mine (`props/hatchery.py`, sheet `preview/hatchery.png`),
+9.5 × 10.2 studs and 8.7 tall, 11,883 triangles: a stepped stone base, four crystal pylons, a brass and
+iron frame round a glass dome with an empty cushioned cradle, a control desk with gauges and a lever,
+and an egg hopper on the right.
+
+- Parts: `Hatchery_Body` (textured), `Hatchery_GLOW` (crystals, runes, conduits) and `Hatchery_Glass`
+  (the dome: set its Material to Glass and Transparency to about 0.6 in Studio).
+- Put an egg's bottom at 2 studs above the Hatchery's bottom centre (Blender empty `Hatchery_EggSpot`
+  at (0, 0, 2.0); Import 3D may drop the empty). All six eggs fit inside the dome.
+- Weak points: the empty dome looks plain until an egg is in it, the hopper reads only from the right,
+  and painted detail is soft up close (about 30 px per stud).
 
 ## Why they do not look like plastic
 

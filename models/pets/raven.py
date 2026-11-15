@@ -13,6 +13,10 @@ with its wings spread, and makes it a raven with a clever, warm face. Must-haves
      dark-grey beak with a clean closed line.
   5. Matte painted texture with crease shading; Body under 10k triangles.
 
+Round 6: from the side the tail was seen edge-on as a thin spike: it fans wider and tilts down, its
+feathers stepped in height, so the wedge reads from the side too; the wing sheen a shade darker so
+the wings stay black first and blue second.
+
 Round 5: the raised "ear" tufts made it read as a horned owl: gone, the nape ruff is fuller instead.
 The sheen on each feather was a hard blue band like a painted paddle: now a soft gradient that
 fades out towards the root and the edges and drifts between blue and violet from feather to feather.
@@ -371,7 +375,7 @@ def feather_material(name, black, sheen, edge, rough=0.75):
     tint.data_type = 'RGBA'
     link(hue.outputs[0], tint.inputs[0])
     tint.inputs[6].default_value = (*hexc(sheen), 1.0)
-    tint.inputs[7].default_value = (*hexc("#3B2C86"), 1.0)
+    tint.inputs[7].default_value = (*hexc("#352878"), 1.0)
     shaft = op('SUBTRACT', 1.0, op('MINIMUM', op('DIVIDE', h, 0.09), 1.0))
     mx = new("ShaderNodeMix")
     mx.data_type = 'RGBA'
@@ -417,7 +421,7 @@ def yloft(sections, segs=14, tip=True):
 
 HEAD_C, HEAD_R = (0, -0.42, 2.36), (0.31, 0.4, 0.28)
 EYE_X, EYE_Z = 0.2, 2.44
-BLACK, SHEEN, EDGE = "#0A0A10", "#2C3C90", "#040406"
+BLACK, SHEEN, EDGE = "#0A0A10", "#26347E", "#040406"
 PLUME = {"black": hexc("#0A0A10"), "sheen": hexc("#1F2B6A"), "violet": hexc("#2C2266"), "under": hexc("#060609")}
 
 
@@ -594,11 +598,11 @@ def build():
     # ---- the wedge tail -------------------------------------------------------------------------------------
     for k in range(9):
         t = (k - 4) / 4
-        root = Vector((0.04 * t, 0.62, 0.86))
-        d = Vector((0.32 * t, 0.65, -0.62)).normalized()
-        L = 0.92 - 0.22 * abs(t)
-        add("tail", blade(root + Vector((0, 0.01 * abs(t), 0.01 * abs(t))), d, Vector((0, 0.4, 1.0)), L, 0.14, bend=0.03, tip=0.7,
-                          nu=4, nv=1), feathers)
+        root = Vector((0.05 * t, 0.62, 0.86 + 0.03 * abs(t)))
+        d = Vector((0.5 * t, 0.62, -0.72 + 0.12 * abs(t))).normalized()
+        L = 0.95 - 0.25 * abs(t)
+        nrm = Vector((-0.5 * t, 0.55, 0.8))
+        add("tail", blade(root, d, nrm, L, 0.15, bend=0.04, cup=0.03, tip=0.7, thick=0.03, nu=4, nv=1), feathers)
     r.build()
     return r
 
