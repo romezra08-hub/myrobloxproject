@@ -56,7 +56,7 @@ def load_lua(path=LUA):
     for name, body in re.findall(r"^\t(\w+) = \{\n(.*?)^\t\},", _block(src, "PetAnimator.STYLES"), re.M | re.S):
         styles[name] = _numbers(body)
     pets = {}
-    for name, body in re.findall(r"^\t(\w+) = \{ (.*?) \},", _block(src, "PetAnimator.PETS"), re.M):
+    for name, body in re.findall(r"^\t(\w+) = \{\s*(.*?)\s*\},", _block(src, "PetAnimator.PETS"), re.M | re.S):
         entry = _numbers(body)
         entry["style"] = re.search(r'style = "(\w+)"', body).group(1)
         pets[name] = entry
@@ -190,8 +190,8 @@ def offset_parts(p, state, t, speed):
     rx, ry, rz = -math.radians(pitch), math.radians(yaw), math.radians(roll)
     cy = p["pivot"] * h
     lowest = (y + cy - cy * math.cos(rz) * math.cos(rx)
-              - abs(C["FOOT"] * state["width"] * 0.5 * math.sin(rz) * math.cos(rx))
-              - abs(C["FOOT"] * state["length"] * 0.5 * math.sin(rx)))
+              - abs(p["foot"] * state["width"] * 0.5 * math.sin(rz) * math.cos(rx))
+              - abs(p["foot"] * state["length"] * 0.5 * math.sin(rx)))
     if lowest < 0:
         y -= lowest
     return x, y, cy, rx, ry, rz
@@ -442,7 +442,7 @@ def write_outputs(name, clips, stats, px):
         draw.text((8 * w + 6, y + 4), "all frames averaged", fill=(235, 235, 235))
         for k, im in enumerate(imgs):
             strip.paste(im, (k * w, y + 20))
-    strip.save(os.path.join(OUT, name + "_strip.png"))
+    strip.quantize(colors=256, method=Image.Quantize.MEDIANCUT).save(os.path.join(OUT, name + "_strip.png"), optimize=True)
 
 
 def p_style(name):

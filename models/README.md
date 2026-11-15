@@ -62,6 +62,72 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
    (`GripPos` moves it, `GripForward`/`GripUp` turn it). Like the pet script, this has only been
    checked as valid Luau, not yet run in Studio.
 
+## Animations
+
+The pets have no bones: each is one rigid model. `PetAnimator.lua` animates them the way Roblox pet
+games usually do, by moving and turning the whole model a little around its pivot every frame, on top
+of where your pet-follow code puts it. Each pet has an idle (breathing, looking round, shifting its
+weight, hovering) and a walk (trot, hop, stomp, glide...) that blend smoothly by speed, and each copy
+starts at a random point in its motion so a group of pets does not move in step.
+
+Put `PetAnimator.lua` in **ReplicatedStorage** as a ModuleScript called `PetAnimator`, then drive it
+from the LocalScript that moves the pets (client only; it makes no connections of its own):
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local PetAnimator = require(ReplicatedStorage.PetAnimator)
+
+local pet = ReplicatedStorage.Pets.Fox:Clone()
+pet.Parent = workspace
+local animator = PetAnimator.new(pet, "Fox")   -- the name picks the style; it defaults to pet.Name
+local lastPosition = pet:GetPivot().Position
+
+RunService.RenderStepped:Connect(function(dt)
+	local target = followCFrame()              -- your follow code: where the pet's feet should be
+	local speed = (target.Position - lastPosition).Magnitude / math.max(dt, 1e-3)
+	lastPosition = target.Position
+	animator:Step(dt, target, speed)           -- calls pet:PivotTo(target * offset)
+end)
+
+-- when the pet is unequipped: animator:Destroy() and pet:Destroy()
+```
+
+Pass the CFrame your code would otherwise have given `PivotTo` (pivot under the feet, facing where
+the pet goes), and its speed in studs per second. Below about 0.6 studs/s the pet idles; by 4 studs/s
+it is fully walking. The walk is tuned for 16 studs/s, a player's walking speed. Flyers and floaters
+add their own hover height, so keep the target on the ground for them too.
+
+**Changing a pet's style.** At the bottom of `PetAnimator.lua`, `PetAnimator.PETS` maps every pet
+(name in lower case) to one of the styles in `PetAnimator.STYLES` (`walker`, `sitter`, `hopper`,
+`heavy`, `flyer`, `floater`, `slither`, `blob`), plus any fields of its own, for example
+`fox = { style = "hopper" }` or `griffin = { style = "flyer", hover = 0.3, amp = 1.2, speed = 0.9 }`.
+`amp` scales all its movements, `speed` how fast they go, `hover` is its height above the ground
+as a fraction of its height. Every field is explained where `Profile` is declared. A pet missing from
+the table walks like a `walker`. Lengths are fractions of the pet's height, so the same style moves a
+dragon more studs than a fox, and bigger pets also stride more slowly.
+
+| Style | Pets |
+|---|---|
+| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip) |
+| `hopper` (arcs with a pause; the odd hop in place) | bunny, drumdevil, gargoyle (slower, lower stone hops: it is modelled crouched on its hands) |
+| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog |
+| `heavy` (slow stomp and roll; rare look round) | dragon, golem, driller, turtle |
+| `flyer` (hover, figure eight, bank; flies pitched down) | phoenix, griffin, raven, infernobat, firedemon |
+| `floater` (slow drift, sway and turn) | ghost, cloudspirit, reaper |
+| `slither` (body swings side to side; raises its head) | salamander |
+| `blob` (hop, tilt and jelly wobble, no scaling) | kingslime, cauldron |
+
+**Previews.** `models/anim/preview_anim.py` renders each pet's idle and walk with an exact Python port
+of the same maths (it reads the tables out of `PetAnimator.lua`), into `preview/anim/<name>_idle.gif`,
+`<name>_walk.gif` and `<name>_strip.png`, and checks that no part ever goes under the floor:
+
+```bash
+python models/anim/preview_anim.py fox golem      # or no names for every pet
+```
+
+PetAnimator parses as strict Luau but, like the setup scripts, has not been run in Studio yet.
+
 ## The pets so far
 
 | Pet | Style | Triangles | Rounds |

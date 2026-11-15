@@ -26,6 +26,7 @@ PetAnimator.__index = PetAnimator
 export type Profile = {
 	hover: number, -- height above the ground, both idle and walking (x height)
 	pivot: number, -- height of the point the pet turns around (x height); the feet are then kept on the floor
+	foot: number, -- how much of the model's width and length its feet cover, for keeping them on the floor
 	-- idle
 	breath: number, -- breathing / hover bob up and down (x height)
 	breathPeriod: number, -- seconds per breath
@@ -97,7 +98,6 @@ local BLEND_RATE = 5 -- how quickly idle and walk blend (per second)
 local SPEED_RATE = 6 -- how quickly the speed the motion follows catches up (per second)
 local TURN_RATE = 4 -- how quickly the measured turning speed follows (per second)
 local TURN_MAX = 3 -- radians per second: faster turning is treated as this
-local FOOT = 0.9 -- the feet cover this much of the model's width and length, for keeping them on the floor
 local IMPACT_TIME = 0.15 -- part of a beat at which the heavy footfall nod is deepest
 local TAU = 2 * math.pi
 
@@ -105,6 +105,7 @@ local TAU = 2 * math.pi
 local DEFAULTS: Profile = {
 	hover = 0,
 	pivot = 0.35,
+	foot = 0.9,
 	breath = 0,
 	breathPeriod = 3,
 	breathPitch = 0,
@@ -234,14 +235,14 @@ PetAnimator.STYLES = {
 		swayPeriod = 7,
 		walkHz = 1.0,
 		beats = 2,
-		bounce = 0.02,
+		bounce = 0.025,
 		sharp = 1,
 		lean = 1.5,
 		nod = 0.8,
-		roll = 3,
-		yaw = 1.5,
+		roll = 4,
+		yaw = 2,
 		side = 0.01,
-		impact = 2.2,
+		impact = 3,
 		bank = 2,
 		bankMax = 4,
 	},
@@ -319,6 +320,7 @@ PetAnimator.STYLES = {
 	-- slimes and cauldrons: a squash-like bounce made of a small hop, a tilt and a jelly wobble (no scaling)
 	blob = {
 		pivot = 0,
+		foot = 1,
 		breath = 0.01,
 		breathPeriod = 2.8,
 		breathPitch = 1,
@@ -362,10 +364,18 @@ PetAnimator.PETS = {
 	griffin = { style = "flyer", hover = 0.22 },
 	golem = { style = "heavy", amp = 1.1 },
 	wolf = { style = "walker" },
-	driller = { style = "heavy", roll = 2.5, impact = 2 },
+	driller = { style = "heavy", roll = 2.5, impact = 2, foot = 1 },
 	salamander = { style = "slither" },
 	infernobat = { style = "flyer", hover = 0.4, speed = 1.4, figure = 0.07 },
-	gargoyle = { style = "flyer", hover = 0.2, speed = 0.8, amp = 0.8 },
+	gargoyle = {
+		style = "hopper",
+		speed = 0.8,
+		bounce = 0.18,
+		duty = 0.55,
+		nod = 7,
+		idleHop = 0.04,
+		idleHopEvery = 4.5,
+	},
 	raven = { style = "flyer", hover = 0.28 },
 	ghost = { style = "floater" },
 	cloudspirit = { style = "floater", hover = 0.1 },
@@ -569,8 +579,8 @@ function PetAnimator.offset(p: Profile, state: State, t: number, speed: number):
 	local lowest = y
 		+ cy
 		- cy * math.cos(rz) * math.cos(rx)
-		- math.abs(FOOT * state.width * 0.5 * math.sin(rz) * math.cos(rx))
-		- math.abs(FOOT * state.length * 0.5 * math.sin(rx))
+		- math.abs(p.foot * state.width * 0.5 * math.sin(rz) * math.cos(rx))
+		- math.abs(p.foot * state.length * 0.5 * math.sin(rx))
 	if lowest < 0 then
 		y -= lowest
 	end
