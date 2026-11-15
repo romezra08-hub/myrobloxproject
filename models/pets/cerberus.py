@@ -11,6 +11,14 @@ Must-haves, checked in every review:
   3. A spiked collar on each neck.
   4. A glowing flame on the tip of the tail.
   5. Matte painted fur with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 4: body shortened and legs moved in for pup proportions; a deeper closed smile on the right head; mottled fur sheen.
+
+Round 3: wider D-shaped open smile; a softer two-row chest ruff with the orange bib lowered below it (the first ruff over the bib read as teeth); fluffy thighs; a bigger flame.
+
+Round 2: broad soft ears folding forward (the thin upright ones read as horns); brown eyes; cheek tufts, chest ruff, toe grooves; trimmed to budget.
+
+Round 1: first build.
 """
 import argparse
 import math

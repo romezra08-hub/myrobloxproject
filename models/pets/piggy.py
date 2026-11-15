@@ -11,6 +11,16 @@ Must-haves, checked in every review:
   5. A curly tail.
   6. A happy face: glossy eyes with highlights, blushing cheeks, a smile.
   7. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 5: a taller, rounder body that fills the dip behind the head.
+
+Round 4: shallower nostrils (deep ones tore), no cheek pads, a narrower muzzle.
+
+Round 3: a neck to fill the back, smile corners, a wider open mouth, more triangles on the skin.
+
+Round 2: lower round body on shorter, thicker legs; visible hooves; stronger fuzz; ears folding forward.
+
+Round 1: first build.
 """
 import argparse
 import math

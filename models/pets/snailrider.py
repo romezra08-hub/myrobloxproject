@@ -11,6 +11,18 @@ Must-haves, checked in every review:
      cranks and pedals.
   4. A happy face with eyes on stalks.
   5. Matte painted textures with crease shading; under 5 studs long; Body under 9k triangles.
+
+Round 6: the shell turned so its opening sits down in the body; it now coils up from the back instead of resting on it like a cushion.
+
+Round 5: a painted spiral stripe and seam on the shell; the spire offset reduced.
+
+Round 4: a slight right-handed spire and an upturned tail tip.
+
+Round 3: a wider, deeper smile; a stronger painted gloss on the shell; under budget.
+
+Round 2: the bicycle scaled down (0.82) and the snail up (1.2) so the snail leads; a finer skin pebble (the first read as cracked); the snout bump removed; a bigger shell.
+
+Round 1: first build.
 """
 import argparse
 import math

@@ -11,6 +11,16 @@ Must-haves, checked in every review:
   4. Large dark eyes with a highlight and a tiny smile (no staring yellow eyes).
   5. Wings in brown, orange and cream with soft swirl patterns, no eye spots.
   6. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 5: a whiter ruff, a lower head crest.
+
+Round 4: a dark brown head like the original (the ruff colour was bleeding onto it); rounder wing tips; a clearer smile.
+
+Round 3: softer, fuller swirls with a cream wash; scalloped margins instead of zigzags.
+
+Round 2: wing patterns painted into images read through their own UV layer (vertex colour had smeared the swirls into spots); finer, denser antenna barbs; short tucked legs (the long black ones looked spidery); a softer three-row ruff.
+
+Round 1: first build.
 """
 import argparse
 import math

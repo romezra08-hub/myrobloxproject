@@ -251,6 +251,13 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | FireDemon | Hunched snarling red demon with bat wings and a gold crown | Upright molten imp-knight with glowing seams, bat wings, a crown of gold flame spikes and a calm face | 13,596 |
 | HornedDemon | Red four-legged demon with ram horns, black wings and a crown | Red ram-beast with glossy curled black horns, armour plates, black-and-red wings and a gold circlet | 10,164 |
 | LavaCat | Scowling red cat beast with a dragon tail | Red-to-flame-orange cat with relaxed amber eyes, a ':3' smile, ember stripes and a fluffy flame tail | 8,848 |
+| Cerberus | Blocky navy three-headed dog | Loyal three-headed guardian pup in black and tan, floppy-folded ears, spiked collars, happy open smiles and a flame-tipped tail | 8,773 |
+| SnailRider | Blocky snail on a red bike | Green snail with a coiled orange shell, stalk eyes and a smile, riding a small spoked red bicycle | 8,792 |
+| Moth | Spiky dark moth with glaring yellow eyes | Fluffy brown moth with a white ruff, feathery antennae, big friendly eyes and painted orange swirl wings | 7,748 |
+| SpiritBlob | Purple spiky ghost with a grin (original design, not a remake of its look) | Purple flame-wisp with one swept-back flame, calm aqua glowing eyes, blush and three floating sparks | 5,200 |
+| Mushroom | Blocky red toadstool on legs | Toadstool with a glossy red cap with domed white spots, a sprout on top, a soft cream stem with a shy smile and moss at its feet | 7,860 |
+| Piggy | Flat pink pig | Round pink piglet with stubby legs and hooves, fuzz, a curly tail and a happy open mouth | 6,740 |
+| SnowBunny | Blocky white rabbit with two faces stacked | Natural white rabbit crouched on all fours, pink-lined ears, dark eyes and a pompom tail (unlike the crochet Bunny) | 7,520 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

@@ -11,6 +11,12 @@ Must-haves, checked in every review:
   4. A chunky cream stem body with a friendly face (glossy eyes, blush, smile) and stubby feet.
   5. A little moss and a tiny sprout.
   6. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 3: the white spots as smooth domes sunk into the cap; a stronger painted gloss; finer moss.
+
+Round 2: bigger spots, moss in cushions against the stem, gills stopped short of the rim, a darker smile; under budget.
+
+Round 1: first build.
 """
 import argparse
 import math

@@ -12,6 +12,12 @@ Must-haves, checked in every review:
   3. Two calm glowing eyes (pale aqua, gently lidded) and a tiny smile. No wide grin, no red eyes,
      no floating hands.
   4. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 3: flickering licks off the big flame; soft spiral ripples pressed into the body and painted.
+
+Round 2: one big swept-back flame with two curls and trailing side smoke (the first crown of points read as ears or spikes); smooth spiral bands instead of crack-like grooves; smaller aqua eyes with less glow.
+
+Round 1: first build.
 """
 import argparse
 import math

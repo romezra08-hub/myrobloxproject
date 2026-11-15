@@ -21,7 +21,7 @@ from mathutils import Vector  # noqa: E402
 
 from build_all import pets  # noqa: E402
 
-ORDER = ["fox", "puppy", "cat", "bunny", "penguin", "turtle", "unicorn", "dragon", "phoenix", "griffin", "golem", "wolf", "driller", "salamander", "infernobat", "gargoyle", "raven", "ghost", "cloudspirit", "kingslime", "cauldron", "drumdevil", "plumedlion", "reaper", "skeletondog", "firedemon", "horneddemon", "lavacat"]     # left to right; any other pet follows these
+ORDER = ["fox", "puppy", "cat", "bunny", "penguin", "turtle", "unicorn", "dragon", "phoenix", "griffin", "golem", "wolf", "driller", "salamander", "infernobat", "gargoyle", "raven", "ghost", "cloudspirit", "kingslime", "cauldron", "drumdevil", "plumedlion", "reaper", "skeletondog", "firedemon", "horneddemon", "lavacat", "cerberus", "snailrider", "moth", "spiritblob", "mushroom", "piggy", "snowbunny", "spikecrab"]     # left to right; any other pet follows these
 TURN = {"fox": -20, "unicorn": 55, "dragon": 38, "wolf": 40, "driller": 40}                  # degrees; long pets are turned to show their side
 GAP = 1.1
 
