@@ -12,6 +12,22 @@ Must-haves, checked in every review:
   4. Big frosted claws in the same icy blue, held up, ready but not threatening.
   5. Calm, friendly eyes on short stalks (level lids, no angry frown) and a small smile seen from the front.
   6. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
+
+Round 8: eyelids fitted closer to the eyes.
+
+Round 7: scaled to 3.9 studs wide; the frost sparkle made finer and sparser (it read as white spots); legs set a little further out.
+
+Round 6 (sent back for: spidery legs, a flat pale plastic disc, white paper spikes): rebuilt low and chubby on six short, thick legs tucked under the shell with rounded toes; a round domed shell in a deep icy blue with frost grain, sparkle flecks and a grainy roughness map with glossy specks; the claws in the same blue with blunt fingertips; five chunky faceted ice-blue crystals instead of a ring of white spikes; the eyes closer together; a small open smile on the front.
+
+Round 5: a deeper ice blue, icy mottling and a blue wrist band on the white claws, a wider calm mouth.
+
+Round 4: thicker legs; the eyelids fitted to the eyes (they sat on top like caps).
+
+Round 3: legs splayed out sideways with high knees; ice veins and a darker rim band; frosted tubercles on the shell.
+
+Round 2: more saturated blue; the crab lowered on shorter legs; bigger, clearer pincers; a calm mouth line.
+
+Round 1: first build.
 """
 import argparse
 import math

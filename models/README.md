@@ -258,6 +258,7 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Mushroom | Blocky red toadstool on legs | Toadstool with a glossy red cap with domed white spots, a sprout on top, a soft cream stem with a shy smile and moss at its feet | 7,860 |
 | Piggy | Flat pink pig | Round pink piglet with stubby legs and hooves, fuzz, a curly tail and a happy open mouth | 6,740 |
 | SnowBunny | Blocky white rabbit with two faces stacked | Natural white rabbit crouched on all fours, pink-lined ears, dark eyes and a pompom tail (unlike the crochet Bunny) | 7,520 |
+| SpikeCrab | Pale crab with long spidery legs and white ice spikes | Low, chubby frost crab on short thick legs, with a domed frosty-blue shell, blue claws, five faceted ice crystals and a small smile | 8,280 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
