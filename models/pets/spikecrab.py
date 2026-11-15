@@ -6,20 +6,12 @@ big white claws and an angry face. Built from scratch by script.
 
 Must-haves, checked in every review:
   1. The same creature: a pale ice-blue crab with a crown of white spikes on its shell and big white claws.
-  2. An icy blue shell with frost and a crown of white crystal spikes.
-  3. Big frosted claws held up, ready but not threatening.
-  4. Calm, determined eyes on short stalks (level lids, no angry frown) and a small calm mouth.
-  5. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
-
-Round 5: a deeper ice blue, icy mottling and a blue wrist band on the white claws, a wider calm mouth.
-
-Round 4: thicker legs; the eyelids fitted to the eyes (they sat on top like caps).
-
-Round 3: legs splayed out sideways with high knees; ice veins and a darker rim band; frosted tubercles on the shell.
-
-Round 2: more saturated blue; the crab lowered on shorter legs (the long thin ones read spidery); bigger, clearer pincers; a calm mouth line.
-
-Round 1: first build.
+  2. A round domed shell in a deep icy blue with frost grain and sparkle, crowned by a few chunky,
+     faceted ice-blue crystals (not white paper spikes).
+  3. Short, thick, stubby legs tucked under the shell, so it sits low like a chubby crab, never on stilts.
+  4. Big frosted claws in the same icy blue, held up, ready but not threatening.
+  5. Calm, friendly eyes on short stalks (level lids, no angry frown) and a small smile seen from the front.
+  6. Matte painted textures with crease shading; 3-4.5 studs tall; Body under 9k triangles.
 """
 import argparse
 import math
@@ -279,32 +271,84 @@ def join(bms):
 # ---- the frost crab --------------------------------------------------------------------------------
 
 NAME = "SpikeCrab"
-COL = {"shell": hexc("#5C9FD2"), "shell_lt": hexc("#9CCDEE"), "shell_dk": hexc("#3A72A2"), "frost": hexc("#EEF8FF"),
-       "under": hexc("#9CCBE8"), "claw": hexc("#E4F2FB"), "claw_dk": hexc("#7EB0D6"), "tip": hexc("#2F5C8C"),
-       "crystal": hexc("#F7FCFF"), "crystal_bl": hexc("#BFE6F8"), "mouth": hexc("#2C3E5A"), "pupil": hexc("#0E1420"),
-       "white": hexc("#FFFFFF")}
-SCALE = 1.15
-BAKE = {"shade": 0.45, "rough": 0.8}
-BODY = Vector((0, 0, 1.05))
-EYES = [Vector((0.3 * s, -0.8, 1.74)) for s in (-1, 1)]
-FACE = Vector((0, -0.8, 1.5)) * SCALE
+COL = {"shell": hexc("#3F7FBF"), "shell_lt": hexc("#79B3E2"), "shell_dk": hexc("#285A90"), "frost": hexc("#E6F4FF"),
+       "under": hexc("#6FA2CF"), "claw": hexc("#5E9ED4"), "claw_lt": hexc("#A9D3F0"), "tip": hexc("#24507E"),
+       "ice_dk": hexc("#5FA8DE"), "ice": hexc("#A6DCF6"), "ice_lt": hexc("#E8F8FF"),
+       "mouth": hexc("#1C2A44"), "tongue": hexc("#E07E92"), "white": hexc("#FFFFFF")}
+SCALE = 1.45
+BAKE = {"shade": 0.45, "rough": 0.82}
+BODY = Vector((0, 0, 0.62))
+EYES = [Vector((0.22 * s, -0.66, 1.2)) for s in (-1, 1)]
+MOUTH_Z = 0.5
+FACE = Vector((0, -0.8, 0.85)) * SCALE
 FOCUS = FACE
-FACE_DIST = 4.4
+FACE_DIST = 4.6
 
 
 def shard(h, r, sides=6, seed=0.0):
-    """A faceted crystal: a prism with a pointed top, every face its own flat facet."""
-    prof = [(0.0, -0.05), (r * 0.85, -0.05), (r, 0.1 * h), (r * 0.92, 0.68 * h), (0.0, h)]
+    """A chunky faceted ice crystal: a prism with a pointed top, every face its own flat facet."""
+    prof = [(0.0, -0.08), (r * 0.9, -0.08), (r, 0.12 * h), (r * 0.94, 0.62 * h), (r * 0.25, 0.93 * h), (0.0, h)]
     bm = lathe(prof, segs=sides)
     for v in bm.verts:
-        v.co.x += 0.15 * r * noise.noise(Vector((v.co.z * 3 + seed, seed, 0)))
+        v.co.x += 0.12 * r * noise.noise(Vector((v.co.z * 3 + seed, seed, 0)))
+        v.co.y += 0.12 * r * noise.noise(Vector((seed, v.co.z * 3 + seed, 1)))
     bmesh.ops.split_edges(bm, edges=bm.edges[:])
     return bm
 
 
+def frosty(name, rough=0.85):
+    """Vertex paint with fine frost grain (kit.scaly cells) and sparse white sparkle flecks."""
+    m = kit.material(name, "#808080", rough=rough)
+    kit.scaly(m, size=0.025, joins=0.12, vary=0.14, rough=rough)
+    tree = m.node_tree
+    new, link, attr = _ops(tree)
+    hsv = next(n for n in tree.nodes if n.type == 'HUE_SAT')
+    link(attr("col"), hsv.inputs["Color"])
+    coord = new("ShaderNodeTexCoord")
+    nz = new("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value, nz.inputs["Detail"].default_value = 30.0, 2.0
+    link(coord.outputs["Object"], nz.inputs["Vector"])
+    rng = new("ShaderNodeMapRange")
+    rng.inputs["From Min"].default_value, rng.inputs["From Max"].default_value = 0.71, 0.78
+    link(nz.outputs[0], rng.inputs["Value"])
+    mixn = new("ShaderNodeMix")
+    mixn.data_type = 'RGBA'
+    link(rng.outputs["Result"], mixn.inputs[0])
+    link(hsv.outputs["Color"], mixn.inputs[6])
+    mixn.inputs[7].default_value = (*COL["frost"], 1.0)
+    link(mixn.outputs[2], kit.principled(m).inputs["Base Color"])
+    return m
+
+
+def after_bake(body):
+    """Swap the flat roughness image for a frost grain: mostly matte with sparse glossy sparkles."""
+    import numpy as np
+    for slot in body.material_slots:
+        for node in slot.material.node_tree.nodes:
+            if node.type == 'TEX_IMAGE' and node.image and node.image.name.endswith("_rough"):
+                name, path = node.image.name, node.image.filepath_raw
+                bpy.data.images.remove(node.image)                   # free the name, so the new image keeps it
+                size = 256
+                rs = np.random.RandomState(7)
+                grain = BAKE["rough"] + rs.normal(0.0, 0.04, (size, size))
+                grain[rs.random_sample((size, size)) < 0.035] = 0.38
+                px = np.ones((size, size, 4), dtype=np.float32)
+                px[..., :3] = np.clip(grain, 0.0, 1.0)[..., None]
+                img = bpy.data.images.new(name, size, size, alpha=False)
+                img.pixels.foreach_set(px.ravel())
+                img.filepath_raw, img.file_format = path, 'PNG'
+                img.save()
+                img.colorspace_settings.name = 'Non-Color'
+                node.image = img
+                return
+
+
 def build():
-    shell_m = painted("Shell", dict(strength=0.08, mottle=0.14, fine=30.0, length=2.0), rough=0.8)
-    claw_m = painted("Claws", dict(strength=0.06, mottle=0.12, fine=34.0, length=1.6), rough=0.8)
+    shell_m = frosty("Shell")
+    claw_m = frosty("Claws")
+    ice_m = kit.material("Ice", "#808080", rough=0.5)
+    _, link, attr = _ops(ice_m.node_tree)
+    link(attr("col"), kit.principled(ice_m).inputs["Base Color"])
     eye_m = kit.material("Eyes", "#121A28", rough=0.08)
     c = Prop(NAME)
     c.tally = {}
@@ -312,148 +356,154 @@ def build():
     def add(part, bm, mat, col=None):
         if col is not None:
             paint(bm, col) if callable(col) else flat_paint(bm, col)
-        for v in bm.verts:
-            if v.co.z < 0.0:
-                v.co.z = 0.0
         c.tally[part] = c.tally.get(part, 0) + sum(len(f.verts) - 2 for f in bm.faces)
         c.add(bm, mat)
 
-    # ---- the carapace: one fused skin ------------------------------------------------------------------
-    clay = [ell(BODY, (1.05, 0.8, 0.46)), ell(BODY + Vector((0, 0.05, -0.22)), (0.85, 0.62, 0.3)),
-            ell(BODY + Vector((0, -0.45, 0.02)), (0.7, 0.42, 0.36))]                       # the front brow
-    for s in (-1, 1):
-        clay.append(loft([Vector((0.24 * s, -0.62, 1.3)), Vector((0.28 * s, -0.74, 1.53)), EYES[0 if s < 0 else 1] + Vector((0, 0.02, -0.08))],
-                         lambda t: lerp(0.09, 0.07, t), segs=10, rings=6))                   # eye stalks
-        for k in range(4):                                                                     # rim teeth
-            a = math.radians(-60 + 22 * k)
-            at = BODY + Vector((math.sin(-a) * 0.0 + 0.98 * s * math.cos(a), -0.74 * abs(math.sin(a)) - 0.05, 0.08))
-            at = BODY + Vector((s * 1.02 * math.cos(a), 0.78 * math.sin(a), 0.06))
-            d = Vector((s * math.cos(a), math.sin(a), 0.15)).normalized()
-            clay.append(loft([at - d * 0.08, at + d * 0.1], lambda t: 0.07 * (1 - t) + 0.008, segs=8, rings=3))
-    for k in range(26):                                                       # little frosted tubercles on the shell
+    # ---- a round, domed carapace sitting low: one fused skin ----------------------------------------------
+    clay = [ell(BODY, (1.0, 0.8, 0.46)),
+            ell(BODY + Vector((0, 0.05, 0.16)), (0.82, 0.64, 0.42)),            # the dome
+            ell(BODY + Vector((0, 0.02, -0.22)), (0.84, 0.64, 0.28)),           # belly
+            ell(BODY + Vector((0, -0.46, -0.04)), (0.62, 0.38, 0.34))]          # the front face
+    for s, e in zip((-1, 1), EYES):
+        clay.append(loft([Vector((0.2 * s, -0.5, 0.9)), Vector((0.21 * s, -0.6, 1.05)), e + Vector((0, 0.02, -0.08))],
+                         lambda t: lerp(0.1, 0.08, t), segs=10, rings=5))        # short eye stalks
+        for k in range(4):                                                        # rounded rim bumps
+            a = math.radians(-58 + 24 * k)
+            at = BODY + Vector((s * 0.98 * math.cos(a), 0.78 * math.sin(a), 0.06))
+            clay.append(ell(at, (0.09, 0.09, 0.07), cuts=2))
+    for k in range(22):                                                           # frosted tubercles on the dome
         a = k * 2.39996
-        rr = 0.3 + 0.55 * math.sqrt((k + 0.5) / 26)
-        x, y = rr * math.cos(a) * 1.0, rr * math.sin(a) * 0.72
-        z = BODY.z + 0.46 * math.sqrt(max(0.0, 1 - (x / 1.05) ** 2 - (y / 0.8) ** 2)) - 0.02
-        if y < -0.45 and abs(x) < 0.5:
+        rr = 0.25 + 0.5 * math.sqrt((k + 0.5) / 22)
+        x, y = rr * math.cos(a), rr * math.sin(a) * 0.75
+        if y < -0.42 and abs(x) < 0.45:
             continue
-        clay.append(ell((x, y, z), (0.07, 0.07, 0.05), cuts=2))
-    skin = fuse(join(clay), voxel=0.024, iterations=3)
+        loc = BODY + Vector((x, y, 0.16 + 0.42 * math.sqrt(max(0.0, 1 - (x / 0.82) ** 2 - ((y - 0.05) / 0.64) ** 2)) - 0.02))
+        clay.append(ell(loc, (0.065, 0.065, 0.045), cuts=2))
+    skin = fuse(join(clay), voxel=0.022, iterations=3)
+    tree = BVHTree.FromBMesh(skin)
+
+    def front(x, z):
+        loc, _, _, _ = tree.ray_cast(Vector((x, -3, z)), Vector((0, 1, 0)))
+        return loc
+    smile = [front(x, MOUTH_Z + 2.2 * x * x) for x in (-0.19, -0.1, 0.0, 0.1, 0.19)]
+    mouth_y = front(0.0, MOUTH_Z - 0.03).y
+
+    def mouth_in(co):
+        """0..1: inside a small open D-shaped smile on the front face."""
+        if co.y > mouth_y + 0.1:
+            return 0.0
+        u = co.x / 0.12
+        if abs(u) > 1.05:
+            return 0.0
+        top, bot = MOUTH_Z + 0.02 + 0.03 * u * u, MOUTH_Z - 0.07 + 0.08 * u * u
+        return smooth(co.z, bot - 0.004, bot + 0.012) * smooth(co.z, top + 0.004, top - 0.012) * smooth(abs(u), 1.02, 0.8)
 
     def carve(co, n):
-        d = n * 0.008 * noise.noise(co * 5)
+        d = n * 0.006 * noise.noise(co * 6)
         p = co - BODY
-        # flatten the top a little and press the H-shaped grooves of a crab shell
-        if n.z > 0.3:
-            g1 = min(abs(abs(p.x) - 0.32 - 0.08 * p.y), 99) if -0.5 < p.y < 0.5 else 99
-            g2 = abs(p.y - 0.02) if abs(p.x) < 0.32 else 99
-            d -= n * 0.025 * (1 - smooth(min(g1, g2), 0.015, 0.05))
+        if n.z > 0.35:                                       # the H-shaped grooves of a crab shell
+            g1 = abs(abs(p.x) - 0.3 - 0.08 * p.y) if -0.45 < p.y < 0.45 else 99
+            g2 = abs(p.y - 0.05) if abs(p.x) < 0.3 else 99
+            d -= n * 0.022 * (1 - smooth(min(g1, g2), 0.015, 0.05))
         if co.y < -0.6:
-            d -= n * 0.022 * (1 - smooth(poly_dist(co, mouth), 0.007, 0.024))
+            d += Vector((0, 0.06, 0)) * mouth_in(co)
+            d -= n * 0.02 * (1 - smooth(poly_dist(co, smile), 0.008, 0.026))
         return d
-    tree = BVHTree.FromBMesh(skin)
-    mouth = []
-    for x in (-0.17, -0.08, 0.0, 0.08, 0.17):
-        z = BODY.z - 0.06 + 0.7 * x * x
-        loc, _, _, _ = tree.ray_cast(Vector((x, -3, z)), Vector((0, 1, 0)))
-        mouth.append(loc)
     sculpt(skin, carve)
-    skin = decimate(skin, 3400, keep=lambda co: 0.6 * (1 - smooth((Vector(co) - FACE).length, 0.3, 0.6)), factor=1.0)
+    skin = decimate(skin, 3700, keep=lambda co: 0.65 * (1 - smooth((Vector(co) - Vector((0, -0.8, 0.6))).length, 0.25, 0.5)), factor=1.0)
 
     def shell_colour(co, n, g=0.0):
         p = co - BODY
-        col = mix(COL["shell"], COL["shell_lt"], 0.5 * smooth(n.z, 0.3, 1.0))
-        col = mix(col, COL["under"], smooth(-n.z, 0.1, 0.6))
-        col = mix(col, COL["shell_dk"], 0.35 * smooth(abs(n.z), 0.4, 0.0) * smooth(p.z, 0.15, -0.1))
-        fl = noise.noise(co * 9.0) + 0.5 * noise.noise(co * 23.0)
-        col = mix(col, COL["frost"], 0.75 * smooth(fl, 0.4, 0.65) * smooth(n.z, 0.1, 0.6))     # frost flecks
-        vein = abs(noise.noise(co * 3.2 + Vector((5, 1, 2))))                                 # ice veins
-        col = mix(col, COL["frost"], 0.6 * (1 - smooth(vein, 0.015, 0.05)) * smooth(n.z, 0.0, 0.5))
-        rim = (p.x / 1.05) ** 2 + (p.y / 0.8) ** 2
-        col = mix(col, COL["shell_dk"], 0.45 * smooth(rim, 0.55, 0.8) * smooth(p.z, 0.0, 0.25) * (1 - smooth(rim, 0.9, 1.0)))
-        col = mix(col, COL["frost"], 0.55 * smooth(rim, 0.75, 0.95) * smooth(abs(p.z), 0.25, 0.05))
+        col = mix(COL["shell"], COL["shell_lt"], 0.55 * smooth(n.z, 0.35, 1.0))
+        col = mix(col, COL["under"], 0.6 * smooth(-n.z, 0.1, 0.6))
+        fl = noise.noise(co * 8.0) + 0.5 * noise.noise(co * 21.0)
+        col = mix(col, COL["frost"], 0.4 * smooth(fl, 0.5, 0.8) * smooth(n.z, 0.2, 0.7))       # frost patches
+        vein = abs(noise.noise(co * 3.0 + Vector((5, 1, 2))))
+        col = mix(col, COL["shell_lt"], 0.5 * (1 - smooth(vein, 0.015, 0.05)) * smooth(n.z, 0.0, 0.5))
+        rim = (p.x / 1.0) ** 2 + (p.y / 0.8) ** 2
+        col = mix(col, COL["shell_dk"], 0.35 * smooth(rim, 0.6, 0.85) * smooth(p.z, -0.05, 0.15) * (1 - smooth(rim, 0.92, 1.0)))
+        col = mix(col, COL["frost"], 0.45 * smooth(rim, 0.82, 0.97) * smooth(abs(p.z), 0.2, 0.04))
         if co.y < -0.6:
-            col = mix(col, COL["mouth"], 1 - smooth(poly_dist(co, mouth), 0.006, 0.018))
+            col = mix(col, COL["mouth"], max(smooth(mouth_in(co), 0.1, 0.5), 1 - smooth(poly_dist(co, smile), 0.008, 0.02)))
         return col
     add("shell", skin, shell_m, shell_colour)
+    tg = ell(Vector((0, mouth_y + 0.035, MOUTH_Z - 0.045)), (0.065, 0.04, 0.025), cuts=2)
+    add("tongue", tg, shell_m, COL["tongue"])
 
-    # ---- eyes with level lids ---------------------------------------------------------------------------
+    # ---- friendly eyes with level lids ------------------------------------------------------------------
     for e, s in zip(EYES, (-1, 1)):
-        fwd = Vector((0.15 * s, -1, 0.05)).normalized()
+        fwd = Vector((0.1 * s, -1, 0.05)).normalized()
         add("eyes", ell(e, (0.13, 0.12, 0.14), cuts=3), eye_m)
-        lid = ell((0, 0, 0), (0.142, 0.133, 0.152), cuts=3)
+        lid = ell((0, 0, 0), (0.136, 0.127, 0.146), cuts=3)
         for v in lid.verts:
-            v.co.z = max(v.co.z, 0.045)
+            v.co.z = max(v.co.z, 0.06)
         lid.transform(M(e, rot=(-6, 0, 0)))
         add("lids", lid, shell_m, lambda co, n, g: mix(COL["shell"], COL["shell_lt"], smooth(n.z, 0.0, 0.9)))
-        hi = e + fwd * 0.115 + Vector((-0.035, 0, 0.0))
-        add("glints", ell(hi, (0.026, 0.02, 0.026), cuts=1), shell_m, COL["white"])
+        add("glints", ell(e + fwd * 0.115 + Vector((-0.035, 0, 0.0)), (0.028, 0.02, 0.028), cuts=1), shell_m, COL["white"])
         add("glints", ell(e + fwd * 0.12 + Vector((0.04, 0, -0.05)), (0.012, 0.01, 0.012), cuts=1), shell_m, COL["white"])
 
-    # ---- six walking legs ---------------------------------------------------------------------------------
+    # ---- six short, stubby legs tucked under the shell ---------------------------------------------------
     def leg_colour(co, n, g):
         col = mix(COL["shell"], COL["shell_lt"], 0.5 * smooth(n.z, 0.2, 1.0))
-        col = mix(col, COL["frost"], 0.7 * (1 - smooth(abs(g - 0.42), 0.0, 0.06)))            # frosty knee
-        return mix(col, COL["tip"], smooth(g, 0.82, 0.95))
+        col = mix(col, COL["frost"], 0.55 * (1 - smooth(abs(g - 0.45), 0.0, 0.08)))           # frosty joint
+        return mix(col, COL["shell_dk"], 0.6 * smooth(g, 0.8, 1.0))
     for s in (-1, 1):
-        for k, y in enumerate((-0.32, 0.08, 0.46)):
-            root = Vector((0.82 * s, y, 0.92))
-            knee = Vector((1.32 * s, y * 1.3 + 0.05 * k, 1.16))
-            ankle = Vector((1.68 * s, y * 1.5 + 0.08 * k, 0.5))
-            tip = Vector((1.76 * s, y * 1.56 + 0.1 * k, 0.0))
-            leg = loft([root, knee, ankle, tip], lambda t: (0.19 - 0.12 * t) * (1 + 0.25 * math.exp(-((t - 0.42) / 0.05) ** 2)) * (1 - smooth(t, 0.85, 1.0) * 0.8),
-                       segs=8, rings=14)
+        for k, y in enumerate((-0.3, 0.06, 0.4)):
+            root = Vector((0.68 * s, y, 0.36))
+            knee = Vector((1.02 * s, y * 1.18 + 0.03 * k, 0.42))
+            tip = Vector((1.12 * s, y * 1.26 + 0.05 * k, 0.1))
+            leg = loft([root, knee, tip], lambda t: (0.17 - 0.05 * t) * (1 + 0.18 * math.exp(-((t - 0.45) / 0.07) ** 2)), segs=8, rings=10)
             add("legs", leg, shell_m, leg_colour)
+            add("legs", ell(tip + Vector((0, 0, -0.01)), (0.12, 0.12, 0.1), cuts=2), shell_m,
+                lambda co, n, g: mix(COL["shell_dk"], COL["shell"], smooth(n.z, -0.5, 0.6)))         # rounded toe
 
-    # ---- two big frosted claws ---------------------------------------------------------------------------
+    # ---- two big frosted blue claws ---------------------------------------------------------------------
     def claw_colour(co, n, g):
-        col = mix(COL["claw"], COL["claw_dk"], 0.7 * smooth(-n.z, -0.1, 0.8))
+        col = mix(COL["claw"], COL["claw_lt"], 0.6 * smooth(n.z, 0.1, 0.9))
+        col = mix(col, COL["shell_dk"], 0.35 * smooth(-n.z, 0.1, 0.8))
         fl = noise.noise(co * 7.0) + 0.5 * noise.noise(co * 19.0)
-        col = mix(col, COL["shell_lt"], 0.55 * smooth(fl, 0.15, 0.45))                     # icy blue mottling
-        col = mix(col, COL["frost"], 0.6 * smooth(fl, -0.2, -0.45))
-        return col
+        return mix(col, COL["frost"], 0.35 * smooth(fl, 0.45, 0.75))
 
     for s in (-1, 1):
-        shoulder = Vector((0.7 * s, -0.5, 0.95))
-        elbow = Vector((1.25 * s, -0.9, 1.0))
-        wrist = Vector((1.15 * s, -1.28, 1.45))
-        add("arms", loft([shoulder, elbow, wrist], lambda t: lerp(0.15, 0.17, t) * (1 + 0.2 * math.exp(-((t - 0.5) / 0.08) ** 2)), segs=10, rings=10),
+        shoulder = Vector((0.66 * s, -0.42, 0.48))
+        elbow = Vector((1.02 * s, -0.72, 0.55))
+        wrist = Vector((0.98 * s, -1.0, 0.85))
+        add("arms", loft([shoulder, elbow, wrist], lambda t: 0.16 * (1 + 0.2 * math.exp(-((t - 0.5) / 0.08) ** 2)), segs=10, rings=8),
             claw_m, claw_colour)
-        R = M(wrist, rot=(-38, 0, 16 * s))                       # claw space: fingers point along -y, up is +z
-        palm = ell((0, -0.24, 0.04), (0.3, 0.38, 0.27), cuts=4)
+        R = M(wrist, rot=(-30, 0, 14 * s))                       # claw space: fingers point along -y, up is +z
+        palm = ell((0, -0.24, 0.04), (0.32, 0.4, 0.3), cuts=4)
         palm.transform(R)
-        wr = wrist.copy()
-        add("claws", palm, claw_m, lambda co, n, g, wr=wr: mix(claw_colour(co, n, g), COL["shell"], 0.8 * smooth((co - wr).length, 0.2, 0.12)))
-        up = [Vector((0.03 * s, -0.48, 0.17)), Vector((0.02 * s, -0.74, 0.3)), Vector((-0.02 * s, -1.0, 0.27)), Vector((-0.04 * s, -1.14, 0.12))]
-        lo = [Vector((0.0, -0.52, -0.1)), Vector((0.0, -0.82, -0.14)), Vector((-0.02 * s, -1.04, -0.08)), Vector((-0.03 * s, -1.13, 0.03))]
-        for pts, r0 in ((up, 0.15), (lo, 0.14)):
-            f = loft([R @ p for p in pts], lambda t: r0 * (1 - t) ** 0.7 + 0.012, segs=10, rings=10, flat=0.75)
+        add("claws", palm, claw_m, claw_colour)
+        up = [Vector((0.03 * s, -0.5, 0.18)), Vector((0.02 * s, -0.72, 0.28)), Vector((-0.02 * s, -0.92, 0.24)), Vector((-0.03 * s, -1.02, 0.12))]
+        lo = [Vector((0.0, -0.54, -0.1)), Vector((0.0, -0.78, -0.13)), Vector((-0.02 * s, -0.96, -0.06)), Vector((-0.03 * s, -1.02, 0.04))]
+        for pts, r0 in ((up, 0.16), (lo, 0.15)):
+            f = loft([R @ p for p in pts], lambda t: r0 * (1 - t) ** 0.55 + 0.035, segs=10, rings=9, flat=0.8)
 
             def finger_colour(co, n, g):
-                return mix(claw_colour(co, n, g), COL["tip"], smooth(g, 0.72, 0.92))
+                return mix(claw_colour(co, n, g), COL["tip"], smooth(g, 0.75, 0.95))
             add("claws", f, claw_m, finger_colour)
-            for k in range(3):                                   # little teeth on the inner edges
-                t = 0.3 + 0.2 * k
-                pt = R @ kit._spline(pts, t * 3)
-                inward = R.to_3x3() @ Vector((0, 0, -1 if pts is up else 1))
-                add("claws", ell(pt + inward * 0.06 * (1 - t), (0.035, 0.035, 0.035), cuts=1), claw_m, COL["claw"])
+            add("claws", ell(R @ pts[-1], (0.045, 0.045, 0.045), cuts=1), claw_m, COL["tip"])      # rounded fingertip
 
-    # ---- the crown of crystal spikes -----------------------------------------------------------------------
-    top = BODY + Vector((0, 0.08, 0.38))
+    # ---- a few chunky ice crystals ----------------------------------------------------------------------
+    top = BODY + Vector((0, 0.1, 0.52))
+    L = Vector((-0.5, -0.6, 0.65)).normalized()
 
-    def crystal_colour(co, n, g):
-        col = mix(COL["crystal_bl"], COL["crystal"], smooth(g, 0.1, 0.8))
-        return mix(col, COL["shell_lt"], 0.35 * smooth(n.z, -0.2, -0.8))
-    ring = 9
-    for k in range(ring):
-        a = 2 * math.pi * k / ring + 0.2
-        h = 0.62 + 0.18 * math.sin(k * 2.7) + (0.12 if k in (2, 6) else 0)
-        base = top + Vector((0.5 * math.cos(a), 0.36 * math.sin(a), -0.06))
-        d = Vector((0.5 * math.cos(a), 0.4 * math.sin(a), 1.0)).normalized()
-        add("crystals", facing(shard(h, 0.11 + 0.02 * math.sin(k), seed=k), base, d), shell_m, crystal_colour)
-    for k, (dx, dy, h, r) in enumerate(((0.0, 0.0, 1.05, 0.16), (0.16, 0.12, 0.75, 0.12), (-0.17, 0.1, 0.8, 0.12), (0.02, -0.18, 0.62, 0.11))):
-        d = Vector((dx * 1.2, dy * 1.2, 1.0)).normalized()
-        add("crystals", facing(shard(h, r, seed=10 + k), top + Vector((dx, dy, 0.0)), d), shell_m, crystal_colour)
+    def ice_colour(co, n, g):
+        k = 0.5 + 0.5 * n.dot(L) + 0.25 * noise.noise(n * 6.0 + co * 2.0)
+        col = mix(COL["ice_dk"], COL["ice"], smooth(k, 0.2, 0.7))
+        col = mix(col, COL["ice_lt"], smooth(k, 0.75, 1.05))
+        col = mix(col, COL["ice_lt"], 0.4 * smooth(g, 0.75, 1.0))                     # pale tips
+        return mix(col, COL["ice_dk"], 0.4 * smooth(g, 0.25, 0.05))                   # deeper where it grows out
+    for k, (dx, dy, h, r, lean) in enumerate(((0.0, 0.02, 0.88, 0.22, (0.0, 0.05)), (0.36, 0.1, 0.56, 0.16, (0.55, 0.15)),
+                                              (-0.34, 0.14, 0.62, 0.17, (-0.55, 0.2)), (0.12, 0.42, 0.5, 0.15, (0.2, 0.6)),
+                                              (-0.16, -0.26, 0.44, 0.14, (-0.25, -0.45)))):
+        d = Vector((lean[0], lean[1], 1.0)).normalized()
+        base = top + Vector((dx, dy, -0.08 - 0.25 * (dx * dx + dy * dy)))
+        add("crystals", facing(shard(h, r, sides=6, seed=10 + k), base, d), ice_m, ice_colour)
+
+    lowest = min(v.co.z for bm, _ in c.parts.values() for v in bm.verts)
+    for bm, _ in c.parts.values():
+        bm.transform(M((0, 0, -lowest)))
     c.build(scale=SCALE)
     return c
 
@@ -465,9 +515,14 @@ def bake(c, texture):
     pre = NAME + "_"
     glow = [ob for ob in c.objects if ob.name.startswith(pre + "GLOW")]
     eyes = [ob for ob in c.objects if ob.name.startswith(pre + "Eyes")]
-    body = kit.bake_texture([ob for ob in c.objects if ob not in glow and ob not in eyes], texture, name=pre + "Body",
+    parts = [ob for ob in c.objects if ob not in glow and ob not in eyes]
+    if "before_bake" in globals():
+        before_bake(parts)
+    body = kit.bake_texture(parts, texture, name=pre + "Body",
                             shade=BAKE["shade"], soften=3, rough=BAKE["rough"], uv_angle=66.0, uv_margin=0.004,
                             pack_margin=0.003)
+    if "after_bake" in globals():
+        after_bake(body)
     out = [body]
     for group, label in ((glow, "GLOW"), (eyes, "Eyes")):
         if not group:
