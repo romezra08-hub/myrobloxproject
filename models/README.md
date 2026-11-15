@@ -109,13 +109,13 @@ dragon more studs than a fox, and bigger pets also stride more slowly.
 
 | Style | Pets |
 |---|---|
-| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip) |
-| `hopper` (arcs with a pause; the odd hop in place) | bunny, drumdevil, gargoyle (slower, lower stone hops: it is modelled crouched on its hands) |
-| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog |
-| `heavy` (slow stomp and roll; rare look round) | dragon, golem, driller, turtle |
-| `flyer` (hover, figure eight, bank; flies pitched down) | phoenix, griffin, raven, infernobat, firedemon |
-| `floater` (slow drift, sway and turn) | ghost, cloudspirit, reaper |
-| `slither` (body swings side to side; raises its head) | salamander |
+| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip), tophatcrow, hedgehog |
+| `hopper` (arcs with a pause; the odd hop in place) | bunny, gargoyle (slower, lower stone hops: it is modelled crouched on its hands), drumdevil, mushroom, snowbunny, frog |
+| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog, cerberus, piggy, dunecat, shadowpanther, frostwolf, nightunicorn |
+| `heavy` (slow stomp and roll; rare look round) | turtle, dragon, golem, driller, spikecrab, highlandbull, magmacrown, grizzly, redrex, armordino, irongolem |
+| `flyer` (hover, figure eight, bank; flies pitched down) | phoenix, griffin, infernobat, raven, firedemon, moth, duskbat, angelyeti |
+| `floater` (slow drift, sway and turn) | ghost, cloudspirit, reaper, spiritblob, skyjelly, halosprite |
+| `slither` (body swings side to side; raises its head) | salamander, snailrider, emberserpent, goldslug, sailback, croc |
 | `blob` (hop, tilt and jelly wobble, no scaling) | kingslime, cauldron |
 
 **Previews.** `models/anim/preview_anim.py` renders each pet's idle and walk with an exact Python port
@@ -275,6 +275,11 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Frog | Lime frog with pink headphones | Chill DJ frog with spotted green skin, big amber eyes, relaxed half lids and pink over-ear headphones | 9,720 |
 | TopHatCrow | Dark purple crow in a top hat with violet wing tips | Plump violet-black crow with layered breast scallops, folded three-layer wings with a violet sheen, a fan tail, a chunky beak and a top hat with a pink ribbon | 11,910 |
 | Croc | Bright green flat-snouted lizard | Low-slung emerald crocodile on splayed legs, with a long tapering snout, a closed smile, two rows of broad scutes and a crested tail | 9,408 |
+| HaloSprite | Winged eyeball inside gold rings | Pearl-white celestial sprite with a gold halo, big round-tipped feather wings, blush cheeks and one curled wispy tail | 9,856 |
+| ArmorDino | Brown lumpy dinosaur with yellow spikes | Sturdy ankylosaur-type with keeled staggered back plates, amber side spikes, head scutes and a club tail | 11,416 |
+| FrostWolf | Blue blocky wolf with a white spiky crest | Fluffy midnight-blue arctic wolf with a pale ruff, a ridge of ice crystals along its back and a round tail tip | 11,062 |
+| IronGolem | Brown block golem with yellow lights | Friendly mining golem of dark stone under rusty riveted iron plates, big fists, a horned helmet and a glowing lantern heart | 11,702 |
+| NightUnicorn | Black and white horse with a pale horn | Night-purple unicorn with a starry coat, a lilac mane and tail, silver hooves and a glowing spiral horn | 11,516 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

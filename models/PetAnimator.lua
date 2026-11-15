@@ -412,6 +412,11 @@ PetAnimator.PETS = {
 	redrex = { style = "heavy", speed = 1.1, roll = 4 },
 	croc = { style = "slither", yaw = 7 },
 	frog = { style = "hopper", bounce = 0.25, duty = 0.55, foot = 1 },
+	halosprite = { style = "floater", hover = 0.18, spin = 4 },
+	armordino = { style = "heavy", speed = 1.1, roll = 3, impact = 2 },
+	frostwolf = { style = "walker", speed = 1.05, bounce = 0.05, lookTilt = 6 },
+	irongolem = { style = "heavy", speed = 1.0, roll = 5, impact = 3 },
+	nightunicorn = { style = "walker", speed = 1.0, bounce = 0.05, skip = 0.1, lookTilt = 5 },
 } :: { [string]: { [string]: any } }
 
 -- Fields that `amp` scales, and the periods that `speed` shortens.

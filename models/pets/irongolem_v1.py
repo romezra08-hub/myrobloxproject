@@ -432,12 +432,10 @@ def scarred(name, rough=0.8):
     mottle.inputs["Scale"].default_value, mottle.inputs["Detail"].default_value = 14.0, 3.0
     link(co.outputs["Object"], mottle.inputs["Vector"])
 
-    def op(kind, x, y=None):
+    def op(kind, *args):
         n = new("ShaderNodeMath")
         n.operation = kind
-        for i, v in enumerate((x, y)):
-            if v is None:
-                continue
+        for i, v in enumerate(args):
             if isinstance(v, (int, float)):
                 n.inputs[i].default_value = v
             else:
