@@ -20,8 +20,35 @@ Must-haves:
   6. Matte, a 1024 colour bake plus a baked roughness map. Body up to about 16k triangles. About 3 studs
      tall, up to about 5 long. Feet at z=0, facing -Y.
 
-Final: round 16 (rounds are kept as frostwolf_hq_v1.py ... frostwolf_hq_v16.py; the previous remake is
+Final: round 21 (rounds are kept as frostwolf_hq_v1.py ... frostwolf_hq_v21.py; the previous remake is
 frostwolf_v4_old.py).
+
+Round 21: with the colour painted per vertex the tail-tip locks ended in white points that flashed like a
+star: the tip is frost blue-white rather than white, and the last locks are shorter and follow the core.
+
+Round 20: pale chest locks beside the forelegs still hung down over the elbows as white blades: no chest
+lock now reaches below the elbows (z 1.22 before scaling), they are shortened instead. The real culprit
+was the leg colour: high on a leg it blended towards the body's band, which below the chest is the pale
+belly, so the outer shoulder locks (coloured per vertex since round 17) turned white at their tips; legs
+now never take a band paler than their own. The white bib no longer reaches round over the shoulders
+either: out there the chest locks turn frost blue and stop higher.
+
+Round 19: a few chest locks still hung below the bib between the forelegs as white blades: the lowest
+chest locks are shorter, and any lock whose root faces even partly down now runs back along the belly.
+
+Round 18: the chest locks still showed dark notched outlines and their lowest tips hung below the chest
+as white blades: chest locks lie flat with a shallower furrow, locks on the underside run back along the
+belly instead of hanging, and after the bake most of the crease shading is taken back out of the chest
+locks (0.14 instead of 0.4), so they merge. The crest is 7% lower than round 17 (its tallest point rose
+0.75 above the fur beside it).
+
+Round 17 (after the coordinator's review: faces read grumpy, smug or sleepy; the chest read as
+plates; the crest was small): finer brows set higher with a gap above the eye, a fuller almond tilted up at
+the outer corner; the dark lip tube is gone and the mouth is a short soft line painted per pixel along the
+upper lip, its corner a touch higher than its front. The chest is long thin locks in columns (no stagger), so
+they run in streaks over each other; the coat gradient is painted per vertex across every lock, the chest and body
+locks have no dark outline and nearly no tip darkening, and the crease shading is softer (0.4). The crest
+is about 25% taller, more upright and thicker.
 
 Round 16: finish. Rime: the tips of the locks round the crystal roots turn frost white (they read as
 frosted by the crystals), and the frost seams between those locks are stronger and reach a little further.
@@ -203,7 +230,7 @@ def band(b):
     return _PAL[-1][1].copy()
 
 
-VERT_LAYERS = ("fu", "fq", "fs", "gloss", "grad", "frost")
+VERT_LAYERS = ("fu", "fq", "fs", "gloss", "grad", "frost", "soft")
 
 
 def ensure_layers(bm):
@@ -652,8 +679,10 @@ def _attr(tree, name, out="Fac"):
     return a.outputs[out]
 
 
-def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9):
-    """Short fur: the vertex colour 'col' under fine streaks running along the axis with the smallest scale."""
+def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9, lip=None):
+    """Short fur: the vertex colour 'col' under fine streaks running along the axis with the smallest scale.
+    With `lip` (see lip_line) a short soft dark line is painted along each upper lip, per pixel, so it is
+    a crisp colour change and not a groove in the mesh."""
     m = kit.material(name, "#808080", rough=rough)
     t = m.node_tree
     b = kit.principled(m)
@@ -668,11 +697,73 @@ def fur_material(name, scale=(30.0, 30.0, 4.0), strength=0.12, rough=0.9):
     hsv = t.nodes.new("ShaderNodeHueSaturation")
     t.links.new(_attr(t, "col", "Color"), hsv.inputs["Color"])
     t.links.new(v, hsv.inputs["Value"])
-    t.links.new(hsv.outputs["Color"], b.inputs["Base Color"])
+    out = hsv.outputs["Color"]
+    if lip:
+        out = lip_line(t, coord, out, **lip)
+    t.links.new(out, b.inputs["Base Color"])
     return m
 
 
-def clump_material(name, strength=0.16, tipdark=0.3, rough=0.9):
+def lip_line(t, coord, colour, H, a, b, w=(0.005, 0.013), dark=DARK, amount=0.85):
+    """Shader nodes: darken `colour` along the segment a-b ((y, z) in head space, on both sides of the
+    muzzle). The baked object's coordinates are the built ones, scaled by SCALE and lowered by LEG_DROP,
+    so they are taken back into head space first."""
+    new, link = t.nodes.new, t.links.new
+    loc, rot, sca = H.decompose()
+    m1 = new("ShaderNodeMapping")
+    m1.inputs["Scale"].default_value = (1.0 / SCALE,) * 3
+    m1.inputs["Location"].default_value = Vector((0, 0, LEG_DROP)) - loc
+    link(coord.outputs["Object"], m1.inputs["Vector"])
+    m2 = new("ShaderNodeMapping")
+    m2.inputs["Rotation"].default_value = rot.to_matrix().inverted().to_euler('XYZ')
+    m2.inputs["Scale"].default_value = (1.0 / sca.x,) * 3
+    link(m1.outputs["Vector"], m2.inputs["Vector"])
+    sep = new("ShaderNodeSeparateXYZ")
+    link(m2.outputs["Vector"], sep.inputs[0])
+    comb = new("ShaderNodeCombineXYZ")
+    link(sep.outputs[1], comb.inputs[1])
+    link(sep.outputs[2], comb.inputs[2])
+    A, B = Vector((0, a[0], a[1])), Vector((0, b[0], b[1]))
+    ab = B - A
+
+    def vec(op, x, y=None):
+        n = new("ShaderNodeVectorMath")
+        n.operation = op
+        for i, val in enumerate((x, y)):
+            if val is None:
+                continue
+            if isinstance(val, Vector):
+                n.inputs[i].default_value = val
+            else:
+                link(val, n.inputs[i])
+        return n
+    ap = vec('SUBTRACT', comb.outputs[0], A)
+    dot = vec('DOT_PRODUCT', ap.outputs[0], ab)
+    tt = _math(t, 'MINIMUM', _math(t, 'MAXIMUM', _math(t, 'DIVIDE', dot.outputs["Value"], ab.length_squared), 0.0), 1.0)
+    sc = vec('SCALE', ab)
+    sc.inputs["Scale"].default_value = 1.0
+    link(tt, sc.inputs["Scale"])
+    near = vec('SUBTRACT', ap.outputs[0], sc.outputs[0])
+    dist = vec('LENGTH', near.outputs[0])
+
+    def ramp(x, lo, hi):
+        r = new("ShaderNodeMapRange")
+        r.interpolation_type = 'SMOOTHSTEP'
+        r.inputs["From Min"].default_value, r.inputs["From Max"].default_value = lo, hi
+        link(x, r.inputs["Value"])
+        return r.outputs["Result"]
+    k = _math(t, 'SUBTRACT', 1.0, ramp(dist.outputs["Value"], w[0], w[1]))
+    k = _math(t, 'MULTIPLY', k, ramp(tt, 0.0, 0.35))                                   # fades in from the front
+    k = _math(t, 'MULTIPLY', k, ramp(_math(t, 'ABSOLUTE', sep.outputs[0], 0.0), 0.05, 0.09))
+    mix = new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    link(_math(t, 'MULTIPLY', k, amount), mix.inputs[0])
+    link(colour, mix.inputs[6])
+    mix.inputs[7].default_value = (*kit.srgb(dark), 1.0)
+    return mix.outputs[2]
+
+
+def clump_material(name, strength=0.16, tipdark=0.3, rough=0.9, edge=0.14):
     """A fur clump: its colour 'col', fine strands along it, darker towards its tip and rim."""
     m = kit.material(name, "#808080", rough=rough)
     t = m.node_tree
@@ -689,7 +780,7 @@ def clump_material(name, strength=0.16, tipdark=0.3, rough=0.9):
     tip = _math(t, 'MULTIPLY_ADD', _math(t, 'MULTIPLY', fu, fu), -tipdark, 1.0)
     fq = _attr(t, "fq")
     q4 = _math(t, 'POWER', _math(t, 'ABSOLUTE', fq, 0.0), 4.0)
-    edge = _math(t, 'MULTIPLY_ADD', q4, -0.14, 1.0)
+    edge = _math(t, 'MULTIPLY_ADD', q4, -edge, 1.0)
     v = _math(t, 'MULTIPLY', _math(t, 'MULTIPLY', v, tip), edge)
     hsv = t.nodes.new("ShaderNodeHueSaturation")
     t.links.new(_attr(t, "col", "Color"), hsv.inputs["Color"])
@@ -856,7 +947,9 @@ def _seg(p, a, b):
 def body_band(p):
     k, ang = SPINE.angle_of(p)
     mane = smooth(k, 4.6, 3.6)              # the mane is dark down its sides, pale only at the throat and chest
-    return 1.0 - smooth(ang, lerp(-72.0, -78.0, mane), lerp(42.0, 15.0, mane))
+    b = 1.0 - smooth(ang, lerp(-72.0, -78.0, mane), lerp(42.0, 15.0, mane))
+    # the white bib is the front of the chest only: out over the shoulders it turns frost blue
+    return b * lerp(1.0, 0.5, mane * smooth(abs(p.x), 0.3, 0.56))
 
 
 EYE_H = []        # the eyes in head space, filled by build()
@@ -889,9 +982,12 @@ def build():
     EYE_H[:] = []
     fur_body = fur_material("FurBody", scale=(34.0, 6.0, 34.0), strength=0.14)      # streaks run along the body (y)
     fur_leg = fur_material("FurLeg", scale=(34.0, 34.0, 6.0), strength=0.13)        # streaks run down the legs (z)
-    fur_face = fur_material("FurFace", scale=(52.0, 9.0, 52.0), strength=0.11)
+    ya, yb = -0.68, -0.47           # the mouth: short, following the upper lip, its corner a touch higher than its front
+    fur_face = fur_material("FurFace", scale=(52.0, 9.0, 52.0), strength=0.11,
+                            lip=dict(H=head_matrix(), a=(ya, skull_at(ya)[5] + 0.004), b=(yb, skull_at(yb)[5] + 0.006)))
     clump_m = clump_material("Clump")
-    clump_soft = clump_material("ClumpSoft", strength=0.2, tipdark=0.12)     # body locks: tips barely darker, so they read as fur, not scales
+    clump_soft = clump_material("ClumpSoft", strength=0.2, tipdark=0.1, edge=0.0)    # body locks: tips barely darker, so they read as fur, not scales
+    clump_chest = clump_material("ClumpChest", strength=0.16, tipdark=0.08, edge=0.0)  # the pale chest: no outlines at all
     dark = kit.material("Dark", DARK, rough=0.6)
     nose_m = kit.material("Nose", "#0D101B", rough=0.45)
     claw_m = kit.material("Claw", "#5A6374", rough=0.45)
@@ -985,7 +1081,7 @@ def build():
         b += 0.14 * smooth(-n.y, 0.4, 0.9) * smooth(co.z, 0.95, 0.6) * smooth(co.z, 0.3, 0.5)
         b = lerp(b, 0.16, smooth(co.z, 0.5, 0.18))            # darker socks down to the paws
         top = smooth(co.z, 1.05, 1.65)
-        return lerp(b, body_band(co), top)
+        return lerp(b, min(body_band(co), max(b, 0.5)), top)        # never the pale belly band on the outside of a leg
 
     global leg_band
     leg_band = leg_band_fn
@@ -1075,7 +1171,7 @@ def build():
         r = co - c
         up = r.z / max(r.length, 1e-6)
         b = 0.18 + 0.45 * smooth(-up, -0.2, 0.9)
-        return lerp(b, 1.12, smooth(t, 0.5, 0.85))
+        return lerp(b, 1.03, smooth(t, 0.5, 0.85))
 
     global tail_band
     tail_band = tail_band_fn
@@ -1089,8 +1185,12 @@ def build():
     eyes = []
     for sx in (-1, 1):
         pe, _ = face.hit((0.55 * sx, -0.62, 0.15), (-0.75 * sx, 0.6, -0.04))
-        brow = [face.hit((0.6 * sx, pe.y + dy, pe.z + dz), (-sx, 0.0, 0.0), out=0.008)[0] for dy, dz in ((-0.09, 0.085), (-0.04, 0.092), (0.03, 0.096), (0.11, 0.086))]
-        head_parts.append(("brows", loft(brow, [(0.01, 0.008), (0.032, 0.024), (0.036, 0.026), (0.022, 0.015)], P_BROW,
+        pn = face.hit((0.55 * sx, -0.62, 0.15), (-0.75 * sx, 0.6, -0.04))[1]
+        # level brows: offsets from the eye in head space, laid onto the surface along its normal; the inner
+        # end a touch higher (a calm brow; an inner end lower than the outer reads as a scowl)
+        brow = [face.hit(pe + Vector((0, dy, dz)) + pn * 0.3, -pn, out=0.008)[0]
+                for dy, dz in ((-0.07, 0.15), (-0.015, 0.142), (0.055, 0.128), (0.125, 0.11))]
+        head_parts.append(("brows", loft(brow, [(0.007, 0.005), (0.022, 0.015), (0.025, 0.017), (0.015, 0.01)], P_BROW,
                                          up=(0.7 * sx, 0, 1), rings=10), fur_face, "head"))
         # cheek ruff volume behind the jaw, for the cheek clumps
         head_parts.append(("ruff", mass([(0.20 * sx, -0.22, -0.13), (0.29 * sx, 0.02, -0.12), (0.28 * sx, 0.22, -0.06)],
@@ -1099,20 +1199,17 @@ def build():
         p, nrm = face.hit((0.55 * sx, -0.62, 0.15), (-0.75 * sx, 0.6, -0.04))
         eyes.append((p, nrm))
         EYE_H.append(p.copy())
-        along = Vector((0.0, 1.0, 0.18))
-        eye = [(-0.5, -0.02), (-0.28, 0.11), (0.05, 0.17), (0.33, 0.15), (0.5, 0.05), (0.3, -0.08), (0.0, -0.12), (-0.3, -0.09)]
+        along = Vector((0.0, 1.0, 0.22))
+        eye = [(-0.5, -0.02), (-0.3, 0.14), (0.0, 0.205), (0.3, 0.175), (0.5, 0.06), (0.3, -0.1), (0.0, -0.14), (-0.3, -0.11)]
         # both are laid onto the curve of the head, so the glow fills its thin dark rim (a flat eye sank
         # into the head at its ends and showed as a dot of light in a dark almond, like a cartoon pupil)
-        sock = lens([(a * 0.16, b * 0.2) for a, b in eye], 0.02, rows=((0.6, 0.9), (1.0, 0.0)), centre=(0.0, 0.03))
+        sock = lens([(a * 0.158, b * 0.196) for a, b in eye], 0.02, rows=((0.6, 0.9), (1.0, 0.0)), centre=(0.0, 0.03))
         sock.transform(facing(p, nrm, along))
         head_parts.append(("socket", drape(sock, face, p, nrm, 0.0), dark, None))
         e = lens([(a * 0.138, b * 0.17) for a, b in eye], 0.02, rows=((0.6, 0.9), (1.0, 0.0)), centre=(0.0, 0.03))
         e.transform(facing(p, nrm, along))
         head_parts.append(("eyes", drape(e, face, p, nrm, 0.007), glow, None))
         # the closed mouth: a dark lip line along the upper lip, back to the corner under the eye
-        lip = [(skull_at(y)[6] * 0.99 * sx, y, skull_at(y)[5] - 0.004 + 0.012 * smooth(y, -0.6, -0.45)) for y in (-0.78, -0.71, -0.64, -0.57, -0.51, -0.45)]
-        head_parts.append(("lips", loft(lip, [0.005, 0.009, 0.01, 0.01, 0.009, 0.005], profile_round(5), up=(0, 0, 1), rings=10),
-                           dark, None))
     # nose: a dark wedge on the tip of the muzzle
     nose = rounded_box((0.12, 0.10, 0.085), n=2.6, cuts=2)
     for v in nose.verts:
@@ -1151,9 +1248,14 @@ def build():
         p, nrm = surf.ray(o, dvec, dvec.length * 1.5)
         if p is None:
             return None
+        under = smooth(-nrm.z, 0.1, 0.6)                  # on the underside: run back along the belly, never hang
+        if under > 0:
+            flow = Vector(flow).normalized().lerp(V((0, 1, -0.15)).normalized(), under)
         bm = clump(surf, p, nrm, flow, L, W, lift=lift, thick=thick, bend=bend, seed=rnd.random(), hug=hug, groove=groove)
-        c = colour(region, p, nrm) * (shade * (1.0 + var * (rnd.random() - 0.5) * 2))
-        paint(bm, lambda co, n, c=c: c)
+        if mat is not None and mat.name.startswith("ClumpChest"):
+            set_layer(bm, "soft", 1.0)
+        f = shade * (1.0 + var * (rnd.random() - 0.5) * 2)
+        paint(bm, lambda co, n, f=f: colour(region, co, nrm) * f)          # per vertex: the coat's gradient runs across the locks
         set_layer(bm, "gloss", 0.12 * rnd.random())
         add("clumps", bm, mat or clump_m, crease=75, boost=boost)
         n_clumps[0] += 1
@@ -1173,25 +1275,29 @@ def build():
         k, ang = skin.angle_of(p)
         return V((0, 1, -0.15 - 0.95 * smooth(ang, 40, -40)))
 
-    def on_skin(index, th, L, W, lift=0.05, thick=0.06, bend=0.0, region="body", mat=None, groove=0.45):
+    def on_skin(index, th, L, W, lift=0.05, thick=0.06, bend=0.0, region="body", mat=None, groove=0.45, floor=None):
         s = skin.s_of(index)
         c = skin.at(s)[0]
         bare = skin.bare(s, th)
+        if floor is not None:                        # no lower than this: a lock must not hang down over the legs
+            L = min(L, (bare.z - floor) / 0.9)
+            if L < 0.14:
+                return None
         o = bare + (bare - c).normalized() * 0.9
         return put(o, c, flow_at(bare), L, W, region, lift=lift, thick=thick, bend=bend, mat=mat, groove=groove, var=0.03 if mat else 0.05)
 
     # ---- ice crystals: a crest along the spine from the neck to mid back, before the fur so that the fur
     # round their roots can be frosted --------------------------------------------------------------------
     roots = []
-    for k, (idx, h) in enumerate(((1.5, 0.34), (2.05, 0.56), (2.6, 0.76), (3.15, 0.9), (3.7, 0.86), (4.25, 0.72), (4.8, 0.55),
-                                  (5.3, 0.39), (5.75, 0.25))):
+    for k, (idx, h) in enumerate(((1.5, 0.42), (2.05, 0.68), (2.6, 0.92), (3.15, 1.05), (3.7, 1.0), (4.25, 0.84), (4.8, 0.64),
+                                  (5.3, 0.45), (5.75, 0.29))):
         s = skin.s_of(idx)
         c, t, u = skin.at(s)[:3]
         p, nrm = surf.hit(c + u * 1.2, -u)
         roots.append(p.copy())
         up = (u + V((0, 0, 0.6))).normalized()
-        lean = (up * 0.85 + t * 0.42 + skin.at(s)[3] * rnd.uniform(-0.08, 0.08)).normalized()
-        cr = crystal(0.06 + 0.075 * h, h, seed=k, sides=6 if k % 3 else 5)
+        lean = (up * 0.9 + t * 0.32 + skin.at(s)[3] * rnd.uniform(-0.08, 0.08)).normalized()
+        cr = crystal(0.07 + 0.09 * h, h, seed=k, sides=6 if k % 3 else 5)
         q = lean.to_track_quat('Z', 'Y')
         cr.transform(M(p - u * 0.04) @ q.to_matrix().to_4x4())
         add("ice", cr, glow, crease=15)
@@ -1204,8 +1310,8 @@ def build():
             if p2 is None:
                 continue
             lean2 = (n2 * 0.6 + up * 0.3 + t * 0.35 + skin.at(s)[3] * (0.38 * -sx)).normalized()
-            h2 = h * rnd.uniform(0.42, 0.62)
-            cr = crystal(0.04 + 0.06 * h2, h2, seed=k * 3 + sx, sides=5 if (k + sx) % 2 else 6)
+            h2 = h * rnd.uniform(0.45, 0.66)
+            cr = crystal(0.05 + 0.07 * h2, h2, seed=k * 3 + sx, sides=5 if (k + sx) % 2 else 6)
             cr.transform(M(p2 - n2 * 0.03) @ lean2.to_track_quat('Z', 'Y').to_matrix().to_4x4())
             add("ice", cr, glow, crease=15)
     ROOTS[:] = roots
@@ -1217,6 +1323,15 @@ def build():
         for j in range(m):
             th = 90.0 + 360.0 * (j + 0.5 * (r % 2)) / m + rnd.uniform(-4, 4)
             low = -math.sin(math.radians(th))          # 1 at the belly side, -1 on the spine
+            if low > 0.2:
+                # the chest: long thin locks in columns (no stagger, every other ring), so each runs over the
+                # roots of the next ones in streaks flowing down instead of tiling like plates
+                th = 90.0 + 360.0 * j / m + rnd.uniform(-3, 3)
+                Lc = L * 1.4 * rnd.uniform(0.9, 1.12) * (1.0 - 0.45 * smooth(low, 0.55, 0.95))
+                on_skin(idx + rnd.uniform(-0.04, 0.04), th, Lc, 0.1 * rnd.uniform(0.9, 1.1),
+                        lift=0.004, thick=0.04, bend=rnd.uniform(-0.1, 0.1), mat=clump_chest, groove=0.4,
+                        floor=1.22 if abs(skin.bare(skin.s_of(idx), th).x) < 0.4 else 1.36)
+                continue
             Lk = L * (1.0 + 0.3 * smooth(low, 0.0, 1.0)) * rnd.uniform(0.78, 1.18)
             on_skin(idx + rnd.uniform(-0.07, 0.07), th, Lk, 0.13 * rnd.uniform(0.85, 1.15),
                     lift=0.04 + 0.02 * r / len(rings), thick=0.05, bend=rnd.uniform(-0.18, 0.18))
@@ -1295,9 +1410,9 @@ def build():
             a = 2 * math.pi * (j + 0.5 * (r % 2)) / m + rnd.uniform(-0.15, 0.15)
             out = ref * math.cos(a) + sd * math.sin(a)
             tip = r == rings_t - 1
-            L = 0.24 if tip else 0.36 + 0.08 * math.sin(math.pi * t)
+            L = 0.19 if tip else 0.36 + 0.08 * math.sin(math.pi * t)
             put(c + out * 0.8, c, tan, L, 0.11 if tip else 0.15, "tail", lift=0.0 if tip else 0.03 + 0.02 * math.sin(math.pi * t),
-                thick=0.04 if tip else 0.05, bend=rnd.uniform(-0.1, 0.1), hug=0.6 if tip else 1.0)
+                thick=0.04 if tip else 0.05, bend=rnd.uniform(-0.1, 0.1), hug=0.85 if tip else 1.0)
     # the tail root: locks off the rump running into the tail
     for idx in (8.45, 8.85):
         for th in (40.0, 70.0, 110.0, 140.0, 90.0):
@@ -1438,6 +1553,60 @@ def rough_map(body, texture, base, vary=0.1):
     return float(px[0::4].min()), float(px[0::4].max())
 
 
+BAKE_SHADE = 0.4              # how dark the deepest crease gets in the bake
+CHEST_SHADE = 0.14            # ... and on the chest locks, so they merge into soft fur instead of outlined plates
+
+
+def soften_chest(ob, size, shade, soft_shade, soften=3):
+    """After the bake: on the chest locks (vertex value "soft") take most of the crease shading back out, so
+    neighbouring locks merge instead of each being outlined like a plate. The crease shading is baked again
+    the way kit.bake_texture made it, and the colour is scaled by the ratio of the two strengths."""
+    import numpy as np
+    sc = bpy.context.scene
+    baked = ob.data.materials[0]
+    tex = next(n.image for n in baked.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image.size[0] == size)
+    m = bpy.data.materials.new("SoftMask")
+    kit.principled(m)
+    tree = m.node_tree
+    em = tree.nodes.new("ShaderNodeEmission")
+    tree.links.new(_attr(tree, "soft"), em.inputs["Color"])
+    out = next(n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL')
+    tree.links.new(em.outputs[0], out.inputs[0])
+    img = bpy.data.images.new("soft_mask", size, size, alpha=False, float_buffer=True)
+    tn = tree.nodes.new("ShaderNodeTexImage")
+    tn.image = img
+    tree.nodes.active = tn
+    ob.data.materials[0] = m
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+
+    def grab():
+        px = np.empty(size * size * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        return px.reshape(size, size, 4)[..., :1].copy()
+    keep = sc.cycles.samples
+    sc.cycles.samples = 4
+    bpy.ops.object.bake(type='EMIT', margin=12)
+    mask = np.clip(grab(), 0.0, 1.0)
+    sc.cycles.samples = keep
+    bpy.ops.object.bake(type='AO', margin=12)
+    ao = grab()
+    ob.data.materials[0] = baked
+    bpy.data.images.remove(img)
+    bpy.data.materials.remove(m)
+    for _ in range(2):
+        for axis in (0, 1):
+            ao = sum(np.roll(ao, d, axis) for d in range(-soften, soften + 1)) / (2 * soften + 1)
+    ao = np.clip((ao - 0.25) / 0.75, 0, 1) ** 0.8
+    ratio = np.clip((1 - soft_shade * (1 - ao)) / (1 - shade * (1 - ao)), 1.0, 1.7)
+    px = np.empty(size * size * 4, dtype=np.float32)
+    tex.pixels.foreach_get(px)
+    px = px.reshape(size, size, 4)
+    px[..., :3] = np.clip(px[..., :3] * (1 + mask * (ratio - 1)), 0.0, 1.0)
+    tex.pixels.foreach_set(px.ravel())
+
+
 FROST = "#BDF3FF"             # the glow in the seams of the fur round the crystal roots
 FROST_REACH = 0.12
 FROST_FROM, FROST_TO, FROST_MAX = 0.12, 0.55, 0.85
@@ -1524,10 +1693,12 @@ def bake(wolf, texture):
     bpy.ops = _OpsProxy(saved, pack)
     try:
         body = kit.bake_texture([ob for ob in wolf.objects if ob not in glow], texture, name=pre + "Body",
-                                shade=0.5, soften=2, rough=0.88, uv_angle=UV_ANGLE, uv_margin=UV_MARGIN, pack_margin=PACK_MARGIN)
+                                shade=BAKE_SHADE, soften=3, rough=0.88, uv_angle=UV_ANGLE, uv_margin=UV_MARGIN, pack_margin=PACK_MARGIN)
     finally:
         bpy.ops = saved
-    frost_seams(body, texture, 512 if os.environ.get("PETS_FAST") else 1024)
+    size = 512 if os.environ.get("PETS_FAST") else 1024
+    soften_chest(body, size, BAKE_SHADE, CHEST_SHADE)
+    frost_seams(body, texture, size)
     rough_map(body, texture, 0.88, 0.1)
     me = body.data
     if "hid" in me.attributes:
@@ -1541,7 +1712,7 @@ def bake(wolf, texture):
             a2 += abs(sum(pts[i].x * pts[(i + 1) % len(pts)].y - pts[(i + 1) % len(pts)].x * pts[i].y for i in range(len(pts)))) / 2
             a3 += pl.area
         print("seen surfaces: about %.0f pixels to a stud" % ((a2 * 1024 * 1024 / max(a3, 1e-9)) ** 0.5))
-    junk = ("hid", "boost", "grad", "fu", "fq", "fs", "gloss", "col", "frost")
+    junk = ("hid", "boost", "grad", "fu", "fq", "fs", "gloss", "col", "frost", "soft")
     for name in junk:
         if name in me.attributes:
             me.attributes.remove(me.attributes[name])

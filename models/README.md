@@ -277,7 +277,7 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Croc | Bright green flat-snouted lizard | Low-slung emerald crocodile on splayed legs, with a long tapering snout, a closed smile, two rows of broad scutes and a crested tail | 9,408 |
 | HaloSprite | Winged eyeball inside gold rings | Pearl-white celestial sprite with a gold halo, big round-tipped feather wings, blush cheeks and one curled wispy tail | 9,856 |
 | ArmorDino | Brown lumpy dinosaur with yellow spikes | Sturdy ankylosaur-type with keeled staggered back plates, amber side spikes, head scutes and a club tail | 11,416 |
-| FrostWolf | Blue blocky wolf with a white spiky crest | Fluffy midnight-blue arctic wolf with a pale ruff, a ridge of ice crystals along its back and a round tail tip | 11,062 |
+| FrostWolf | Blue blocky wolf with a white spiky crest | Hero-quality midnight-blue arctic wolf (dragon method, 21 rounds): real wolf build with clawed paws, layered fur locks, a streaked frost-white bib, a tall faceted ice-crystal crest and small glowing eyes | 14,194 |
 | IronGolem | Brown block golem with yellow lights | Friendly mining golem of dark stone under rusty riveted iron plates, big fists, a horned helmet and a glowing lantern heart | 11,702 |
 | NightUnicorn | Black and white horse with a pale horn | Night-purple unicorn with a starry coat, a lilac mane and tail, silver hooves and a glowing spiral horn | 11,516 |
 | SunDragon | Yellow long-legged dragon with a red spiky crest | Golden sun dragon on a low stance, with a wedge head, swept-back horns, big folded wings with warm membranes and a flame-tipped tail | 11,724 |
