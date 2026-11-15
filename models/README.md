@@ -267,6 +267,12 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Grizzly | Brown bear with back spikes and long claws | Calm grizzly with a shoulder hump, layered fur ridges, short claws and small mossy stones on its back | 11,840 |
 | DuneCat | Hunched bony tan cat with a ridged spine | Slender sandy desert cat with calm kohl-lined almond eyes, shaped legs, darker ear and tail tips and a gold collar with a blue gem | 10,596 |
 | ShadowPanther | Black panther with an open red snarl | Long, low charcoal panther with a blue-violet sheen, faint rosettes, calm gold-green eyes, a glowing violet collar gem and tail flame | 11,656 |
+| GoldSlug | Lumpy gold blob with a moustache and sparkles | Dapper golden slug gentleman with a curled moustache, monocle, little top hat and floating sparkles | 9,988 |
+| AngelYeti | Stiff white ape with a crown and feather wings | Fluffy white yeti cub with a pale blue face, layered feathered angel wings and a small gold halo-crown | 10,080 |
+| Hedgehog | Blocky grey-spined hedgehog | Round hedgehog with clumped brown-cream spines, a pointy cream face, button nose and a mushroom on its back | 11,716 |
+| SailBack | Stiff blocky sail-backed reptile | Rust-red sail-backed lizard with a ribbed sunset-striped sail, bold scales and a low, strong stance | 10,216 |
+| RedRex | Chunky red horned dinosaur | Crimson horned dinosaur with darker bands, leaf-green back plates, cream horns and smiling cheeks | 10,472 |
+| Frog | Lime frog with pink headphones | Chill DJ frog with spotted green skin, big amber eyes, relaxed half lids and pink over-ear headphones | 9,720 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
