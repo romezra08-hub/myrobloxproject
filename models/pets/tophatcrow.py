@@ -5,16 +5,26 @@ with a top hat, pink eyes and violet wing tips. Built from scratch by script.
     python models/pets/tophatcrow.py --export models/export/tophatcrow.fbx
 
 Must-haves, checked in every review:
-  1. The same pet: a dark purple crow in a black top hat with a pink band, wings held out with violet tips.
-  2. Clearly not the Raven remake: plump and round, not slim; violet-black, not blue-black; short legs; a
-     short stout beak; wings half open at the sides, not raised high; bright pink-lilac eyes, not amber.
-  3. An oil-slick sheen on the plumage (purple facing up, blue at the sides), small feather scales painted in.
-  4. Big bright curious eyes with glints, a short beak; classy, never spooky.
-  5. A rakish top hat with a pink ribbon and a violet feather in the band.
-  6. Matte painted textures with crease shading; about 3 studs tall; Body under 12k triangles.
+  1. The same pet: a dark purple crow in a black top hat with a pink band, with violet wing tips.
+  2. Clearly not the Raven remake: plump, round and fluffy; violet-black; short legs; wings folded at the sides;
+     a raised fan tail; bright pink-lilac eyes.
+  3. Plumage that reads as feathers, not a smooth ball (sent back after round 5): layered breast scallops built in
+     the geometry, each with an iridescent violet-blue rim and a shadow under it.
+  4. Wings folded neatly along the sides in clear layers (coverts, secondaries, long violet-tipped primaries),
+     with blue-violet sheen on the feather edges; a fan tail.
+  5. A chunky, gently curved crow beak with nasal bristles, not a cone; big bright curious eyes; classy.
+  6. A rakish top hat with a pink ribbon and a violet feather in the band.
+  7. Matte painted textures with crease shading; about 3 studs tall; Body under 12k triangles.
 
-Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
-mipmapping would bleed into the seams as gloss).
+Round 8: the fan tail set higher, wider and tipped up so it shows behind the folded wings (it hid under them).
+
+Round 7: the wing feathers bent to follow the round body, so the folded wings lie along the sides instead of standing out as flaps, and made longer to cover the sides; scallops on the back too; the fan tail set outside the body and raised.
+
+Round 6 (sent back for: a smooth plasticky ball body, wings drooping like arms, a cone beak): eight rows of
+overlapping breast scallops built into the skin, painted with a blue-violet rim and a shadow under each; the wings
+folded flat along the sides in three layers with iridescent edges and violet-tipped primaries running back past
+the tail; a raised seven-feather fan tail; a chunky beak with a curved ridge, a hooked tip, a lower mandible and
+nasal bristles; soft belly fluff.
 
 Round 5: the breast feathers taken off again; the plumage painted with streaks, soft patch-to-patch shade changes and mottling instead, without dark joins.
 
@@ -446,16 +456,17 @@ def two_threads():
 # ---- the top hat crow -----------------------------------------------------------------------------
 
 NAME = "TopHatCrow"
-COL = {"black": hexc("#1C1624"), "deep": hexc("#110D16"), "violet": hexc("#4E2E80"), "blue": hexc("#2B3C8C"),
-       "plum": hexc("#3A2050"), "tip": hexc("#8E58E2"), "tip_lt": hexc("#B48CF2"), "beak": hexc("#2C2734"),
-       "beak_lt": hexc("#6A6178"), "leg": hexc("#2C2833"), "iris": hexc("#E9A0D2"), "iris_dk": hexc("#B866A8"),
+COL = {"black": hexc("#1C1624"), "deep": hexc("#0F0B14"), "violet": hexc("#4E2E80"), "blue": hexc("#2B3C8C"),
+       "plum": hexc("#3A2050"), "tip": hexc("#8E58E2"), "tip_lt": hexc("#B48CF2"), "beak": hexc("#26222E"),
+       "beak_lt": hexc("#5E566E"), "leg": hexc("#2C2833"), "iris": hexc("#E9A0D2"), "iris_dk": hexc("#B866A8"),
        "white": hexc("#FFFFFF"), "hat": hexc("#141218"), "hat_hi": hexc("#3A3546"), "ribbon": hexc("#E276B4"),
-       "ribbon_dk": hexc("#B24C8A")}
+       "ribbon_dk": hexc("#B24C8A"), "sheen_b": hexc("#5468E0"), "sheen_v": hexc("#9A62F0")}
 SCALE = 1.1
-BAKE = {"shade": 0.4, "rough": 0.7}
-GRAIN = [("noise", 40.0, 0.05), ("cells", 22.0, 0.05)]
+BAKE = {"shade": 0.42, "rough": 0.7}
+GRAIN = [("streak", 70.0, 0.06), ("noise", 40.0, 0.04)]
 HEAD = Vector((0, -0.3, 1.86))
 HEAD_M = M(HEAD, rot=(-4, 0, 0))
+BODY = Vector((0, 0.05, 1.08))
 FACE = Vector((0, -0.75, 1.95)) * SCALE
 FOCUS = FACE
 FACE_DIST = 4.4
@@ -468,7 +479,7 @@ def leaf(length, width, thick=0.022, rings=7):
     loops = []
     for i in range(rings):
         t = i / (rings - 1) * 0.96
-        w = width * (math.sin(math.pi * min(0.15 + t * 1.4, 1.0) * 0.5) ** 0.7) * (1 - t ** 3) ** 0.6 + 0.004
+        w = leaf_w(t, width)
         th = thick * (1 - 0.6 * t) + 0.003
         loops.append([bm.verts.new(p) for p in ((w, 0, t * length), (0, th, t * length), (-w, 0, t * length), (0, -th, t * length))])
     for a, b in zip(loops, loops[1:]):
@@ -482,16 +493,46 @@ def leaf(length, width, thick=0.022, rings=7):
     return bm
 
 
+def leaf_w(t, width):
+    return width * (math.sin(math.pi * min(0.15 + t * 1.4, 1.0) * 0.5) ** 0.7) * (1 - t ** 3) ** 0.6 + 0.004
+
+
 def sheen(co, n):
     """Violet-black plumage with an oil-slick sheen: purple where it faces up, blue at the sides."""
     col = mix(COL["deep"], COL["black"], smooth(n.z, -0.8, 0.0))
-    col = mix(col, COL["violet"], 0.7 * smooth(n.z, 0.15, 0.85))
-    col = mix(col, COL["blue"], 0.55 * smooth(abs(n.x), 0.45, 0.95) * smooth(n.z, -0.4, 0.35))
+    col = mix(col, COL["violet"], 0.6 * smooth(n.z, 0.15, 0.85))
+    col = mix(col, COL["blue"], 0.5 * smooth(abs(n.x), 0.45, 0.95) * smooth(n.z, -0.4, 0.35))
     return mix(col, COL["plum"], 0.3 * smooth(noise.noise(co * 4.0 + Vector((2, 7, 1))), 0.1, 0.6))
 
 
+def feather_col(length, width, tipcol, row=0.0):
+    """Paint for a leaf(): violet-black, a darker shaft, an iridescent blue-violet edge and (tipcol) violet tips."""
+    def f(co, n, g):
+        tt = min(max(co.z / length, 0.0), 1.0)
+        col = mix(COL["black"], COL["plum"], 0.35 * smooth(tt, 0.2, 0.7) + 0.15 * row)
+        edge = smooth(abs(co.x) / max(leaf_w(tt, width), 1e-3), 0.55, 0.95)
+        col = mix(col, mix(COL["sheen_b"], COL["sheen_v"], smooth(tt, 0.2, 0.9)), 0.55 * edge)
+        col = mix(col, COL["tip"], tipcol * smooth(tt, 0.55, 0.88))
+        col = mix(col, COL["tip_lt"], 0.4 * tipcol * smooth(tt, 0.88, 1.0))
+        return mix(col, COL["deep"], 0.5 * (1 - smooth(abs(co.x), 0.004, 0.012)) * smooth(tt, 0.95, 0.7))
+    return f
+
+
+def beak_shape(length, width, height, droop, lower=False):
+    """A chunky crow beak along -Y from the origin: deep and wide at the base, a curved ridge and a hooked tip."""
+    bm = kit.ball((2, 2, 2), cuts=3)
+    for v in bm.verts:
+        p = v.co.copy()
+        t = (1 - p.y) / 2                                                   # 0 at the base, 1 at the tip
+        w = width * (1 - t) ** 0.75 + 0.008
+        h = height * (1 - t) ** (0.6 if not lower else 1.0) + 0.008
+        z = p.z * h * (1.15 if p.z > 0 and not lower else 1.0)              # a raised ridge on the upper beak
+        v.co = Vector((p.x * w, -t * length, z - droop * t * t))
+    return bm
+
+
 def build():
-    plume_m = grained("Plumage", [("streak", 55.0, 0.12), ("cells", 16.0, 0.07), ("noise", 7.0, 0.06)], rough=0.62)
+    plume_m = grained("Plumage", [("streak", 55.0, 0.1), ("cells", 16.0, 0.05), ("noise", 7.0, 0.05)], rough=0.6)
     feather_m = grained("Feather", [("streak", 110.0, 0.07), ("noise", 14.0, 0.04)], rough=0.55)
     cloth_m = painted("Cloth", dict(strength=0.18, mottle=0.08, fine=90.0, length=3.0), rough=0.6)
     eye_m = kit.material("Eyes", "#0E0A12", rough=0.05)
@@ -516,16 +557,74 @@ def build():
         at, d = Vector(at), Vector(d).normalized()
         return loft([at, at + d * length * 0.55, at + d * length + Vector((0, 0, -0.02))], lambda t: r * (1 - 0.7 * t ** 1.5), segs=8, rings=5)
 
-    # ---- one fused skin: a plump round body and head ---------------------------------------------------
-    clay = [ell((0, 0.05, 1.08), (0.6, 0.66, 0.68)),
-            ell((0, -0.2, 1.2), (0.52, 0.48, 0.55)),                            # full chest
+    def lay(bm, at, n, d):
+        """Lay a shape built along +Z (flat in XZ) on a surface: +Z along d (tangent), +Y along the normal n."""
+        n = Vector(n).normalized()
+        d = (Vector(d) - n * Vector(d).dot(n)).normalized()
+        x = n.cross(d).normalized()
+        bm.transform(Matrix.Translation(at) @ Matrix((x, n, d)).transposed().to_4x4())
+        return bm
+
+    # ---- a plump round body and head ---------------------------------------------------------------------
+    base = [ell(BODY, (0.62, 0.66, 0.7)),
+            ell((0, -0.2, 1.2), (0.54, 0.5, 0.56)),                             # full chest
             ell(hd((0, 0, 0)), (0.42, 0.41, 0.41)),
-            ell((0, -0.15, 1.55), (0.42, 0.4, 0.3))]                            # neck ruff
+            ell((0, -0.15, 1.55), (0.43, 0.41, 0.3))]                           # neck ruff
     for s in (-1, 1):
-        clay.append(ell(hd((0.2 * s, -0.17, -0.08)), (0.17, 0.16, 0.15)))       # cheeks
+        base.append(ell(hd((0.2 * s, -0.17, -0.08)), (0.17, 0.16, 0.15)))       # cheeks
+    joined = join([b.copy() for b in base])
+    tree0 = BVHTree.FromBMesh(joined)
+
+    def surf(d, origin=BODY):
+        """Where a ray from inside the body along d leaves it, with the outward normal."""
+        far = Vector(origin) + Vector(d).normalized() * 3.0
+        loc, nrm, _, _ = tree0.ray_cast(far, -Vector(d).normalized())
+        return loc, nrm
+
+    # layered breast feathers: overlapping scallops, each lower edge lifted a little off the one below
+    clay = list(base)
+    scallops = []
+    for row in range(8):
+        el = math.radians(-38 + 10.5 * row)                                  # bottom of the belly up to the throat
+        per = 9 if row < 6 else 7
+        for k in range(per):
+            az = math.radians(-62 + 124 * (k + 0.5 * (row % 2)) / (per - 0.5))
+            d = Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+            loc, nrm = surf(d, BODY + Vector((0, -0.1, 0.12)))
+            if loc is None:
+                continue
+            down = Vector((0, 0, -1))
+            sc = ell((0, 0, 0), (0.11, 0.04, 0.1), cuts=3)
+            sc.transform(M(rot=(-18, 0, 0)))                                   # the lower edge tips out
+            lay(sc, loc + nrm * 0.005, nrm, down)
+            clay.append(sc)
+            dd = (down - nrm * down.dot(nrm)).normalized()
+            scallops.append((loc, nrm, dd))
+    for row in range(5):                                                     # and on the back, under the wing tips
+        el = math.radians(-10 + 11 * row)
+        for k in range(6):
+            az = math.radians(135 + 90 * (k + 0.5 * (row % 2)) / 5.5)
+            d = Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+            loc, nrm = surf(d, BODY + Vector((0, 0, 0.1)))
+            if loc is None:
+                continue
+            down = Vector((0, 0.5, -1))
+            sc = ell((0, 0, 0), (0.11, 0.04, 0.1), cuts=3)
+            sc.transform(M(rot=(-15, 0, 0)))
+            lay(sc, loc + nrm * 0.005, nrm, down)
+            clay.append(sc)
+            dd = (down - nrm * down.dot(nrm)).normalized()
+            scallops.append((loc, nrm, dd))
+    for k in range(9):                                                       # a soft rounded fluff at the belly
+        az = math.radians(-80 + 160 * k / 8)
+        loc, nrm = surf(Vector((math.sin(az) * 0.8, -math.cos(az) * 0.8, -0.6)))
+        if loc is not None:
+            clay.append(tuft(loc - nrm * 0.02, nrm + Vector((0, 0, -0.6)), length=0.08, r=0.06))
+    for s in (-1, 1):
         for k in range(3):                                                   # soft cheek feathers
             clay.append(tuft(hd((0.3 * s, -0.08 + 0.08 * k, -0.18 - 0.03 * k)), R @ Vector((s, 0.2, -0.7)), length=0.1, r=0.05))
-    skin = fuse(join(clay), voxel=0.02, iterations=3)
+    joined.free()
+    skin = fuse(join(clay), voxel=0.018, iterations=2)
     tree = BVHTree.FromBMesh(skin)
 
     def hit(origin, direction):
@@ -535,18 +634,34 @@ def build():
     for s in (-1, 1):
         d = R @ Vector((-0.55 * s, 1.0, 0.0))
         eyes.append(hit(hd((0.0, 0.0, 0.08)) - d.normalized() * 1.5, d))
-    beak_at, beak_n = hit(hd((0, -1.5, -0.01)), R @ Vector((0, 1, 0)))
+    beak_at, beak_n = hit(hd((0, -1.5, -0.03)), R @ Vector((0, 1, 0)))
 
     def carve(co, n):
-        d = n * 0.008 * noise.noise(co * 9.0)
+        d = n * 0.006 * noise.noise(co * 9.0)
         for e, en in eyes:
             d -= en * 0.025 * (1 - smooth((co - e).length, 0.08, 0.14))
         return d
     sculpt(skin, carve)
-    skin = decimate(skin, 5200, keep=lambda co: 0.7 * (1 - smooth((Vector(co) - hd((0, -0.3, 0.0))).length, 0.25, 0.5)), factor=1.0)
-    add("skin", skin, plume_m, lambda co, n, g: sheen(co, n), lambda co, n, g: 0.55 + 0.15 * smooth(-n.z, 0.0, 0.8))
+    skin = decimate(skin, 6400, keep=lambda co: max(0.7 * (1 - smooth((Vector(co) - hd((0, -0.3, 0.0))).length, 0.25, 0.5)),
+                                                    0.35 * smooth(Vector(co).y, -0.2, -0.5) * smooth(Vector(co).z, 1.7, 1.5)), factor=1.0)
 
-    # ---- big bright eyes and a short stout beak ----------------------------------------------------------
+    def plume(co, n, g=0.0):
+        col = sheen(co, n)
+        best, info = 0.2, None
+        for loc, nrm, dd in scallops:
+            dist = (co - loc).length
+            if dist < best:
+                best, info = dist, (loc, dd)
+        if info is not None:
+            loc, dd = info
+            v = (co - loc).dot(dd) / 0.1                                    # 0 at a scallop's middle, 1 at its lower rim
+            col = mix(col, mix(COL["sheen_b"], COL["sheen_v"], 0.5 + 0.5 * math.sin(co.x * 9)), 0.5 * smooth(v, 0.35, 0.8) * smooth(v, 1.15, 0.9))
+            col = mix(col, COL["deep"], 0.5 * smooth(v, 1.0, 1.25))         # the shadow under the rim
+            col = mix(col, COL["deep"], 0.25 * smooth(v, -0.2, -0.9))
+        return col
+    add("skin", skin, plume_m, plume, lambda co, n, g: 0.55 + 0.15 * smooth(-n.z, 0.0, 0.8))
+
+    # ---- big bright eyes ---------------------------------------------------------------------------------
     for (e, en), s in zip(eyes, (-1, 1)):
         iris = facing(ell((0, 0, 0), (0.095, 0.095, 0.03), cuts=3), e + en * 0.004, en)
         add("iris", iris, cloth_m, lambda co, n, g, e=e: mix(COL["iris"], COL["iris_dk"], smooth((co - e).length, 0.06, 0.095)), 0.3)
@@ -555,73 +670,64 @@ def build():
         side = en.cross(up).normalized()
         add("glints", ell(e + en * 0.05 + up * 0.03 - side * 0.02 * s, (0.024, 0.024, 0.018), cuts=1), cloth_m, COL["white"], 0.3)
         add("glints", ell(e + en * 0.05 - up * 0.03 + side * 0.025 * s, (0.01, 0.01, 0.008), cuts=1), cloth_m, COL["white"], 0.3)
-    beak = lathe([(0.0, -0.06), (0.13, -0.05), (0.125, 0.04), (0.095, 0.11), (0.055, 0.17), (0.02, 0.215), (0.0, 0.23)], segs=16)
-    for v in beak.verts:
-        v.co.x *= 0.82                                                      # a little narrower than deep
-        v.co.y -= 0.12 * smooth(v.co.z, 0.12, 0.27) * 0.3                   # the tip curves down a touch
-    beak.transform(M(beak_at - beak_n * 0.03) @ (R @ Matrix.Rotation(math.radians(80), 3, "X")).to_4x4())
 
-    def beak_col(co, n, g):
-        t = (co - beak_at).length / 0.23
-        col = mix(COL["beak"], COL["beak_lt"], 0.5 * smooth(n.z, 0.2, 0.9) + 0.3 * smooth(t, 0.6, 1.0))
-        return col
-    add("beak", beak, cloth_m, beak_col, 0.45)
+    # ---- a chunky, gently curved crow beak with nasal bristles -------------------------------------------
+    BK = M(beak_at - beak_n * 0.05) @ R.to_4x4()
 
-    # ---- half-open wings with violet finger tips -----------------------------------------------------
+    def beak_col(lower):
+        def f(co, n, g):
+            col = mix(COL["beak"], COL["beak_lt"], 0.45 * smooth(n.z, 0.2, 0.95))
+            return mix(col, COL["violet"], 0.25 * smooth(n.z, 0.6, 0.95)) if not lower else col
+        return f
+    upper = beak_shape(0.3, 0.12, 0.085, 0.07)
+    upper.transform(BK @ M((0, 0, 0.015)))
+    add("beak", upper, cloth_m, beak_col(False), 0.4)
+    lower = beak_shape(0.22, 0.1, 0.045, 0.03, lower=True)
+    lower.transform(BK @ M((0, 0, -0.06)))
+    add("beak", lower, cloth_m, beak_col(True), 0.45)
+    for k, x in enumerate((-0.05, 0.0, 0.05)):                               # bristle feathers over the base of the beak
+        br = leaf(0.13, 0.04, thick=0.012, rings=5)
+        paint(br, feather_col(0.13, 0.04, 0.0))
+        br.transform(BK @ M((x, 0.03, 0.09), rot=(100 - 8 * abs(k - 1), 0, -15 * (k - 1))))
+        add("beak", br, feather_m, None, 0.5)
+
+    # ---- wings folded neatly along the sides: coverts over secondaries over the long violet-tipped primaries ----
     for s in (-1, 1):
-        root = Vector((0.5 * s, 0.1, 1.4))
-        U = Vector((s * 1.0, 0.2, -0.55)).normalized()
-        Vv = Vector((0, -0.55, 0.85))
-        Vv = (Vv - U * Vv.dot(U)).normalized()
-        N = U.cross(Vv).normalized()
-        edge = [Vector((0, 0)), Vector((0.42, 0.06)), Vector((0.74, 0.04)), Vector((0.95, -0.02))]
-
-        def at(t):
-            return kit._spline(edge, t * (len(edge) - 1))
-
-        def feather(t, ang, length, width, lift, tipcol):
-            base = at(t)
-            d2 = Vector((math.cos(ang), math.sin(ang)))
-            dirn = (U * d2.x + Vv * d2.y).normalized()
-            side = N.cross(dirn).normalized()
+        def wing_feather(y, z, d, length, width, lift, tipcol, row):
+            loc, nrm = surf(Vector((s, 0, 0)), Vector((0, y, z)))
+            if loc is None:
+                return
             bm = leaf(length, width)
-
-            def fcol(co, n, g, length=length, tipcol=tipcol):
-                tt = co.z / length
-                col = mix(COL["black"], COL["plum"], 0.4 * smooth(tt, 0.2, 0.7))
-                col = mix(col, COL["tip"], tipcol * smooth(tt, 0.5, 0.85))
-                col = mix(col, COL["tip_lt"], 0.4 * tipcol * smooth(tt, 0.85, 1.0))
-                return mix(col, COL["deep"], 0.5 * (1 - smooth(abs(co.x), 0.004, 0.012)) * smooth(tt, 0.95, 0.7))
-            paint(bm, fcol)
-            mtx = Matrix((side, N, dirn)).transposed()
-            bm.transform(Matrix.Translation(root + U * base.x + Vv * base.y + N * lift) @ mtx.to_4x4())
+            paint(bm, feather_col(length, width, tipcol, row))
+            lay(bm, loc + nrm * lift, nrm, d)
+            plane = loc + nrm * lift
+            for v in bm.verts:                                               # follow the round body, keeping the layering
+                off = (v.co - plane).dot(nrm)
+                near, nn, _, _ = tree0.find_nearest(v.co)
+                if near is not None:
+                    v.co = near + nn * (lift + off)
             add("wings", bm, feather_m, None, 0.5)
+        for i in range(5):                                                   # primaries, longest, running back past the tail
+            t = i / 4
+            wing_feather(lerp(0.12, 0.34, t), lerp(1.2, 1.02, t), Vector((0.12 * s, 1.0, -0.32 - 0.08 * t)), lerp(0.95, 0.8, t), 0.11, 0.035 + 0.004 * i, 1.0, 0)
+        for i in range(6):                                                   # secondaries along the fold
+            t = i / 5
+            wing_feather(lerp(-0.3, 0.12, t), lerp(1.3, 1.16, t), Vector((0.05 * s, 1.0, -0.62)), lerp(0.66, 0.72, t), 0.13, 0.055, 0.35, 0.3)
+        for row, (zz, ln) in enumerate(((1.44, 0.42), (1.33, 0.36))):         # two rows of coverts at the shoulder
+            for i in range(5):
+                t = i / 4
+                wing_feather(lerp(-0.34, 0.14, t), zz - 0.06 * t, Vector((0.0, 1.0, -0.75)), ln, 0.12, 0.075 + 0.015 * row, 0.0, 0.6)
 
-        for i in range(6):                                                   # primaries: long violet-tipped fingers
-            t = 0.62 + 0.38 * i / 5
-            ang = math.radians(lerp(-70, 2, i / 5))
-            feather(t, ang, lerp(0.62, 0.78, math.sin(math.pi * i / 5 * 0.7)), 0.085, -0.012 * i, 1.0)
-        for i in range(6):                                                   # secondaries along the arm
-            t = 0.06 + 0.52 * i / 5
-            ang = math.radians(lerp(-95, -72, i / 5))
-            feather(t, ang, lerp(0.5, 0.58, i / 5), 0.11, 0.008, 0.45)
-        for i in range(8):                                                   # coverts over their roots
-            t = 0.02 + 0.9 * i / 7
-            ang = math.radians(lerp(-92, -35, i / 7))
-            feather(t, ang, lerp(0.3, 0.36, i / 7), 0.1, 0.035, 0.0)
-        arm = loft([root + U * p.x + Vv * p.y + N * 0.02 for p in (at(0), at(0.35), at(0.7), at(1.0))], lambda t: lerp(0.1, 0.04, t), segs=8, rings=10)
-        add("wings", arm, plume_m, lambda co, n, g: sheen(co, n), 0.55)
-
-    # ---- a short fan tail -------------------------------------------------------------------------------
-    for k in range(5):
-        a = math.radians(-36 + 18 * k)
-        dirn = Vector((math.sin(a) * 0.6, math.cos(a), -0.55)).normalized()
+    # ---- a raised fan tail ----------------------------------------------------------------------------------
+    for k in range(7):
+        a = math.radians(-54 + 18 * k)
+        dirn = Vector((math.sin(a) * 0.8, math.cos(a), 0.62)).normalized()
         side = Vector((0, 0, 1)).cross(dirn).normalized()
         N = dirn.cross(side).normalized()
-        bm = leaf(0.62 - 0.05 * abs(k - 2), 0.11)
-        paint(bm, lambda co, n, g: mix(mix(COL["black"], COL["plum"], 0.4 * smooth(co.z, 0.1, 0.4)), COL["tip"], 0.6 * smooth(co.z, 0.4, 0.6)))
-        mtx = Matrix((side, N, dirn)).transposed()
-        bm.transform(Matrix.Translation(Vector((0, 0.55, 0.78)) + N * 0.01 * k) @ mtx.to_4x4())
+        ln = 0.74 - 0.06 * abs(k - 3)
+        bm = leaf(ln, 0.14)
+        paint(bm, feather_col(ln, 0.14, 0.8))
+        bm.transform(Matrix.Translation(Vector((0, 0.62, 0.86)) + N * 0.01 * abs(k - 3)) @ Matrix((side, N, dirn)).transposed().to_4x4())
         add("tail", bm, feather_m, None, 0.5)
 
     # ---- short legs and feet ---------------------------------------------------------------------------
@@ -656,9 +762,10 @@ def build():
     plume.transform(HAT @ M((0.235, 0.05, 0.1), rot=(0, 22, 0)) @ M(rot=(0, 0, 0)))
     add("hat", plume, feather_m, None, 0.5)
 
-    lowest = min(v.co.z for k, (bm, _) in c.parts.items() if not k.startswith("GLOW") for v in bm.verts)
-    for bm, _ in c.parts.values():
-        bm.transform(M((0, 0, -lowest)))
+
+    lowest = min(v.co.z for k, (bm_, _) in c.parts.items() if not k.startswith("GLOW") for v in bm_.verts)
+    for bm_, _ in c.parts.values():
+        bm_.transform(M((0, 0, -lowest)))
     c.build(scale=SCALE)
     return c
 

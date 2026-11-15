@@ -6,15 +6,22 @@ from scratch by script.
 
 Must-haves, checked in every review:
   1. The same pet: a bright green crocodile on four legs with a long flat snout and a long tail.
-  2. A big creature, stylish and never menacing: a broad snout rounded at the tip, a gentle closed smile
-     whose corner turns up, and no teeth showing.
-  3. Rows of bumpy back scutes (four on the back, two down the tail) with dark tops and pale worn ridges.
-  4. An emerald scaly hide with dark spots on the flanks, a pale yellow-green belly and jaw.
-  5. Friendly glossy eyes on raised turrets under soft lids; stubby legs with pale toenails.
-  6. Matte painted textures with crease shading; up to about 4.5 studs tall; Body under 12k triangles.
+  2. A real crocodile stance (sent back after round 4 for reading half frog): the body slung low and long,
+     nearly on the ground; short legs splayed out to the sides with the elbows bent outward.
+  3. A long, flat, tapering snout with a slightly rounded tip (no bulb), nostril bumps on top, and a gentle
+     closed smile line running back along the jaw that also shows from the front. No teeth.
+  4. Big, defined back scutes in two rows and a scute crest down the tail.
+  5. Friendly glossy eyes on raised eye bumps; an emerald scaly hide, dark flank spots, a pale belly and jaw.
+  6. Matte painted textures with crease shading; Body under 12k triangles.
 
-Export: the empty texels of the roughness map are filled with its median (they were 0.05, which
-mipmapping would bleed into the seams as gloss).
+Round 7: broader, blunter back scutes (from the side they read as a row of spikes).
+
+Round 6: the nostril bumps made low and flat (they stood up like pegs); a deeper, wider smile line.
+
+Round 5 (sent back for: tall legs and a round snout bulb, half frog from the front 3/4): rebuilt low and long on
+short legs splayed out at the elbows with clawed toes; a long flat snout tapering to a slightly round tip with two
+nostril bumps; the smile line runs the length of the jaw; two rows of big ridged scutes set on the real back
+(found by casting down onto the body) and a crest down the tail where the rows meet.
 
 Round 4: smaller eyes under fuller lids (the big round eyes made it look babyish); a flatter snout that narrows a little to its round tip (from the front it was a bulb).
 
@@ -444,19 +451,17 @@ def two_threads():
 # ---- the crocodile --------------------------------------------------------------------------------
 
 NAME = "Croc"
-COL = {"green": hexc("#127438"), "green_lt": hexc("#22904A"), "green_dk": hexc("#0A4A26"), "scute": hexc("#0C4C2A"),
-       "scute_lt": hexc("#4E9C56"), "belly": hexc("#CADB8A"), "belly_dk": hexc("#9DB266"), "mouth": hexc("#123A22"),
+COL = {"green": hexc("#127438"), "green_lt": hexc("#22904A"), "green_dk": hexc("#0A4A26"), "scute": hexc("#0B4226"),
+       "scute_lt": hexc("#5AA45E"), "belly": hexc("#CADB8A"), "belly_dk": hexc("#9DB266"), "mouth": hexc("#0E3019"),
        "nail": hexc("#E4DCC0"), "pupil": hexc("#120E08"), "white": hexc("#FFFFFF"), "spot": hexc("#0B4428")}
-SCALE = 1.45
+SCALE = 1.5
 BAKE = {"shade": 0.5, "rough": 0.78}
 GRAIN = [("cells", 20.0, 0.06), ("noise", 45.0, 0.04)]
-HEAD = Vector((0, -1.25, 0.82))
-HEAD_M = M(HEAD, rot=(-8, 0, 0))
-FACE = Vector((-0.1, -1.75, 0.95)) * SCALE
+HEAD = Vector((0, -1.12, 0.42))
+HEAD_M = M(HEAD, rot=(0, 0, 0))
+FACE = Vector((-0.1, -1.75, 0.45)) * SCALE
 FOCUS = FACE
 FACE_DIST = 5.4
-SPINE = [Vector((0, -0.9, 1.15)), Vector((0, -0.2, 1.19)), Vector((0, 0.5, 1.15)), Vector((0, 1.0, 1.02)),
-         Vector((0, 1.7, 0.76)), Vector((0.1, 2.4, 0.5)), Vector((0.3, 2.9, 0.3))]
 
 
 def build():
@@ -488,34 +493,63 @@ def build():
         bm.transform(HEAD_M @ M(at))
         return bm
 
-    # ---- one fused skin: body, stubby legs, broad round snout, scutes ------------------------------------
-    clay = [ell((0, 0.05, 0.75), (0.62, 1.05, 0.42)),
-            ell((0, -0.7, 0.78), (0.52, 0.5, 0.4)),                             # chest
-            loft([(0, 0.9, 0.72), (0, 1.6, 0.52), (0, 2.3, 0.32), (0.12, 2.8, 0.18), (0.32, 3.15, 0.1)],
-                 lambda t: 0.4 * (1 - t) ** 1.0 + 0.03, segs=14, rings=18, flat=0.8),
-            ell(hd((0, 0.02, 0.04)), (0.38, 0.38, 0.26)),                       # skull
-            shaped(Vector((0, -0.52, -0.05)), (0.29, 0.54, 0.13), 0.82, 1.0),    # a broad snout, round at the tip
-            shaped(Vector((0, -0.44, -0.15)), (0.29, 0.52, 0.09), 0.82, 1.0),    # lower jaw
-            ell(hd((0, -0.92, 0.04)), (0.2, 0.12, 0.09))]                       # nostril bump on the tip
+    # ---- the base forms: a long body slung low, legs splayed out to the sides, a long flat snout -----------
+    clay = [ell((0, 0.1, 0.36), (0.6, 1.1, 0.29)),
+            ell((0, -0.68, 0.38), (0.5, 0.5, 0.27)),                            # chest
+            loft([(0, 0.95, 0.35), (0, 1.75, 0.27), (0, 2.55, 0.18), (0.14, 3.15, 0.11), (0.34, 3.6, 0.07)],
+                 lambda t: 0.31 * (1 - t) ** 1.0 + 0.03, segs=14, rings=18, flat=0.8),
+            ell(hd((0, 0.02, 0.03)), (0.36, 0.36, 0.2)),                        # skull
+            shaped(Vector((0, -0.62, -0.03)), (0.3, 0.64, 0.12), 0.48, 1.0),    # long flat snout, tapering forward
+            shaped(Vector((0, -0.55, -0.12)), (0.29, 0.62, 0.08), 0.48, 1.0)]   # lower jaw
     for s in (-1, 1):
-        clay += [ell(hd((0.17 * s, -0.02, 0.2)), (0.13, 0.14, 0.12)),           # eye turrets
-                 ell(hd((0.3 * s, 0.1, -0.06)), (0.14, 0.2, 0.16)),             # jaw muscles
-                 ell((0.45 * s, -0.68, 0.62), (0.2, 0.22, 0.22)),               # shoulders
-                 loft([(0.5 * s, -0.7, 0.55), (0.64 * s, -0.74, 0.3), (0.64 * s, -0.8, 0.1)], lambda t: lerp(0.15, 0.12, t), segs=10, rings=6),
-                 ell((0.66 * s, -0.88, 0.06), (0.15, 0.2, 0.065)),              # front feet
-                 ell((0.47 * s, 0.68, 0.6), (0.22, 0.28, 0.24)),                # thighs
-                 loft([(0.55 * s, 0.7, 0.5), (0.68 * s, 0.65, 0.3), (0.68 * s, 0.72, 0.1)], lambda t: lerp(0.16, 0.12, t), segs=10, rings=6),
-                 ell((0.7 * s, 0.6, 0.06), (0.16, 0.24, 0.065))]                # hind feet
-    # rows of back scutes: four rows on the back, two down the tail
-    for k in range(26):
-        t = k / 25
-        at = kit._spline(SPINE, t * (len(SPINE) - 1))
-        rows = (-0.27, -0.09, 0.09, 0.27) if t < 0.45 else (-0.1, 0.1)
-        w = 1 - 0.6 * smooth(t, 0.4, 1.0)
+        clay += [ell(hd((0.16 * s, -0.02, 0.17)), (0.12, 0.13, 0.11)),          # raised eye bumps
+                 ell(hd((0.06 * s, -1.12, 0.03)), (0.045, 0.05, 0.024)),        # low nostril bumps on top of the tip
+                 ell(hd((0.3 * s, 0.08, -0.04)), (0.13, 0.2, 0.13)),            # jaw muscles
+                 ell((0.42 * s, -0.68, 0.33), (0.17, 0.2, 0.15)),               # shoulders
+                 loft([(0.45 * s, -0.7, 0.33), (0.74 * s, -0.72, 0.3), (0.82 * s, -0.8, 0.1)], lambda t: lerp(0.13, 0.095, t), segs=10, rings=8),
+                 ell((0.86 * s, -0.88, 0.045), (0.14, 0.17, 0.05)),             # front feet
+                 ell((0.45 * s, 0.66, 0.32), (0.19, 0.25, 0.18)),               # thighs
+                 loft([(0.5 * s, 0.68, 0.3), (0.8 * s, 0.62, 0.27), (0.88 * s, 0.72, 0.09)], lambda t: lerp(0.14, 0.1, t), segs=10, rings=8),
+                 ell((0.92 * s, 0.6, 0.045), (0.15, 0.21, 0.05))]               # hind feet
+        for foot, ln in (((0.86 * s, -0.9, 0.04), 0.14), ((0.92 * s, 0.56, 0.04), 0.17)):
+            for a in (-40, -12, 16, 44):
+                d = Vector((math.sin(math.radians(a)) * s, -math.cos(math.radians(a)), 0))
+                f = Vector(foot)
+                clay.append(loft([f, f + d * ln], lambda t: lerp(0.04, 0.03, t), segs=8, rings=3))
+
+    # ---- scutes, set on the real back: two big rows down the body, a crest down the tail -------------------
+    base = join([b.copy() for b in clay[:3]])
+    tree0 = BVHTree.FromBMesh(base)
+    scutes = []
+    for k in range(13):
+        y = lerp(-0.95, 0.95, k / 12)
+        for x in (-0.14, 0.14):
+            loc, _, _, _ = tree0.ray_cast(Vector((x, y, 3.0)), Vector((0, 0, -1)))
+            if loc is None:
+                continue
+            w = 1 - 0.25 * abs(y) / 0.95
+            b = kit.rounded_box((0.16 * w, 0.17 * w, 0.1 * w), n=3.4, cuts=3)
+            kit.taper(b, axis=2, lo=1.0, hi=0.72)                               # a blunt keel on top
+            b.transform(M(loc + Vector((0, 0, 0.02)), rot=(0, -12 * (1 if x > 0 else -1), 0)))
+            clay.append(b)
+            scutes.append((loc + Vector((0, 0, 0.06)), 0.08 * w))
+    for k in range(16):                                                      # the tail crest: two rows that meet in one
+        t = k / 15
+        y = lerp(1.08, 3.35, t)
+        rows = (-0.1, 0.1) if t < 0.4 else (0.0,)
         for x in rows:
-            clay.append(kit.rounded_box((0.11 * w, 0.13 * w, 0.12 * w), n=2.6, cuts=2))
-            clay[-1].transform(M(at + Vector((x * w * (1.3 if abs(x) > 0.2 else 1.0), 0, -0.04 - 0.08 * abs(x)))))
-    skin = fuse(join(clay), voxel=0.022, iterations=2)
+            px = x * (1 - t) + 0.12 * smooth(y, 2.9, 3.4)                     # follows the tail as it curls
+            loc, _, _, _ = tree0.ray_cast(Vector((px, y, 3.0)), Vector((0, 0, -1)))
+            if loc is None:
+                continue
+            h = lerp(0.15, 0.07, t)
+            b = kit.rounded_box((0.06, 0.13 * (1 - 0.4 * t), h), n=3.0, cuts=3)
+            kit.taper(b, axis=2, lo=1.0, hi=0.25)
+            b.transform(M(loc + Vector((0, 0, h * 0.3))))
+            clay.append(b)
+            scutes.append((loc + Vector((0, 0, h * 0.5)), 0.07))
+    base.free()
+    skin = fuse(join(clay), voxel=0.02, iterations=2)
     tree = BVHTree.FromBMesh(skin)
 
     def hit(origin, direction):
@@ -523,21 +557,21 @@ def build():
         return loc, nrm
     eyes = []
     for s in (-1, 1):
-        d = R @ Vector((-0.45 * s, 1.0, -0.35))
-        eyes.append(hit(hd((0.17 * s, -0.02, 0.22)) - d.normalized() * 1.0, d))
-    nostrils = [hit(hd((0.06 * s, -0.95, 1.0)), R @ Vector((0, 0, -1)))[0] for s in (-1, 1)]
+        d = R @ Vector((-0.4 * s, 1.0, -0.35))
+        eyes.append(hit(hd((0.16 * s, -0.02, 0.19)) - d.normalized() * 1.0, d))
+    nostrils = [hit(hd((0.065 * s, -1.14, 1.0)), Vector((0, 0, -1)))[0] for s in (-1, 1)]
     mouth = []
     for s in (-1, 1):
         line = []
-        for k in range(10):
-            t = k / 9
-            y = lerp(-0.98, 0.15, t)
-            z = -0.11 + 0.1 * smooth(t, 0.6, 1.0)                             # the corner turns up: a gentle smile
-            p, _ = hit(hd((0.9 * s, y, z)), R @ Vector((-s, 0, 0)))
+        for k in range(14):
+            t = k / 13
+            y = lerp(-1.24, 0.2, t)
+            z = -0.085 + 0.06 * smooth(t, 0.7, 1.0)                           # the corner turns up under the eye: a gentle smile
+            p, _ = hit(hd((1.0 * s, y, z)), Vector((-s, 0, 0)))
             if p is not None:
                 line.append(p)
         mouth.append(line)
-    front, _ = hit(hd((0, -1.6, -0.11)), R @ Vector((0, 1, 0)))
+    front, _ = hit(hd((0, -2.0, -0.085)), Vector((0, 1, 0)))
     if front is not None and mouth[0] and mouth[1]:
         mouth.append([mouth[0][0], front, mouth[1][0]])
 
@@ -548,41 +582,47 @@ def build():
         d = n * 0.008 * noise.noise(co * 8.0)
         for e, en in eyes:
             d -= en * 0.02 * (1 - smooth((co - e).length, 0.06, 0.11))
-        if (co - HEAD).length < 1.3:
-            d -= n * 0.03 * (1 - smooth(mdist(co), 0.01, 0.032))
+        if (co - HEAD).length < 1.5:
+            d -= n * 0.04 * (1 - smooth(mdist(co), 0.012, 0.036))
             for nn in nostrils:
                 if nn is not None:
-                    d -= n * 0.02 * (1 - smooth((co - nn).length, 0.012, 0.03))
+                    d -= n * 0.018 * (1 - smooth((co - nn).length, 0.01, 0.025))
         return d
     sculpt(skin, carve)
-    skin = decimate(skin, 7600, keep=lambda co: 0.8 * (1 - smooth((Vector(co) - hd((0, -0.4, 0))).length, 0.4, 0.8)), factor=1.0)
+    skin = decimate(skin, 8800, keep=lambda co: 0.8 * (1 - smooth((Vector(co) - hd((0, -0.5, 0))).length, 0.5, 0.95)), factor=1.0)
+
+    def scute_top(co):
+        best = 0.0
+        for p, r in scutes:
+            dd = (co - p).length
+            if dd < r * 1.6:
+                best = max(best, 1 - smooth(dd, r * 0.6, r * 1.5))
+        return best
 
     def colour(co, n, g=0.0):
         col = mix(COL["green"], COL["green_lt"], 0.45 * smooth(n.z, 0.2, 0.9))
         col = mix(col, COL["green_dk"], 0.35 * smooth(noise.noise(co * 3.0), 0.2, 0.6))
         sp = noise.noise(co * 6.0 + Vector((5, 2, 9)))
         col = mix(col, COL["spot"], 0.6 * smooth(sp, 0.38, 0.46) * smooth(abs(n.x), 0.3, 0.7))
-        # the scute tops: dark with pale worn ridges
-        p = co - kit._spline(SPINE, min(max((co.y + 0.9) / 3.8, 0.0), 1.0) * (len(SPINE) - 1))
-        top = smooth(n.z, 0.55, 0.9) * smooth(p.z, -0.12, 0.02) * smooth(co.y, -1.0, -0.85)
-        col = mix(col, COL["scute"], 0.55 * top)
-        col = mix(col, COL["scute_lt"], 0.45 * top * smooth(n.z, 0.93, 0.99))
-        belly = smooth(-n.z, 0.25, 0.65) * smooth(co.z, 0.75, 0.4)
-        col = mix(col, mix(COL["belly"], COL["belly_dk"], 0.3 * smooth(co.z, 0.4, 0.1)), belly)
-        if (co - HEAD).length < 1.3:
+        st = scute_top(co)
+        col = mix(col, COL["scute"], 0.6 * st)
+        col = mix(col, COL["scute_lt"], 0.6 * st * smooth(n.z, 0.88, 0.98))     # pale worn ridges
+        belly = smooth(-n.z, 0.25, 0.65) * smooth(co.z, 0.4, 0.15)
+        col = mix(col, mix(COL["belly"], COL["belly_dk"], 0.3 * smooth(co.z, 0.25, 0.05)), belly)
+        if (co - HEAD).length < 1.5:
             q = HINV @ co
-            jaw = smooth(q.z, -0.13, -0.18) * smooth(-n.z, -0.3, 0.2)
+            jaw = smooth(q.z, -0.1, -0.15) * smooth(-n.z, -0.3, 0.2)
             col = mix(col, COL["belly"], 0.8 * jaw)
-            col = mix(col, COL["mouth"], 1 - smooth(mdist(co), 0.014, 0.024))
+            col = mix(col, COL["mouth"], 1 - smooth(mdist(co), 0.018, 0.03))
             for nn in nostrils:
                 if nn is not None:
-                    col = mix(col, COL["mouth"], 1 - smooth((co - nn).length, 0.016, 0.028))
+                    col = mix(col, COL["mouth"], 1 - smooth((co - nn).length, 0.014, 0.024))
         return col
-    add("skin", skin, scale_m, colour, lambda co, n, g: 0.72 + 0.12 * smooth(-n.z, 0.0, 0.6))
+    add("skin", skin, scale_m, colour, lambda co, n, g: 0.72 + 0.12 * smooth(-n.z, 0.0, 0.6) - 0.1 * scute_top(co))
 
-    # ---- friendly eyes on the turrets --------------------------------------------------------------------
-    up = (R @ Vector((0, 0, 1))).normalized()
-    fwd = (R @ Vector((0, -1, 0))).normalized()
+    # ---- friendly eyes on the bumps --------------------------------------------------------------------
+    up = Vector((0, 0, 1))
+    fwd = Vector((0, -1, 0))
     for (e, en), s in zip(eyes, (-1, 1)):
         add("eyes", facing(ell((0, 0, 0), (0.078, 0.082, 0.045), cuts=3), e - en * 0.01, en), eye_m)
         add("glints", ell(e + en * 0.04 + up * 0.022 - fwd * 0.015, (0.02, 0.02, 0.014), cuts=1), bone_m, COL["white"], 0.2)
@@ -594,16 +634,14 @@ def build():
         lid.transform(Matrix.Translation(e - en * 0.012) @ Matrix((side, upv, en)).transposed().to_4x4())
         add("lids", lid, scale_m, COL["green_dk"], 0.75)
 
-    # ---- toenails ----------------------------------------------------------------------------------------
-    for fx, fy in ((0.66, -0.88), (0.7, 0.6)):
-        for sx in (-1, 1):
-            for dx in (-0.08, 0.0, 0.08):
-                base, _ = hit(Vector((sx * (fx + dx), fy - 0.8, 0.05)), Vector((0, 1, 0)))
-                if base is None:
-                    continue
-                nail = ell((0, 0, 0), (0.045, 0.04, 0.03), cuts=1)
-                nail.transform(M(base + Vector((0, 0.005, 0.0))))
-                add("nails", nail, bone_m, COL["nail"], 0.5)
+    # ---- claws ------------------------------------------------------------------------------------------
+    for s in (-1, 1):
+        for foot, ln in (((0.86 * s, -0.9, 0.04), 0.14), ((0.92 * s, 0.56, 0.04), 0.17)):
+            for a in (-40, -12, 16, 44):
+                d = Vector((math.sin(math.radians(a)) * s, -math.cos(math.radians(a)), 0))
+                cl = lathe([(0.026, 0.0), (0.018, 0.03), (0.0, 0.06)], segs=6)
+                cl.transform(Matrix.Translation(Vector(foot) + d * (ln + 0.02)) @ (d + Vector((0, 0, -0.3))).to_track_quat('Z', 'Y').to_matrix().to_4x4())
+                add("claws", cl, bone_m, COL["nail"], 0.5)
 
     lowest = min(v.co.z for k, (bm_, _) in c.parts.items() if not k.startswith("GLOW") for v in bm_.verts)
     for bm_, _ in c.parts.values():

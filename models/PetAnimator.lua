@@ -411,7 +411,7 @@ PetAnimator.PETS = {
 	sailback = { style = "slither", yaw = 6, roll = 2 },
 	redrex = { style = "heavy", speed = 1.1, roll = 4 },
 	croc = { style = "slither", yaw = 7 },
-	frog = { style = "hopper", bounce = 0.25, duty = 0.55 },
+	frog = { style = "hopper", bounce = 0.25, duty = 0.55, foot = 1 },
 } :: { [string]: { [string]: any } }
 
 -- Fields that `amp` scales, and the periods that `speed` shortens.
