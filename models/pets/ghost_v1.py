@@ -124,7 +124,7 @@ class Paint:
 def _feed(p, sock, v):
     if isinstance(v, V):
         p.t.links.new(v.s, sock)
-    elif hasattr(v, "links") or hasattr(v, "is_linked") and not isinstance(v, (int, float, tuple)):
+    elif isinstance(v, bpy.types.NodeSocket):
         p.t.links.new(v, sock)
     else:
         sock.default_value = v
@@ -298,7 +298,7 @@ def build():
     armm = armp.done()
     for s, lift, tilt in ((-1, 0.12, 30), (1, -0.02, -18)):
         nub = kit.ball((0.62, 0.44, 0.4), cuts=4)
-        add(nub, armm, M((s * 1.3, -0.08, 1.62 + lift), rot=(0, tilt * -s * 0 + s * tilt, s * -12)))
+        add(nub, armm, M((s * 1.3, -0.08, 1.62 + lift), rot=(0, s * tilt, s * -12)))
 
     # ---- eyes: small dark lenses with lavender light low in them and a highlight ------------------------
     ep = Paint("Eye", rough=0.4)
