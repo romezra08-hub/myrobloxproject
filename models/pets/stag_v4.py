@@ -12,6 +12,8 @@ Must-haves, checked in every review:
   4. A calm face: dark almond eyes under soft lids, big leaf ears; pale bone antlers with several tines.
   5. Matte short-coat texture with roughness variation; 3-4.5 studs tall; Body under 12k triangles.
 
+Final: round 4.
+
 Export: the empty texels of the roughness map are filled with its median, so mipmapping does not bleed gloss
 into the seams.
 
