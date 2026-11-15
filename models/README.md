@@ -259,6 +259,12 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Piggy | Flat pink pig | Round pink piglet with stubby legs and hooves, fuzz, a curly tail and a happy open mouth | 6,740 |
 | SnowBunny | Blocky white rabbit with two faces stacked | Natural white rabbit crouched on all fours, pink-lined ears, dark eyes and a pompom tail (unlike the crochet Bunny) | 7,520 |
 | SpikeCrab | Pale crab with long spidery legs and white ice spikes | Low, chubby frost crab on short thick legs, with a domed frosty-blue shell, blue claws, five faceted ice crystals and a small smile | 8,280 |
+| SkyJelly | White cloud covered in grey bumps that read as many eyes, with dangling strands | Pastel blue-to-pink cloud jellyfish with one friendly face, rim beads and flowing ribbon tentacles | 11,080 |
+| EmberSerpent | Coiled red horned snake | Friendly coiled serpent-dragon in red-to-orange scales, small swept-back horns, round eyes and glowing ember belly plates | 9,672 |
+| HighlandBull | Hunched minotaur-like bull-ape | Sturdy shaggy highland calf with a rust fringe, wide cream horns, a soft dark nose and hooves | 11,720 |
+| DuskBat | Purple bat with a cat-like face | Fluffy dusk-purple fruit bat with big ears, a cream chest, lilac wing membranes and gentle eyes | 10,859 |
+| MagmaCrown | Blocky lava lump with crystal spikes | Little basalt magma king with glowing cracks and face, an orange crystal crown and amethyst shoulder shards | 8,076 |
+| Grizzly | Brown bear with back spikes and long claws | Calm grizzly with a shoulder hump, layered fur ridges, short claws and small mossy stones on its back | 11,840 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

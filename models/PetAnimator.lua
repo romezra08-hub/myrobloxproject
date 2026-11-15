@@ -396,6 +396,14 @@ PetAnimator.PETS = {
 	piggy = { style = "walker", speed = 1.2, bounce = 0.06, skip = 0.15, lookTilt = 6 },
 	snowbunny = { style = "hopper" },
 	spikecrab = { style = "heavy", speed = 1.4, yaw = 4, roll = 3 },
+	dunecat = { style = "walker", speed = 1.05, bounce = 0.04, lookTilt = 6 },
+	skyjelly = { style = "floater", hover = 0.2, spin = 6 },
+	shadowpanther = { style = "walker", speed = 0.85, bounce = 0.03, impact = 1 },
+	emberserpent = { style = "slither", yaw = 5 },
+	highlandbull = { style = "heavy", speed = 1.2, bounce = 0.04, roll = 3 },
+	duskbat = { style = "flyer", hover = 0.4, speed = 1.3 },
+	magmacrown = { style = "heavy", roll = 5, impact = 3 },
+	grizzly = { style = "heavy", speed = 1.1, roll = 4 },
 } :: { [string]: { [string]: any } }
 
 -- Fields that `amp` scales, and the periods that `speed` shortens.
