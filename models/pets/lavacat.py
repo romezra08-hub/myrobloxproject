@@ -12,7 +12,18 @@ raised tail, and makes it a friendly fire cat. Must-haves, checked every review:
   4. Small glowing ember stripes on the back and flame marks on the brow.
   5. Matte painted fur with crease shading; Body under 10k triangles.
 
-Final: round 9.
+Final: round 11.
+
+Round 11: the eyes a little rounder and taller with a gentler tilt (they read slightly sly), a
+rounder pupil, a flat catchlight (it stood out like a pearl), a thinner outline, and the lower
+lid lifted higher so the eyes smile.
+
+Round 10: the face again (the big round eyes with small pupils stared like bug eyes): eyes about
+30% smaller, almond-to-round with the outer corners tilted up, set flatter into proper sockets
+with a dark outline; the amber iris fills the eye round a big soft vertical pupil, with one
+catchlight on the light's side; a soft upper lid with a dark lash edge over the top quarter and a
+little lift from below, so it looks relaxed and happy; a shorter tail, thicker and fluffier under
+the flame.
 
 Round 9: no lash caps on the eyes (up close each read as a small dark nub on top of the eye).
 
@@ -369,7 +380,7 @@ def poly_t(p, pts):
     return best, bt
 
 
-TAIL0 = [Vector(p) for p in ((0, 0.9, 1.12), (0, 1.22, 1.22), (0.04, 1.42, 1.62), (0.0, 1.4, 2.1), (-0.04, 1.3, 2.42))]
+TAIL0 = [Vector(p) for p in ((0, 0.9, 1.12), (0, 1.22, 1.22), (0.04, 1.42, 1.62), (0.0, 1.38, 1.94), (-0.04, 1.3, 2.22))]
 TAIL = [p - Vector((0, 0, DROP)) for p in TAIL0]
 
 
@@ -463,7 +474,7 @@ def build():
         clay.append(kit.tube([root, root + Vector((x * 0.3, -0.06, -0.07)), root + Vector((x * 0.5, -0.06, -0.13))],
                              [0.08, 0.055, 0.008], segs=8, rings=6))
     # the tail: rising behind, ending in a fluffy flame
-    clay.append(kit.tube(TL, [0.15, 0.17, 0.2, 0.24, 0.25], segs=12))
+    clay.append(kit.tube(TL, [0.16, 0.19, 0.23, 0.26, 0.26], segs=12))
     flames = []
     for k, (dx, dy, h, lean) in enumerate(((0, 0, 0.72, 0), (0.15, 0.02, 0.5, 1), (-0.15, 0.0, 0.54, -1), (0.06, 0.15, 0.48, 0.5),
                                             (-0.06, -0.13, 0.46, -0.4), (0.1, -0.1, 0.36, 1.2), (-0.1, 0.12, 0.38, -1.2))):
@@ -472,8 +483,8 @@ def build():
         mid = root.lerp(tip, 0.5) + Vector((-lean * 0.06 + 0.04, 0.03, 0))
         flames.append((root, tip))
         clay.append(kit.tube([root, mid, tip], [0.17, 0.11, 0.01], segs=10, rings=8))
-    for k in range(5):                                                             # fluffy tufts along the tail
-        t = 0.3 + 0.14 * k
+    for k in range(8):                                                             # fluffy tufts along the tail
+        t = 0.28 + 0.09 * k
         i = min(int(t * (len(TL) - 1)), len(TL) - 2)
         u = t * (len(TL) - 1) - i
         p = TL[i].lerp(TL[i + 1], u)
@@ -508,7 +519,7 @@ def build():
         d = Vector()
         for (p, en) in eyes:
             r = (co - p).length
-            d -= en * 0.032 * (1 - smooth(r, 0.08, 0.16))                      # sockets for the eyes
+            d -= en * 0.03 * (1 - smooth(r, 0.06, 0.13))                       # sockets for the eyes
         md = mouth_d(co)
         if md < 0.03:
             d -= n * 0.014 * (1 - smooth(md, 0.0, 0.018))
@@ -530,7 +541,7 @@ def build():
         cheek = smooth(co.z, H.z - 0.1 + j, H.z - 0.22 + j) * smooth(abs(co.x), 0.3, 0.5) * smooth(co.y, H.y + 0.1, H.y - 0.1)
         paws = smooth(co.z, 0.26 + j, 0.16 + j)
         tdist, tt = poly_t(co, TAIL)
-        tail = smooth(co.z, 2.05 + j, 2.3 + j) * smooth(co.y, 1.0, 1.15)
+        tail = smooth(co.z, 1.85 + j, 2.1 + j) * smooth(co.y, 1.0, 1.15)
         return max(chest, face, cheek, paws, tail)
 
     def fur_colour(co, n):
@@ -540,7 +551,7 @@ def build():
         c = mix(c, C["stripe"], smooth(band, 0.75, 0.95) * smooth(n.z, 0.2, 0.7) * smooth(co.y, -0.1, 0.1) * smooth(co.y, 0.95, 0.8) * 0.6)
         o = orange_amt(co, n)
         c = mix(c, C["orange"], o)
-        c = mix(c, C["flame"], smooth(co.z, 2.45, 2.85) * smooth(co.y, 1.0, 1.15))
+        c = mix(c, C["flame"], smooth(co.z, 2.25, 2.65) * smooth(co.y, 1.0, 1.15))
         # ears: dark inside with an orange rim
         for s in (-1, 1):
             ec = H + Vector((0.36 * s, -0.02, 0.62))
@@ -551,29 +562,52 @@ def build():
         if mouth_d(co) < 0.015:
             c = mix(c, C["line"], 0.85)
         for (p, en) in eyes:
-            c = mix(c, C["red_dark"], (1 - smooth((co - p).length, 0.13, 0.17)) * 0.3)
+            c = mix(c, C["red_dark"], (1 - smooth((co - p).length, 0.1, 0.14)) * 0.3)
         return c
     paint(skin, fur_colour)
     tree = BVHTree.FromBMesh(skin)
     add("skin", skin, fur)
 
-    # ---- big friendly amber eyes: glossy balls with round pupils and a sparkle ------------------------
+    # ---- cat eyes: amber almonds tilted up at the outer corners, a big soft pupil, one catchlight -----
+    EW, EH, ED = 0.21, 0.19, 0.05                    # eye width, height, depth (half of each is a radius)
+
+    def almond(w, h, d):
+        bm = kit.ball((w, d, h), cuts=4)
+        for v in bm.verts:
+            k = min(abs(v.co.x) / (w / 2), 1.0)
+            v.co.z *= (1 - k ** 2) ** 0.3            # rounder in the middle, a soft point at the corners
+        return bm
     for s in (-1, 1):
         p, n = hit(tree, (EYE_X * s, -4, EYE_Z), (0, 1, 0))
-        look = (n + Vector((-0.25 * s * 0.6, -0.6, 0))).normalized()
-        r = 0.14
-        c = p - n * 0.042
-        add("eyes", ell(c, (r, r, r * 1.05), cuts=4), eye_m)
-        front = c + look * (r - 0.012)
-        yaw = math.degrees(math.atan2(look.x, -look.y))
-        pupil = kit.ball((0.12, 0.03, 0.14), cuts=3)
-        pupil.transform(M(front + Vector((0, 0, 0.012)), rot=(0, 0, yaw)))
+        yaw = math.degrees(math.atan2(n.x, -n.y)) * 0.6
+        place = M(p - n * 0.012, rot=(0, -8 * s, yaw))
+        look = (place.to_3x3() @ Vector((0, -1, 0))).normalized()
+        e = almond(EW, EH, 2 * ED)
+        e.transform(place)
+        add("eyes", e, eye_m)
+        rim = almond(EW * 1.09, EH * 1.09, 2 * ED * 0.8)                       # a dark outline round the eye
+        rim.transform(place @ M((0, 0.012, 0)))
+        flat(rim, C["line"])
+        add("rims", rim, fur)
+        front = p - n * 0.012 + look * (ED - 0.006)
+        pupil = kit.ball((0.1, 0.02, 0.13), cuts=3)
+        pupil.transform(M(front, rot=(0, 0, yaw)))
         flat(pupil, C["pupil"])
         add("pupils", pupil, fur)
-        for (ox, oz, rr) in ((-0.042 * s, 0.045, 0.022), (0.035 * s, -0.035, 0.012)):
-            sp = ell(front + Vector((ox, -0.006, oz)), (rr, rr * 0.4, rr), cuts=2)
-            flat(sp, C["white"])
-            add("sparkles", sp, fur)
+        sp = ell(front + Vector((-0.03, -0.006, 0.036)), (0.02, 0.004, 0.02), cuts=2)   # one catchlight, on the key light's side
+        flat(sp, C["white"])
+        add("sparkles", sp, fur)
+        # a soft upper lid over the top quarter, its edge a dark lash line, and a little lift from below
+        lid = almond(EW * 1.08, EH * 1.08, 2 * ED * 1.15)
+        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.z < EH * 0.22 or v.co.y > 0.004], context='VERTS')
+        lid.transform(place @ M((0, 0.004, 0)))
+        paint(lid, lambda co, nn, top=place @ Vector((0, 0, EH * 0.22)): mix(C["red"], C["line"], 1 - smooth(co.z - top.z, 0.008, 0.03)))
+        add("lids", lid, fur)
+        low = almond(EW * 1.06, EH * 1.06, 2 * ED * 1.1)
+        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.z > -EH * 0.26 or v.co.y > 0.004], context='VERTS')
+        low.transform(place @ M((0, 0.004, 0)))
+        flat(low, mix(C["red"], C["orange"], 0.55))
+        add("lids", low, fur)
 
     # ---- whiskers ----------------------------------------------------------------------------------------------
     for s in (-1, 1):
