@@ -273,6 +273,8 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | SailBack | Stiff blocky sail-backed reptile | Rust-red sail-backed lizard with a ribbed sunset-striped sail, bold scales and a low, strong stance | 10,216 |
 | RedRex | Chunky red horned dinosaur | Crimson horned dinosaur with darker bands, leaf-green back plates, cream horns and smiling cheeks | 10,472 |
 | Frog | Lime frog with pink headphones | Chill DJ frog with spotted green skin, big amber eyes, relaxed half lids and pink over-ear headphones | 9,720 |
+| TopHatCrow | Dark purple crow in a top hat with violet wing tips | Plump violet-black crow with layered breast scallops, folded three-layer wings with a violet sheen, a fan tail, a chunky beak and a top hat with a pink ribbon | 11,910 |
+| Croc | Bright green flat-snouted lizard | Low-slung emerald crocodile on splayed legs, with a long tapering snout, a closed smile, two rows of broad scutes and a crested tail | 9,408 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
