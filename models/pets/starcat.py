@@ -12,10 +12,14 @@ Must-haves, checked in every review:
   4. Big calm eyes (soft blue, relaxed upper lids), a small pink nose, a gentle mouth; never creepy.
   5. Matte long-fur texture with roughness variation; about 3 studs tall; Body under 12k triangles.
 
-Final: round 6.
+Final: round 8.
 
 Export: the empty texels of the roughness map are filled with its median, so mipmapping does not bleed gloss
 into the seams.
+
+Round 8: the horn moved up onto the top of the forehead, standing nearly upright (round 7 placed it on the bridge of the nose, between the eyes); a fuller plume with soft lumps.
+
+Round 7 (after review): almond eyes, a bit smaller, with a thin dark upper lid line lifted at the outer corner, a wide oval pupil and one highlight, on a smooth full forehead with only shallow sockets (the round discs stared, and the brow ledge cast grumpy shading); one clean fluffy silhouette with a neat scalloped ruff and two small cheek tufts (the spiky locks read as matted); a smooth tapering plume with a gentle gold gradient (a yellow cap on a sausage); a slim horn centred on the forehead (it sat back by the ears and read as a third ear); smaller cupped ears, pink inside; shorter legs for a cat build.
 
 Round 6: no lid shells at all: each eye is soft blue glass with a flatter, relaxed upper edge, the pupil and catchlight on its real front surface (round 5's eyes had come forward over the pupils and looked blank, and every lid read heavy or bored); shallower sockets.
 
@@ -474,19 +478,19 @@ def fibonacci(n):
 # ---- the star cat ------------------------------------------------------------------------------------
 
 NAME = "StarCat"
-COL = {"white": hexc("#F5F2EC"), "white_dk": hexc("#D5D0CC"), "shadow": hexc("#BDB8B8"), "gold": hexc("#E6C98A"),
-       "gold_lt": hexc("#F3E2B6"), "ear_in": hexc("#EDC4B8"), "nose": hexc("#E2949A"), "nose_dk": hexc("#B86A72"),
+COL = {"white": hexc("#F5F2EC"), "white_dk": hexc("#D5D0CC"), "shadow": hexc("#BDB8B8"), "gold": hexc("#E2BF72"),
+       "gold_lt": hexc("#F1DDA8"), "ear_in": hexc("#EFAFB0"), "nose": hexc("#E2949A"), "nose_dk": hexc("#B86A72"),
        "mouth": hexc("#9A7276"), "pupil": hexc("#141828"), "lash": hexc("#5E5660"), "glint": hexc("#FFFFFF"),
        "pad": hexc("#E8B4B0")}
-SCALE = 1.45
+SCALE = 1.6
 BAKE = {"shade": 0.42, "rough": 0.9}
 GRAIN = [("streak", 60.0, 0.05), ("noise", 7.0, 0.03)]
-HEAD = Vector((0, -0.56, 1.36))
+HEAD = Vector((0, -0.58, 1.2))
 HEAD_M = M(HEAD, rot=(4, 0, 0))
 FACE = HEAD + Vector((0, -0.3, 0.0))
 FOCUS = FACE * SCALE
 FACE_DIST = 3.2
-LEGS = [(-0.16, -0.4), (0.16, -0.4), (-0.17, 0.48), (0.17, 0.48)]
+LEGS = [(-0.16, -0.38), (0.16, -0.38), (-0.17, 0.46), (0.17, 0.46)]
 
 
 def star_horn(r_out, r_in, h, points=5, rings=7, twist=35.0):
@@ -522,8 +526,8 @@ def star_horn(r_out, r_in, h, points=5, rings=7, twist=35.0):
 
 
 def build():
-    fur_m = painted("Fur", dict(strength=0.26, mottle=0.08, fine=52.0, length=8.0), rough=0.9)
-    eye_m = kit.material("Eyes", "#5C9FCC", rough=0.06)
+    fur_m = painted("Fur", dict(strength=0.2, mottle=0.07, fine=56.0, length=6.0), rough=0.9)
+    eye_m = kit.material("Eyes", "#5A9CCB", rough=0.06)
     glow_m = kit.material("GLOW_Star", "#FFC53D", rough=0.3, emit=3.0)
     c = Prop(NAME)
     c.tally = {}
@@ -543,55 +547,43 @@ def build():
         c.tally[part] = c.tally.get(part, 0) + sum(len(f.verts) - 2 for f in bm.faces)
         c.add(bm, mat)
 
-    def lock(at, d, length, r, droop=0.3, flat=0.6, segs=6, rings=5):
+    def tuft(at, d, length, r, droop=0.2):
         at, d = Vector(at), Vector(d).normalized()
         end = at + d * length + Vector((0, 0, -length * droop))
-        return loft([at - d * 0.02, at + d * length * 0.5, end], lambda t: r * (1 - t) ** 0.8 + 0.004, segs=segs, rings=rings, flat=flat)
+        return loft([at - d * 0.03, at + d * length * 0.5, end], lambda t: r * (1 - t) ** 0.7 + 0.006, segs=8, rings=6)
 
-    # ---- one fused skin: a soft body, a fluffy chest ruff and cheeks, slim legs with round paws ----------
-    clay = [ell((0, 0.06, 0.82), (0.3, 0.56, 0.3)),
-            ell((0, -0.34, 0.9), (0.31, 0.28, 0.34)),                            # chest
-            ell((0, 0.42, 0.84), (0.29, 0.26, 0.3)),                             # haunches
-            ell(hd((0, 0, 0)), (0.35, 0.31, 0.3)),                               # head
-            ell(hd((0, -0.24, -0.1)), (0.13, 0.1, 0.08))]                        # muzzle
+    # ---- one clean fused skin: a soft cat body on shorter legs, a round head, a neat ruff, small cheek tufts --
+    clay = [ell((0, 0.04, 0.7), (0.3, 0.58, 0.29)),
+            ell((0, -0.32, 0.76), (0.3, 0.27, 0.32)),                            # chest
+            ell((0, 0.42, 0.72), (0.3, 0.27, 0.3)),                              # haunches
+            ell(hd((0, 0, 0)), (0.34, 0.3, 0.29)),                               # head
+            ell(hd((0, -0.1, 0.1)), (0.24, 0.2, 0.17)),                          # a smooth, full forehead
+            ell(hd((0, -0.23, -0.1)), (0.13, 0.1, 0.08))]                        # muzzle
     for s in (-1, 1):
-        clay += [ell(hd((0.12 * s, -0.25, -0.1)), (0.09, 0.08, 0.07))]            # whisker pads
+        clay += [ell(hd((0.11 * s, -0.24, -0.1)), (0.085, 0.075, 0.065)),         # whisker pads
+                 ell(hd((0.21 * s, -0.08, -0.1)), (0.15, 0.15, 0.14))]            # round cheeks
+        for k in range(2):                                                        # two small cheek tufts
+            clay.append(tuft(hd((0.31 * s, -0.04 + 0.05 * k, -0.13 - 0.03 * k)), R @ Vector((s * 0.85, 0.25, -0.45)), 0.09, 0.05))
     for (x, y) in LEGS:
         hind = y > 0
         if hind:
-            clay.append(ell((x * 1.15, y, 0.64), (0.16, 0.23, 0.27)))
-            for k in range(5):                                                    # fluffy britches
-                a = math.radians(-40 + 25 * k)
-                clay.append(lock((x * 1.4, y + 0.12 * math.sin(a), 0.55 + 0.1 * math.cos(a)), (x * 2, 0.6, -0.8), 0.17, 0.06, droop=0.2, flat=1.0))
-        clay += [loft([(x, y, 0.8), (x, y + (0.03 if hind else -0.01), 0.42), (x, y - 0.02, 0.1)], lambda t: lerp(0.115, 0.09, t), segs=12, rings=6),
-                 ell((x, y - 0.05, 0.07), (0.1, 0.125, 0.07))]                   # round paws
-        for k in range(4):                                                        # fur over the paws
-            a = 2 * math.pi * k / 4 + 0.4
-            clay.append(lock((x + 0.08 * math.cos(a), y + 0.08 * math.sin(a), 0.2), (math.cos(a) * 0.5, math.sin(a) * 0.5, -1.0), 0.1, 0.045, droop=0.0, flat=1.0))
-    for k in range(30):                                                           # the chest ruff: round soft clumps
-        a = math.radians(-85 + 170 * ((k * 0.618) % 1.0))
-        zz = 0.74 + 0.44 * ((k * 0.381) % 1.0)
-        at = Vector((0.25 * math.sin(a), -0.4 - 0.1 * math.cos(a), zz))
-        clay.append(lock(at, (math.sin(a) * 0.5, -0.7, -0.7), 0.14, 0.085, droop=0.3, flat=0.95))
-    for s in (-1, 1):                                                             # round fluffy cheeks
-        clay.append(ell(hd((0.22 * s, -0.08, -0.1)), (0.15, 0.15, 0.14)))
-        for k in range(4):
-            at = hd((0.28 * s, -0.04 + 0.04 * k, -0.12 - 0.03 * k))
-            clay.append(lock(at, R @ Vector((s * 0.7, 0.3, -0.7)), 0.11, 0.06, droop=0.2, flat=0.95))
-    for k in range(24):                                                           # long fur on the flanks and belly
-        y = -0.25 + 0.65 * ((k * 0.618) % 1.0)
-        s = 1 if k % 2 else -1
-        ang = math.radians(-60 + 70 * ((k * 0.381) % 1.0))
-        at = Vector((0.27 * s * math.cos(ang), y, 0.82 + 0.27 * math.sin(ang)))
-        clay.append(lock(at, (s * 0.5, 0.4, -0.8), 0.16, 0.07, droop=0.2))
-    skin = fuse(join(clay), voxel=0.017, iterations=2)
+            clay.append(ell((x * 1.15, y, 0.55), (0.16, 0.23, 0.25)))            # haunch
+        clay += [loft([(x, y, 0.66), (x, y + (0.03 if hind else -0.01), 0.36), (x, y - 0.02, 0.1)], lambda t: lerp(0.115, 0.095, t), segs=12, rings=6),
+                 ell((x, y - 0.05, 0.07), (0.105, 0.13, 0.07))]                  # round paws
+    for row, (z, n, r) in enumerate(((0.98, 5, 0.12), (0.86, 4, 0.12), (0.74, 3, 0.11))):    # a neat scalloped ruff
+        for k in range(n):
+            u = (k - (n - 1) / 2) / max(n - 1, 1)
+            a = u * math.radians(110)
+            clay.append(ell((0.24 * math.sin(a), -0.44 - 0.07 * math.cos(a) + 0.02 * row, z), (r, r * 0.8, r * 1.05)))
+    skin = fuse(join(clay), voxel=0.016, iterations=3)
     tree = BVHTree.FromBMesh(skin)
 
     def hit(origin, direction):
         loc, nrm, _, _ = tree.ray_cast(Vector(origin), Vector(direction).normalized())
         return loc, nrm
     fwd = R @ Vector((0, 1, 0))
-    eyes = [hit(hd((0.14 * s, -1.5, 0.05)), fwd) for s in (-1, 1)]
+    up_h = R @ Vector((0, 0, 1))
+    eyes = [hit(hd((0.135 * s, -1.5, 0.04)), fwd) for s in (-1, 1)]
     nose_at, nose_n = hit(hd((0, -1.5, -0.06)), fwd)
     mouth = []
     for s in (-1, 1):
@@ -599,52 +591,62 @@ def build():
     mouth_top = hit(hd((0, -1.5, -0.1)), fwd)[0]
 
     def carve(co, n):
-        d = n * 0.01 * noise.noise(Vector((co.x * 8, co.y * 8, co.z * 3)))
+        d = n * 0.003 * noise.noise(co * 8.0)
         for e, en in eyes:
-            d -= en * 0.018 * (1 - smooth((co - e).length, 0.08, 0.11))
+            d -= en * 0.008 * (1 - smooth((co - e).length, 0.06, 0.09))           # very shallow sockets: no brow ledge
         return d
-    up_h = R @ Vector((0, 0, 1))
-    lashes = []                                                                   # a soft line over the top of each eye
-    for s in (-1, 1):
-        e, en = eyes[0 if s < 0 else 1]
-        side = en.cross(up_h).normalized()
-        lashes.append([e + side * (0.088 * math.cos(a)) + up_h * (0.068 * math.sin(a) + 0.006) + en * 0.0 for a in
-                       [math.radians(x) for x in (5, 30, 60, 90, 120, 150, 175)]])
     sculpt(skin, carve)
     skin = decimate(skin, 7600, keep=lambda co: 0.8 * (1 - smooth((Vector(co) - hd((0, -0.25, 0.0))).length, 0.25, 0.45)), factor=1.0)
 
     def colour(co, n, g=0.0):
         col = mix(COL["white_dk"], COL["white"], smooth(n.z, -0.7, 0.1))
-        col = mix(col, COL["shadow"], 0.12 * smooth(noise.noise(co * 5.0), 0.1, 0.6))
+        col = mix(col, COL["shadow"], 0.1 * smooth(noise.noise(co * 5.0), 0.1, 0.6))
         q = HINV @ co
         if q.length < 0.6:
             for line in mouth:
                 col = mix(col, COL["mouth"], 1 - smooth(poly_dist(co, line), 0.005, 0.012))
             col = mix(col, COL["mouth"], 1 - smooth(seg_dist(co, mouth_top, mouth[0][0]), 0.004, 0.01))
-            col = mix(col, COL["gold_lt"], 0.35 * (1 - smooth((co - hd((0, -0.18, 0.2))).length, 0.04, 0.14)))
+            col = mix(col, COL["gold_lt"], 0.35 * (1 - smooth((q - HORN_Q).length, 0.03, 0.12)))
         return col
+
+    # ---- the slim glowing star-crystal horn, centred on the forehead ----------------------------------------------
+    hp, hn = hit(hd((0, -0.13, 1.0)), -up_h)                                  # the top of the forehead
+    HORN_Q = HINV @ hp
+    horn = star_horn(0.045, 0.02, 0.26, points=4, rings=5, twist=45.0)
+    d = (R @ Vector((0, -0.18, 1.0))).normalized()
+    horn.transform(Matrix.Translation(hp - d * 0.025) @ d.to_track_quat('Z', 'Y').to_matrix().to_4x4())
+    add("GLOW", horn, glow_m)
     add("skin", skin, fur_m, colour, 0.92)
 
-    # ---- big calm eyes: soft blue glass with a relaxed, flatter top edge, a tall pupil and a catchlight ----------
+    # ---- almond cat eyes: soft blue, a wide oval pupil, one highlight, a thin dark upper lid line ----------------
+    EW, EH, ED = 0.066, 0.046, 0.028
     for (e, en), s in zip(eyes, (-1, 1)):
-        en = (en * 0.45 + R @ Vector((0.25 * s, -1, 0)).normalized() * 0.55).normalized()
+        en = (en * 0.5 + R @ Vector((0.2 * s, -1, 0)).normalized() * 0.5).normalized()
         xa = -en.cross(up_h).normalized()
         ya = en.cross(xa).normalized()
         frame = Matrix((xa, ya, en)).transposed().to_4x4()                         # local x across, y up, z out
-        ctr = e - en * 0.016
-        eye = ell((0, 0, 0), (0.084, 0.07, 0.04), cuts=4)
+        ctr = e - en * 0.012
+
+        def almond_y(x, y):
+            return y * (1 - 0.55 * (x / EW) ** 2) + 0.12 * x * s                     # pointed corners, outer corner lifted
+        eye = ell((0, 0, 0), (EW, EH, ED), cuts=4)
         for v in eye.verts:
-            top = 0.026 - 1.6 * v.co.x * v.co.x
-            if v.co.y > top:
-                v.co.y = top + (v.co.y - top) * 0.25                             # a flatter, relaxed upper edge
+            v.co.y = almond_y(v.co.x, v.co.y)
         eye.transform(Matrix.Translation(ctr) @ frame)
         add("eyes", eye, eye_m)
-        pupil = ell((0, 0, 0), (0.024, 0.04, 0.008), cuts=2)
-        pupil.transform(Matrix.Translation(ctr + en * 0.039 - ya * 0.004) @ frame)
+        pupil = ell((0, 0, 0), (0.021, 0.034, 0.006), cuts=2)
+        pupil.transform(Matrix.Translation(ctr + en * (ED + 0.002)) @ frame)
         add("pupils", pupil, fur_m, COL["pupil"], 0.2)
-        glint = ell((0, 0, 0), (0.014, 0.014, 0.006), cuts=1)
-        glint.transform(Matrix.Translation(ctr + en * 0.043 + xa * (-0.02 * s) + ya * 0.008) @ frame)
+        glint = ell((0, 0, 0), (0.011, 0.011, 0.005), cuts=1)
+        glint.transform(Matrix.Translation(ctr + en * (ED + 0.006) + xa * (-0.014 * s) + ya * 0.014) @ frame)
         add("glints", glint, fur_m, COL["glint"], 0.2)
+        line = []
+        for i in range(9):
+            x = -EW * 1.04 + 2.08 * EW * i / 8
+            yt = almond_y(x, EH * math.sqrt(max(0.0, 1 - (x / (EW * 1.04)) ** 2)))
+            zt = ED * math.sqrt(max(0.0, 1 - (x / EW) ** 2 - 0.5 * (yt / EH) ** 2)) * 0.6
+            line.append(ctr + xa * x + ya * (yt + 0.003) + en * (zt + 0.004))
+        add("lids", loft(line, lambda t: 0.0045 + 0.002 * math.sin(math.pi * t), segs=6, rings=16), fur_m, COL["lash"], 0.6)
 
     # ---- a small pink nose -------------------------------------------------------------------------------
     nose = ell((0, 0, 0), (0.05, 0.03, 0.035), cuts=2)
@@ -653,46 +655,35 @@ def build():
     nose.transform(M(nose_at + nose_n * 0.015, rot=(8, 0, 0)))
     add("nose", nose, fur_m, lambda co, n, g: mix(COL["nose_dk"], COL["nose"], smooth(n.z, -0.3, 0.6)), 0.4)
 
-    # ---- pointed ears with pale gold tips and fur tufts inside ---------------------------------------------
+    # ---- cupped pointed ears, pink inside, white rims, a touch of pale gold at the very tip --------------------
     for s in (-1, 1):
-        root = hd((0.2 * s, 0.04, 0.2))
-        pts = [root, root + R @ Vector((0.05 * s, 0.0, 0.14)), root + R @ Vector((0.08 * s, 0.02, 0.27))]
-        ear = loft(pts, lambda t: 0.12 * (1 - t) ** 0.85 + 0.006, segs=10, rings=8, flat=0.42)
+        ear = ell((0, 0, 0), (0.11, 0.05, 0.13), cuts=4)
+        for v in ear.verts:
+            v.co.x *= 1 - 0.8 * smooth(v.co.z, -0.04, 0.13)                          # a rounded triangle
+            if v.co.y < 0:
+                v.co.y *= 0.25                                                        # cupped to the front
 
         def ear_col(co, n, g):
-            inside = smooth(-(R.inverted() @ n).y, 0.3, 0.8) * smooth(g, 0.1, 0.3) * smooth(g, 0.85, 0.6)
-            col = mix(COL["white"], COL["ear_in"], 0.8 * inside)
-            return mix(col, COL["gold"], smooth(g, 0.55, 0.85))
-        add("ears", ear, fur_m, ear_col)
-        for k in range(4):
-            at = root + R @ Vector((0.0, -0.02, 0.04 + 0.03 * k))
-            add("ears", lock(at, R @ Vector((0.15 * s, -0.6, 0.8)), 0.09, 0.018, droop=0.0, segs=5, rings=3), fur_m, COL["white"])
+            inside = smooth(-n.y, 0.3, 0.7) * (1 - smooth(abs(co.x) / max(0.11 * (1 - 0.8 * smooth(co.z, -0.04, 0.13)), 1e-3), 0.55, 0.8))
+            col = mix(COL["white"], COL["ear_in"], 0.9 * inside)
+            return mix(col, COL["gold_lt"], 0.8 * smooth(co.z, 0.08, 0.125))
+        paint(ear, ear_col)
+        ear.transform(M(hd((0.2 * s, 0.05, 0.21)), rot=(-8, 0, -20 * s)))
+        add("ears", ear, fur_m)
 
-    # ---- the big plume tail held up, with a pale gold tip --------------------------------------------------------
-    path = [Vector((0, 0.56, 0.92)), Vector((0, 0.78, 1.08)), Vector((0, 0.86, 1.4)), Vector((0, 0.8, 1.7)), Vector((0, 0.66, 1.86))]
-    plume = [loft(path, lambda t: 0.07 + 0.08 * math.sin(math.pi * min(t * 1.1, 1.0)) ** 0.7, segs=12, rings=16)]
-    for k in range(36):
-        t = 0.1 + 0.62 * k / 35
-        p = kit._spline(path, t * (len(path) - 1))
-        a = k * 2.4
-        d = Vector((math.cos(a), 0.4 * math.sin(a), 0.6 + 0.4 * math.sin(a)))
-        plume.append(lock(p, d, 0.15, 0.085, droop=-0.1, flat=1.0))
-    plume = fuse(join(plume), voxel=0.016, iterations=1)
-    plume = decimate(plume, 1900)
-    top = path[-1]
+    # ---- the full fluffy plume tail, tapering to a soft tip with a gentle gold gradient ----------------------------
+    path = [Vector((0, 0.6, 0.8)), Vector((0, 0.82, 0.96)), Vector((0, 0.9, 1.26)), Vector((0, 0.84, 1.56)), Vector((0, 0.7, 1.74))]
+    plume = loft(path, lambda t: (0.08 + 0.13 * math.sin(math.pi * min(t * 1.12, 1.0)) ** 0.7) * (1 - 0.8 * smooth(t, 0.74, 1.0)), segs=16, rings=30)
+    plume = fuse(plume, voxel=0.014, iterations=2)
+    sculpt(plume, lambda co, n: n * 0.02 * noise.noise(Vector((co.x * 8, co.y * 8, co.z * 5))))
+    plume = decimate(plume, 1500)
+    pts = [kit._spline(path, i / 60 * (len(path) - 1)) for i in range(61)]
 
     def tail_col(co, n, g):
+        t = min(range(61), key=lambda k: (pts[k] - co).length_squared) / 60
         col = mix(COL["white_dk"], COL["white"], smooth(n.z, -0.6, 0.2))
-        tip = smooth(co.z, 1.55, 1.8)
-        return mix(col, mix(COL["gold"], COL["gold_lt"], smooth(n.z, -0.3, 0.6)), tip)
+        return mix(col, mix(COL["gold_lt"], COL["gold"], smooth(t, 0.8, 1.0)), smooth(t, 0.55, 0.9))
     add("tail", plume, fur_m, tail_col)
-
-    # ---- the glowing star-crystal horn on the forehead --------------------------------------------------------
-    hp, hn = hit(hd((0, -0.05, 1.0)), R @ Vector((0, -0.2, -1.0)))
-    horn = star_horn(0.06, 0.026, 0.24, points=4, rings=4, twist=45.0)
-    d = (hn * 0.4 + R @ Vector((0, -0.3, 1.0)).normalized() * 0.6).normalized()
-    horn.transform(Matrix.Translation(hp - d * 0.02) @ d.to_track_quat('Z', 'Y').to_matrix().to_4x4())
-    add("GLOW", horn, glow_m)
 
     lowest = min(v.co.z for k, (bm, _) in c.parts.items() if not k.startswith("GLOW") for v in bm.verts)
     for bm, _ in c.parts.values():

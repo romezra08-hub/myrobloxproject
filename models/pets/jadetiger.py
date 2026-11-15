@@ -14,7 +14,13 @@ Must-haves, checked in every review:
      a red silk collar with gold trim and a gold coin.
   5. About 3 studs tall; Body under 12k triangles.
 
-Final: round 9.
+Final: round 12.
+
+Round 12: pupils centred and only a touch high (pushed out and up they looked wall-eyed and rolled up), a little smaller in a taller eye so more amber shows round them and the eye no longer reads as a sleepy slit.
+
+Round 11: a thinner upper lid (with the smaller eye it covered a third and looked sleepy); bolder, wider body stripes and a denser skin so the painted stripes read on the smooth torso (they had blurred into faint smudges).
+
+Round 10 (after review: "still worried, the brow marks read as letters, the body is lumpy"): pupils centred and a touch high, looking forward, smaller, in a slightly narrower eye, under a straight lid line rising to the outer corner; no pale ring; a tiger face: a broad flat muzzle pad, wide whisker pads, a wider nose, cheek ruffs out to the sides, a flatter skull top; two bold chevron stripes on the forehead instead of the three marks; one sleek lofted torso with a firm back line, shoulders and thighs blended in, a smoother skin; stripes painted in dark jade with only a very slight cut.
 
 Round 9: shallow eye sockets with a pale ring instead of dark shading, and the brow marks moved high on the forehead (the dark smudges over the eyes read as worried brows).
 
@@ -493,29 +499,44 @@ def build():
     def hd(p):
         return HEAD_M @ Vector(p)
 
+    def head_shape():
+        bm = kit.ball((0.86, 0.76, 0.72), cuts=5)
+        for v in bm.verts:
+            if v.co.z > 0.1:
+                v.co.z = 0.1 + (v.co.z - 0.1) * 0.75                            # a flatter skull top
+        bm.transform(HEAD_M @ M((0, 0.04, 0.05)))
+        return bm
+
+    def tuft(at, d, length, r):
+        at, d = Vector(at), Vector(d).normalized()
+        return loft([at - d * 0.04, at + d * length * 0.5, at + d * length + Vector((0, 0, -0.015))], lambda t: r * (1 - t) ** 0.9 + 0.008, segs=8, rings=5)
+
     # ---- one fused carved form: a chunky cub body, big paws, a round head and the curled tail -------------
-    clay = [ell((0, 0.05, 1.02), (0.36, 0.6, 0.34)),
-            ell((0, -0.3, 1.06), (0.38, 0.34, 0.37)),                           # chest
-            ell((0, 0.42, 1.02), (0.35, 0.32, 0.33)),                           # haunches
+    torso = [Vector((0, -0.46, 1.07)), Vector((0, -0.2, 1.07)), Vector((0, 0.12, 1.05)), Vector((0, 0.4, 1.06)), Vector((0, 0.56, 1.05))]
+    clay = [loft(torso, lambda t: 0.35 - 0.03 * math.sin(math.pi * t) ** 2, segs=20, rings=16),   # one sleek torso with a firm back line
+            ell((0, -0.44, 1.06), (0.35, 0.22, 0.35)),                          # its rounded chest
+            ell((0, 0.54, 1.05), (0.33, 0.2, 0.33)),                            # and rump
             loft(NECK, lambda t: 0.27, segs=14, rings=6),
             loft(TAIL, lambda t: 0.1 - 0.035 * t, segs=10, rings=36),
-            ell(hd((0, 0.04, 0.04)), (0.42, 0.38, 0.37)),                       # round head
-            ell(hd((0, -0.28, -0.1)), (0.21, 0.16, 0.15)),                      # muzzle
+            head_shape(),                                                       # broad head with a flatter skull
+            ell(hd((0, -0.27, -0.11)), (0.25, 0.15, 0.13)),                     # a broad, flat muzzle
             ell(hd((0, -0.22, -0.2)), (0.12, 0.12, 0.08))]                      # chin
     for s in (-1, 1):
-        clay += [ell(hd((0.085 * s, -0.33, -0.1)), (0.1, 0.09, 0.09)),            # whisker pads
-                 ell(hd((0.25 * s, -0.04, -0.1)), (0.13, 0.13, 0.13))]            # cheeks
+        clay += [ell(hd((0.1 * s, -0.33, -0.11)), (0.12, 0.09, 0.085)),           # wide whisker pads
+                 ell(hd((0.28 * s, -0.04, -0.12)), (0.14, 0.13, 0.13)),           # cheeks
+                 tuft(hd((0.36 * s, -0.04, -0.1)), R @ Vector((0.9 * s, 0.2, -0.45)), 0.13, 0.07),    # cheek ruffs out to the sides
+                 tuft(hd((0.34 * s, 0.0, -0.18)), R @ Vector((0.8 * s, 0.3, -0.7)), 0.11, 0.06)]
     for x, y, front in LEGS:
         if front:
-            clay += [ell((x * 1.1, y + 0.02, 0.86), (0.19, 0.24, 0.3)),          # shoulders
+            clay += [ell((x * 0.92, y + 0.02, 0.9), (0.15, 0.21, 0.27)),         # shoulders, blended into the torso
                      loft([Vector((x * 1.05, y, 0.78)), Vector((x, y - 0.02, 0.48)), Vector((x, y - 0.03, 0.24)), Vector((x, y - 0.05, 0.12))],
                           lambda t: 0.135 - 0.04 * smooth(t, 0.2, 0.75) + 0.01 * smooth(t, 0.8, 1.0), segs=12, rings=10)]   # forearm to a slim wrist
         else:
-            clay += [ell((x * 1.1, y, 0.86), (0.21, 0.3, 0.32)),                # thighs
+            clay += [ell((x * 0.92, y, 0.9), (0.17, 0.26, 0.29)),               # thighs, blended into the torso
                      loft([Vector((x * 1.05, y + 0.06, 0.76)), Vector((x, y + 0.14, 0.46)), Vector((x, y + 0.06, 0.24)), Vector((x, y + 0.0, 0.12))],
                           lambda t: 0.14 - 0.045 * smooth(t, 0.2, 0.75) + 0.01 * smooth(t, 0.8, 1.0), segs=12, rings=10)]  # hock to a slim ankle
         clay.append(ell((x, y - 0.08, 0.09), (0.17, 0.21, 0.095)))             # big cub paws
-    skin = fuse(join(clay), voxel=0.019, iterations=4)
+    skin = fuse(join(clay), voxel=0.019, factor=0.6, iterations=7)
     tree = BVHTree.FromBMesh(skin)
 
     def hit(origin, direction):
@@ -534,11 +555,12 @@ def build():
         """0..1: inside a tiger stripe. Bands round the body and legs, narrowing to points on the sides."""
         if (co - HEAD).length < 0.55:
             p = HEAD_M.inverted() @ co
-            if p.z > 0.12 and p.y < 0.1:                                                    # three marks on the brow
+            if p.z > 0.12 and p.y < 0.12 and abs(p.x) < 0.2:                                # bold chevron stripes on the forehead
                 k = 0.0
-                for xm, top in ((-0.06, 0.3), (0.0, 0.32), (0.06, 0.3)):                        # short marks high on the brow
-                    k = max(k, (1 - smooth(abs(p.x - xm), 0.01, 0.022)) * smooth(p.z, 0.22, 0.25) * smooth(p.z, top + 0.03, top))
-                return 0.6 * k
+                for z0 in (0.17, 0.26):
+                    dv = p.z - z0 - 0.75 * abs(p.x)
+                    k = max(k, (1 - smooth(abs(dv), 0.012, 0.022)) * smooth(abs(p.x), 0.17, 0.12))
+                return k
             if abs(p.x) > 0.22 and p.z < 0.06 and p.y < 0.05:                                # cheek stripes
                 w = 0.5 + 0.5 * math.sin(p.z * 40 + abs(p.x) * 12)
                 return smooth(w, 0.72, 0.85) * smooth(abs(p.x), 0.22, 0.3)
@@ -553,14 +575,14 @@ def build():
             band = 0.5 + 0.5 * math.sin(co.z * 24.0 + 0.8 * math.sin(co.y * 10))
             return smooth(band, 0.8, 0.86) * smooth(co.z, 0.3, 0.45) * smooth(n.x * (1 if co.x > 0 else -1), 0.2, 0.6)
         wob = 0.06 * math.sin(co.z * 11 + co.x * 5) + 0.03 * math.sin(co.x * 17)
-        band = 0.5 + 0.5 * math.sin((co.y + wob) * 21.0 + 0.6)
-        width = 0.5 + 0.38 * smooth(n.z, 0.95, 0.0)                                          # wide over the back, narrowing to points
-        return smooth(band, width, width + 0.06) * side
+        band = 0.5 + 0.5 * math.sin((co.y + wob) * 18.0 + 0.6)
+        width = 0.36 + 0.44 * smooth(n.z, 0.95, 0.0)                                         # bold over the back, narrowing to points
+        return smooth(band, width, width + 0.08) * side
 
     def carve(co, n):
-        d = n * 0.006 * noise.noise(co * 4.0)
+        d = n * 0.002 * noise.noise(co * 4.0)
         shallow = 0 if (co - HEAD).length < 0.5 or poly_dist(co, TAIL) < 0.13 else 1
-        d -= n * 0.009 * stripe(co, n) * shallow                                             # stripes cut in shallow (painted only on the face and tail)
+        d -= n * 0.003 * stripe(co, n) * shallow                                             # stripes painted, with only a very slight cut
         for e, en in eyes:
             d -= en * 0.014 * (1 - smooth((co - e).length, 0.075, 0.11))
         if (co - nose_at).length < 0.3:
@@ -572,7 +594,7 @@ def build():
                         d -= n * 0.018 * (1 - smooth(abs(co.x - x - dx), 0.003, 0.014)) * smooth(co.z, 0.17, 0.1) * (1 if co.y < y - 0.06 else 0)
         return d
     sculpt(skin, carve)
-    skin = decimate(skin, 7400, keep=lambda co: max(0.8 * (1 - smooth((Vector(co) - hd((0, -0.22, -0.02))).length, 0.22, 0.45)),
+    skin = decimate(skin, 8800, keep=lambda co: max(0.8 * (1 - smooth((Vector(co) - hd((0, -0.22, -0.02))).length, 0.22, 0.45)),
                                                     0.35 * (1 - smooth((Vector(co) - HEAD).length, 0.4, 0.6))), factor=1.0)
 
     def jade_colour(co, n, g=0.0):
@@ -585,9 +607,7 @@ def build():
         if (co - HEAD).length < 0.55:
             p = HEAD_M.inverted() @ co
             col = mix(col, COL["jade_pale"], 0.9 * smooth(p.y, -0.22, -0.32) * smooth(p.z, 0.0, -0.07))  # pale muzzle and chin
-            col = mix(col, COL["jade_pale"], 0.7 * (1 - smooth((p - Vector((0.13 * (1 if p.x > 0 else -1), -0.24, 0.12))).length, 0.03, 0.07)))  # pale spots over the eyes
-            for e, en in eyes:
-                col = mix(col, COL["jade_pale"], 0.35 * (1 - smooth((co - e).length, 0.08, 0.12)))     # a pale ring, not a dark socket
+            col = mix(col, COL["jade_pale"], 0.45 * (1 - smooth((p - Vector((0.13 * (1 if p.x > 0 else -1), -0.24, 0.13))).length, 0.025, 0.05)))  # small pale spots over the eyes
             if (co - nose_at).length < 0.3:
                 col = mix(col, COL["stripe"], 0.85 * (1 - smooth(min(poly_dist(co, m) for m in mouth), 0.005, 0.012)))
         return col
@@ -608,19 +628,19 @@ def build():
         basis = Matrix((ex, up, en)).transposed().to_4x4()
         tilt = Matrix.Rotation(math.radians(-12 * s), 4, Vector((0, -1, 0)))        # outer corners up as seen from the front (checked in the render)
         basis = tilt @ basis
-        eb = almond(0.13, 0.088, 0.08)
+        eb = almond(0.13, 0.092, 0.08)
         eb.transform(Matrix.Translation(e - en * 0.014) @ basis)
         add("eyes", eb, eye_m)
         lid = almond(0.145, 0.1, 0.095, cuts=8)                                               # a carved upper lid with a level edge
-        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < 0.034 or v.co.z < -0.004], context='VERTS')
+        bmesh.ops.delete(lid, geom=[v for v in lid.verts if v.co.y < 0.038 or v.co.z < -0.004], context='VERTS')
         lid.transform(Matrix.Translation(e - en * 0.012) @ basis)
         add("lids", glossy(lid, 0.2), jade_m, COL["jade"])
         low = almond(0.142, 0.098, 0.094, cuts=8)                                            # a lift from below: a round top, a flatter bottom
-        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.y > -0.022 or v.co.z < -0.004], context='VERTS')
+        bmesh.ops.delete(low, geom=[v for v in low.verts if v.co.y > -0.032 or v.co.z < -0.004], context='VERTS')
         low.transform(Matrix.Translation(e - en * 0.012) @ basis)
         add("lids", glossy(low, 0.2), jade_m, COL["jade"])
-        front = e + en * 0.024
-        pu = kit.ball((0.05, 0.06, 0.016), cuts=2)
+        front = e + en * 0.026 + up * 0.004                                                  # centred, a touch high, looking forward
+        pu = kit.ball((0.038, 0.05, 0.016), cuts=2)
         pu.transform(Matrix.Translation(front) @ basis)
         add("pupils", pu, jade_m, COL["pupil"])
         add("pupils", ell(front + en * 0.006 + up * 0.016 + ex * 0.016 * s, (0.013, 0.013, 0.005), cuts=2), jade_m, COL["white"])
@@ -628,7 +648,7 @@ def build():
     for m in mouth:                                                                     # the smile, cut as a fine dark line
         if len(m) > 1:
             add("mouth", loft([p + (p - HEAD).normalized() * 0.002 for p in m], lambda t: 0.007, segs=5, rings=3 * len(m)), jade_m, COL["stripe"])
-    nose = ell((0, 0, 0), (0.065, 0.04, 0.04), cuts=2)
+    nose = ell((0, 0, 0), (0.088, 0.045, 0.045), cuts=2)
     for v in nose.verts:
         v.co.x *= 0.45 + 0.55 * smooth(v.co.z, -0.04, 0.035)
     nose.transform(M(nose_at + fwd * -0.006) @ R.to_4x4())

@@ -109,9 +109,9 @@ dragon more studs than a fox, and bigger pets also stride more slowly.
 
 | Style | Pets |
 |---|---|
-| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip), tophatcrow, hedgehog, bearcub |
+| `sitter` (breathe, tilt and look round; perky hop-skip) | fox, puppy, cat, penguin (a side-to-side waddle instead of the skip), tophatcrow, hedgehog, bearcub, starcat |
 | `hopper` (arcs with a pause; the odd hop in place) | bunny, gargoyle (slower, lower stone hops: it is modelled crouched on its hands), drumdevil, mushroom, snowbunny, frog |
-| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog, cerberus, piggy, dunecat, shadowpanther, frostwolf, nightunicorn, lavawolf, boar, sheep, stag, redpanda, treedeer |
+| `walker` (two-beat trot; slow look round, weight shift) | unicorn, wolf, horneddemon, lavacat, plumedlion, skeletondog, cerberus, piggy, dunecat, shadowpanther, frostwolf, nightunicorn, lavawolf, boar, sheep, stag, redpanda, treedeer, jadetiger |
 | `heavy` (slow stomp and roll; rare look round) | turtle, dragon, golem, driller, spikecrab, highlandbull, magmacrown, grizzly, redrex, armordino, irongolem, sundragon, ankylo |
 | `flyer` (hover, figure eight, bank; flies pitched down) | phoenix, griffin, infernobat, raven, firedemon, moth, duskbat, angelyeti |
 | `floater` (slow drift, sway and turn) | ghost, cloudspirit, reaper, spiritblob, skyjelly, halosprite |
@@ -289,6 +289,8 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | RedPanda | Orange and black blocky animal with a tall tail | Red panda with a white face mask, cupped rimmed ears, dark legs and a soft ringed tail | 10,138 |
 | Ankylo | Sandy flat dinosaur with a club tail | Low, wide sandy ankylosaur with rows of domed scutes, side spikes, a dark beak, a smile and a bone club | 11,344 |
 | TreeDeer | Brown deer with tree branches and leaves on its back | Forest-spirit deer of grooved bark, with leafy branch antlers, a mossy back with red berries and glowing green spots | 11,992 |
+| JadeTiger | Green blocky tiger with a curly tail | Tiger cub carved from matte veined jade, with a broad muzzle, cheek ruffs, chevron brow stripes, painted bands and a red silk collar | 11,466 |
+| StarCat | White blocky cat with a yellow horn | Fluffy white cat with a glowing gold star-crystal horn, calm almond eyes, a scalloped chest ruff and a plume tail with a gold tip | 10,528 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more

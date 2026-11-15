@@ -426,6 +426,8 @@ PetAnimator.PETS = {
 	redpanda = { style = "walker", speed = 1.2, bounce = 0.05, skip = 0.15, lookTilt = 8 },
 	ankylo = { style = "heavy", speed = 1.2, roll = 3 },
 	treedeer = { style = "walker", speed = 0.95, bounce = 0.04, lookTilt = 5 },
+	jadetiger = { style = "walker", speed = 1.1, bounce = 0.05, skip = 0.1, lookTilt = 7 },
+	starcat = { style = "sitter", skip = 0.2, bounce = 0.05, speed = 1.15, yaw = 4 },
 } :: { [string]: { [string]: any } }
 
 -- Fields that `amp` scales, and the periods that `speed` shortens.
