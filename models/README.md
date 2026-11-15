@@ -182,6 +182,8 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | PlumedLion | Lion with a turkey-feather mane and red wings | Lion cub with a barred turkey-fan mane and red feather wings | 9,376 |
 | Reaper | Hooded figure with a scythe | Little hooded spirit with soft violet eyes, a moon scythe and floating wisps | 8,096 |
 | SkeletonDog | Skeleton dog | Happy black pup in a glowing bone-print costume with a bone tag | 9,570 |
+| FireDemon | Hunched snarling red demon with bat wings and a gold crown | Upright molten imp-knight with glowing seams, bat wings, a crown of gold flame spikes and a calm face | 13,596 |
+| HornedDemon | Red four-legged demon with ram horns, black wings and a crown | Red ram-beast with glossy curled black horns, armour plates, black-and-red wings and a gold circlet | 10,164 |
 
 Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
 are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
