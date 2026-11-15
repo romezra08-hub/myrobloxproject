@@ -14,8 +14,16 @@ Tough and cool, never cute-blobby, never a lizard horror, never slimy or plastic
   4. A warm ember-orange belly and toe tips.
   5. Matte rock-like skin with baked crease shading; the lava glow is a separate part.
 
-Final: round 7. Round 8 (salamander_v8.py) tipped the head further down; from the low close-up it
-showed more of the jaw and less of the crest, so it was dropped.
+Final: round 10. (Round 8, salamander_v8.py, tipped the old head further down and was dropped.)
+
+Round 10: no bib: the throat and the front of the neck stay basalt now that the neck is low (the
+ember showed head-on as a bright patch); a sharper taper, wide jaws at the back of the head to a
+lower, narrower snout, so head-on it reads as a pointed face rather than a rounded bulb.
+
+Round 9: the head and neck again, for the front view: a narrower wedge of a head (two thirds of
+the width) whose snout points at the viewer, eyes on its sides near the front with a soft brow,
+the crust a strip down the middle of the crown (its rim had outlined the head like a hat brim), a
+shorter, thicker neck so the head sits low and forward; darker basalt.
 
 Round 7: back under budget (lighter eyes, toes and lava bands); small crust plates on the bridge of
 the snout and broad flat scutes down the throat, which were plain dark planes from the front.
@@ -59,21 +67,21 @@ from mathutils import Matrix, Vector, noise  # noqa: E402
 
 # The spine, from inside the head down the neck, along the back and out to the tip of the tail,
 # which curls round to the -X side (towards the cameras).
-SPINE = [(-0.50, -2.02, 2.34), (-0.28, -1.62, 1.76), (-0.04, -1.08, 1.22), (0.0, -0.2, 1.0), (0.02, 0.68, 0.86),
+SPINE = [(-0.42, -2.12, 1.98), (-0.2, -1.62, 1.64), (-0.04, -1.08, 1.22), (0.0, -0.2, 1.0), (0.02, 0.68, 0.86),
          (0.0, 1.38, 0.66), (-0.35, 1.94, 0.40), (-1.0, 2.24, 0.22), (-1.7, 2.1, 0.13), (-2.15, 1.62, 0.08)]
 # Half width and half height of the trunk at fractions of the spine's length.
-GIRTH = [(0.00, 0.46, 0.42), (0.07, 0.52, 0.47), (0.15, 0.74, 0.55), (0.27, 0.74, 0.53), (0.38, 0.66, 0.48),
+GIRTH = [(0.00, 0.5, 0.44), (0.07, 0.62, 0.52), (0.15, 0.74, 0.55), (0.27, 0.74, 0.53), (0.38, 0.66, 0.48),
          (0.47, 0.62, 0.46), (0.56, 0.44, 0.36), (0.66, 0.29, 0.25), (0.78, 0.17, 0.15), (0.90, 0.09, 0.08),
          (1.00, 0.015, 0.015)]
 SQUARE = 2.5           # squareness of the trunk's cross-section
 BELLY = 0.78           # the underside is flatter than the back
 
-HEAD_AT = Vector((-0.78, -2.5, 2.53))
-SCALE = 1.08                       # the whole pet is built a little small and scaled up at the end
-HEAD_ROT = (-3, 0, -24)            # a touch nose-down, turned towards -X (the cameras)
+HEAD_AT = Vector((-0.64, -2.58, 2.1))
+SCALE = 1.12                       # the whole pet is built a little small and scaled up at the end
+HEAD_ROT = (-6, 0, -26)            # a touch nose-down, turned towards -X (the cameras)
 HEAD_SIZE = 1.16
 
-SKIN = [(0.0, "#3A3634"), (0.12, "#2C2829"), (0.3, "#231F21"), (0.5, "#3A221C"), (0.68, "#7A2E14"), (0.84, "#C2501C"), (1.0, "#EE7A2C")]
+SKIN = [(0.0, "#2B2827"), (0.12, "#1F1C1D"), (0.3, "#171415"), (0.5, "#2E1A16"), (0.68, "#7A2E14"), (0.84, "#C2501C"), (1.0, "#EE7A2C")]
 CRUST = [(0.0, "#8E2C10"), (0.22, "#4A2018"), (0.45, "#2E2826"), (0.8, "#423B38"), (1.0, "#57504B")]
 OBSIDIAN = [(0.0, "#3A1610"), (0.25, "#141014"), (0.75, "#1E1A26"), (1.0, "#3A3550")]
 
@@ -207,8 +215,9 @@ class Trunk:
 def skin_g(p, n):
     """Colour position of the skin: basalt on top, a dark red-brown flank, ember underneath (the
     throat and the front of the neck stay dark, so it has no bib from the front)."""
-    under = smooth(n.z, -0.45, -0.85) * (1.0 - 0.6 * smooth(-n.y, 0.2, 0.6))
-    return 0.2 - 0.14 * smooth(n.z, 0.45, 0.95) + 0.3 * smooth(n.z, 0.05, -0.4) + 0.5 * under
+    front = smooth(p.y, -0.95, -1.45)                  # the throat and the front of the neck, ahead of the shoulders
+    under = smooth(n.z, -0.45, -0.85) * (1.0 - 0.6 * smooth(-n.y, 0.2, 0.6)) * (1.0 - 0.85 * front)
+    return 0.2 - 0.14 * smooth(n.z, 0.45, 0.95) + 0.3 * (1.0 - 0.4 * front) * smooth(n.z, 0.05, -0.4) + 0.5 * under
 
 
 def gpaint(bm, fn=skin_g):
@@ -361,9 +370,9 @@ def _ball(size, loc, rot=(0, 0, 0), cuts=3):
 
 
 # The head, lofted along -Y in its own space: y, half width, top, bottom (below the centre line).
-HEAD = [(0.62, 0.46, 0.30, 0.30), (0.40, 0.70, 0.33, 0.30), (0.12, 0.75, 0.32, 0.26), (-0.18, 0.68, 0.28, 0.22),
-        (-0.46, 0.54, 0.21, 0.17), (-0.72, 0.39, 0.155, 0.13), (-0.90, 0.26, 0.105, 0.095), (-0.99, 0.10, 0.06, 0.055)]
-MOUTH = [(0.42, -0.14, 0.0), (0.30, -0.12, 0.05), (0.0, -0.095, 0.06), (-0.5, -0.06, 0.045), (-0.84, -0.045, 0.0)]   # y, z, groove depth
+HEAD = [(0.62, 0.44, 0.30, 0.32), (0.40, 0.53, 0.32, 0.32), (0.12, 0.52, 0.30, 0.28), (-0.18, 0.45, 0.255, 0.22),
+        (-0.46, 0.34, 0.195, 0.17), (-0.72, 0.235, 0.14, 0.125), (-0.92, 0.145, 0.095, 0.085), (-1.04, 0.06, 0.055, 0.05)]
+MOUTH = [(0.42, -0.15, 0.0), (0.30, -0.13, 0.04), (0.0, -0.1, 0.045), (-0.5, -0.065, 0.035), (-0.88, -0.05, 0.0)]   # y, z, groove depth
 
 
 def place(bm, p, n, fwd=(0, -1, 0)):
@@ -409,7 +418,7 @@ def head_shell(rings=18, segs=24):
         ring = []
         for j in range(segs):
             a = 2 * math.pi * j / segs
-            cx, cz = _se(a, 3.8 if math.sin(a) > 0 else 2.5)
+            cx, cz = _se(a, 2.7 if math.sin(a) > 0 else 2.3)
             x, z = w * cx, (zt if cz > 0 else zb) * cz
             # the groove: pull the side in where it crosses the mouth line
             x *= 1.0 - md * math.exp(-((z - mz) / 0.035) ** 2) * abs(cx) / max(w, 0.1)
@@ -447,45 +456,45 @@ def head_parts(rnd):
         return bm
 
     for sx in (-1, 1):
-        # the eye: an almond at the front corner of the crown, looking forward and out, with its
-        # long axis level; a level lid covers its top third (calm and knowing, no frown)
-        nrm = Vector((sx * 0.55, -0.75, 0.32))
-        lng = Vector((sx * 0.78, 0.55, -0.03))
-        e = Vector((sx * 0.43, -0.44, 0.16))
-        out.append(("rim", framed_ball((0.4, 0.2, 0.21), e - nrm.normalized() * 0.03, lng, nrm)))
-        out.append(("eye", framed_ball((0.34, 0.17, 0.16), e, lng, nrm, cuts=2)))
+        # the eye: an almond on the side of the head near the front, looking out and forward so it
+        # reads head-on, standing a little proud of the side; a soft brow ridge over it
+        nrm = Vector((sx * 0.8, -0.5, 0.25))
+        lng = Vector((sx * 0.5, 0.8, 0.0))
+        e = Vector((sx * 0.345, -0.36, 0.1))
+        out.append(("rim", framed_ball((0.37, 0.19, 0.2), e - nrm.normalized() * 0.025, lng, nrm)))
+        out.append(("eye", framed_ball((0.32, 0.17, 0.155), e, lng, nrm, cuts=2)))
         up = nrm.normalized().cross((lng - nrm.normalized() * lng.dot(nrm.normalized())).normalized())
         up = up if up.z > 0 else -up
-        out.append(("skin", framed_ball((0.42, 0.12, 0.075), e + up * 0.07 + nrm.normalized() * 0.03, lng, nrm)))
-        out.append(("rim", _ball((0.06, 0.05, 0.04), (sx * 0.15, -0.9, 0.09), cuts=1)))              # nostril
+        out.append(("skin", framed_ball((0.42, 0.15, 0.09), e + up * 0.085 - nrm.normalized() * 0.01, lng, nrm)))
+        out.append(("rim", _ball((0.05, 0.045, 0.035), (sx * 0.1, -0.95, 0.07), cuts=1)))              # nostril
         # an obsidian crest at the back of the skull, swept back
-        for x, y, L, out_ang in ((0.24, 0.5, 0.42, 18), (0.46, 0.36, 0.34, 34)):
+        for x, y, L, out_ang in ((0.15, 0.5, 0.44, 16), (0.3, 0.36, 0.34, 32)):
             p, n = top(sx * x, y)
-            bm = blade(L, 0.17, 0.07, lean=0.32 * L)
+            bm = blade(L, 0.16, 0.07, lean=0.32 * L)
             bm.transform(M(rot=(0, 0, 90)))                 # lean back, towards +Y
             bm.transform(M(rot=(0, sx * out_ang, 0)))
             out.append(("obsid", lie(bm, p - Vector(n) * 0.02, n, fwd=(1, 0, 0))))
     p, n = top(0.0, 0.58)
-    bm = blade(0.5, 0.2, 0.08, lean=0.18)
+    bm = blade(0.52, 0.2, 0.08, lean=0.18)
     bm.transform(M(rot=(0, 0, 90)))
     out.append(("obsid", lie(bm, p - Vector(n) * 0.02, n, fwd=(1, 0, 0))))
-    # crown plates: the whole crown is crust with narrow cracks
-    plates = [(0.0, 0.36, 0.34, 0.36), (-0.27, 0.22, 0.28, 0.3), (0.27, 0.22, 0.28, 0.3), (-0.15, -0.04, 0.3, 0.28),
-              (0.15, -0.04, 0.3, 0.28), (0.0, -0.3, 0.3, 0.26), (-0.3, -0.22, 0.2, 0.2), (0.3, -0.22, 0.2, 0.2)]
+    # crown plates: a strip of crust down the middle of the crown, clear of its edges (no hat brim)
+    plates = [(0.0, 0.36, 0.3, 0.3), (-0.15, 0.15, 0.24, 0.22), (0.15, 0.15, 0.24, 0.22), (0.0, -0.06, 0.26, 0.24),
+              (0.0, -0.31, 0.22, 0.2)]
     for x, y, a, b in plates:
         p, n = top(x, y)
-        out.append(("crust", lie(slab(outline(a, b, rnd, jag=0.12), 0.05, sink=0.05), p, n)))
-    # two small plates on the bridge of the snout, so its front is not one smooth dark plane
-    for x, y, a, b in ((0.0, -0.6, 0.22, 0.2), (-0.14, -0.78, 0.15, 0.13), (0.14, -0.78, 0.15, 0.13)):
+        out.append(("crust", lie(slab(outline(a, b, rnd, jag=0.12), 0.045, sink=0.05), p, n)))
+    # small plates down the bridge of the snout
+    for x, y, a, b in ((0.0, -0.56, 0.18, 0.16), (0.0, -0.76, 0.13, 0.12)):
         p, n = top(x, y)
         out.append(("crust", lie(slab(outline(a, b, rnd, k=6, jag=0.12), 0.03, sink=0.04), p, n)))
-    # a few flat plates of crust on the cheeks, behind the eyes, so the head is not one smooth dome
+    # low on the cheeks, below the eye line, a couple of flat plates
     for sx in (-1, 1):
-        for y, z, a, b in ((0.02, 0.08, 0.26, 0.2), (0.3, 0.12, 0.28, 0.22), (0.28, -0.1, 0.22, 0.17), (-0.22, -0.02, 0.18, 0.13)):
+        for y, z, a, b in ((0.3, -0.06, 0.24, 0.18), (0.04, -0.06, 0.2, 0.15)):
             hit = bvh.ray_cast(Vector((sx * 2.0, y, z)), Vector((-sx, 0, 0)))
             if hit[0] is None:
                 continue
-            out.append(("crust", lie(slab(outline(a, b, rnd, k=6, jag=0.15), 0.035, sink=0.04), hit[0], hit[1])))
+            out.append(("crust", lie(slab(outline(a, b, rnd, k=6, jag=0.15), 0.03, sink=0.04), hit[0], hit[1])))
     # the lava under them: a thin patch lying on the crown
     patch = bmesh.new()
     rings = []
@@ -493,7 +502,7 @@ def head_parts(rnd):
         ring = []
         for j in range(1 if r == 0 else 10):
             ang = 2 * math.pi * j / 10
-            p, n = top(math.cos(ang) * r * 0.36, 0.04 + math.sin(ang) * r * 0.42)
+            p, n = top(math.cos(ang) * r * 0.2, 0.04 + math.sin(ang) * r * 0.4)
             ring.append((p, n))
         rings.append(ring)
     tops = [[patch.verts.new(p + n * 0.022) for p, n in ring] for ring in rings]

@@ -48,7 +48,7 @@ python models/build_all.py
 4. One Blender unit is one stud. The front of the pet faces -Z in Studio.
 
 Each pet arrives as two parts: `<Pet>_Body`, which carries the texture, and a small glossy or glowing
-part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Cat_GLOW`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`, `Driller_GLOW`).
+part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`, `Cat_Gloss`, `Cat_GLOW`, `Penguin_Eyes`, `Turtle_Eyes`, `Phoenix_GLOW`, `Griffin_GLOW`, `Golem_GLOW`, `Wolf_GLOW`, `Driller_GLOW`, `Salamander_GLOW`).
 
 ## Put a pickaxe into Roblox Studio
 
@@ -78,6 +78,7 @@ part (`Fox_Eye`, `Puppy_Gloss`, `Unicorn_GLOW_Horn`, `Dragon_GLOW`, `Bunny_Eyes`
 | Golem | Ancient crystal golem: chipped slate slabs with moss and roots, knee boulders and splayed toe stones, emerald crystals lit from inside, glowing eye slots, rune rings and seams, 9.9 studs tall | 11,246 | 11 |
 | Wolf | Shadow alpha wolf: long wedge muzzle, tall ears, slate blue-grey coat with a charcoal saddle, big silver mane of sculpted locks, violet crystals glowing along the spine, calm violet eyes, 7 studs tall | 15,032 | 19 (10 since the remake) |
 | Driller | Mining machine shaped like a mole: worn mining-yellow armour over gunmetal, chrome drill in a glowing ring, light-bar visor, furnace grille, oversized shovel claws, exhaust stacks, dug-up gems on its back, 5.1 studs tall and 7.9 long | 11,844 | 12 |
+| Salamander | Lava salamander (a remake of the game's black lava lizard): near-black basalt skin with a cooled-lava crust, glowing seam and flank veins, obsidian spines, amber eyes, 3.3 studs tall and 6.8 long | 11,460 | 10 |
 
 Each has its colours and soft shading baked into one texture, so it arrives as two parts.
 
@@ -194,6 +195,8 @@ Known weak points, from the last review of each:
 - Driller: the outline is still a low loaf with stacks, and from the side the armour bands look a
   bit like a row of drums. The yellow is a little uniform at mid distance and the paint chips are
   small. In the renders the glow ring lights the yellow snout orange, which Roblox Neon will not do.
+- Salamander: straight on the snout still reads rounded, the throat plates look a little like belt
+  bands, the legs are plain tubes, and at game distance it is a dark shape with orange accents.
 
 ## How the practice rounds work
 
