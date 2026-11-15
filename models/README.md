@@ -177,8 +177,14 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | Ghost | White blob with huge bulging purple eyes | Small floating sheet ghost with calm eyes, a tiny smile, lavender glow in the folds | 7,460 |
 | CloudSpirit | Cloud head with tentacle-like white wisps | Puffy cumulus with a friendly face, raining blue drops and a small spark | 7,154 |
 | KingSlime | Yellow blob with staring eyes and a crown | Golden honey slime with a content smirk, trapped bubbles and a jewelled crown | 7,740 |
+| Cauldron | Black horned cauldron with angry white eyes | Cheerful cast-iron cauldron with ember-tipped horns, bubbling green potion and a friendly face | 12,060 |
+| DrumDevil | Red drum with a face, horns, a flame and a trident | Cheeky lacquered drum imp with brass studs, a flickering flame and a little trident | 10,248 |
+| PlumedLion | Lion with a turkey-feather mane and red wings | Lion cub with a barred turkey-fan mane and red feather wings | 9,376 |
+| Reaper | Hooded figure with a scythe | Little hooded spirit with soft violet eyes, a moon scythe and floating wisps | 8,096 |
+| SkeletonDog | Skeleton dog | Happy black pup in a glowing bone-print costume with a bone tag | 9,570 |
 
-Weak points: the Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
+Weak points: PlumedLion's face reads more cub than noble lion; the Cauldron's and DrumDevil's surfaces
+are fairly plain away from the face; the Reaper's hood is a plain smooth form. The Ghost and KingSlime are quite smooth (KingSlime's shine is painted on, and it is more
 orange than the original's lemon); the CloudSpirit's wisps became rain streaks. InfernoBat's chest ruff looks a little like a shaggy beard up close; the Gargoyle's stone is
 fairly smooth up close and it is crouched where the original stood; the Raven's body below the neck is
 a plain dark column and its legs are thin.

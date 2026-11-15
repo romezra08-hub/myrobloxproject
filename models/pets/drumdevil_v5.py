@@ -567,7 +567,7 @@ def bake(c, texture):
     """Everything that neither glows nor is an eye becomes one textured mesh, DrumDevil_Body; the flame
     is DrumDevil_GLOW, and the glossy eyes stay DrumDevil_Eyes."""
     glow = [ob for ob in c.objects if "GLOW" in ob.name]
-    eyes = [ob for ob in c.objects if ob.name.endswith("_Eyes")]
+    eyes = [ob for ob in c.objects if "_Eyes" in ob.name]
     body = kit.bake_texture([ob for ob in c.objects if ob not in glow and ob not in eyes], texture, name=NAME + "_Body",
                             shade=0.5, soften=3, rough=0.62, uv_angle=66.0, uv_margin=0.004, pack_margin=0.003)
     bpy.ops.object.select_all(action='DESELECT')
