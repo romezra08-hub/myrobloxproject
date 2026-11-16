@@ -281,7 +281,7 @@ Each has `export/<name>.fbx` (+ `_colour.png`, `_rough.png`), `preview/<name>.pn
 | IronGolem | Brown block golem with yellow lights | Friendly mining golem of dark stone under rusty riveted iron plates, big fists, a horned helmet and a glowing lantern heart | 11,702 |
 | NightUnicorn | Black and white horse with a pale horn | Night-purple unicorn with a starry coat, a lilac mane and tail, silver hooves and a glowing spiral horn | 11,516 |
 | SunDragon | Yellow long-legged dragon with a red spiky crest | Golden sun dragon on a low stance, with a wedge head, swept-back horns, big folded wings with warm membranes and a flame-tipped tail | 11,724 |
-| LavaWolf | Dark orange crumbly wolf | Wolf of cooled lava: broken basalt plates with glowing cracks, ember eyes and a mane of flat flame locks that glow at the tips | 11,192 |
+| LavaWolf | Dark orange crumbly wolf | Hero-quality heavy wolf of cooled lava (dragon method, 22 rounds): cracked near-black basalt crust with glowing magma seams, coarse chipped fur, a flaming mane framing the head, a smouldering tail and small ember eyes | 16,013 |
 | BearCub | Brown blocky bear with a bump on its head | Chubby honey-brown plush cub sitting up, with a cream belly, pale paw pads and a cowlick tuft | 10,648 |
 | Boar | Brown blocky pig with a stick tail | Bristly wild boar piglet with a dark mane, small tusks, faint piglet stripes and dark hooves | 11,760 |
 | Sheep | White cloud of wool with a grey face | Round fleece of fused curl clumps with a painted curl pattern, a soft grey face and a curled topknot | 10,608 |

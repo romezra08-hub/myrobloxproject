@@ -19,12 +19,26 @@ not a recolour of FrostWolf. Must-haves:
      face from the front. The tail smoulders into flame tongues at its tip.
   4. An angular, powerful wolf head (FrostWolf's sections, scaled 1.08): sloped forehead, cheekbone planes,
      a jaw line, a narrow tapered muzzle, a firm brow ridge with a gap above the eye, coarse cheek and jaw
-     fur, thick ears with a glowing cup. Small glowing ember eyes in sockets (no whites, lids or irises);
+     fur, thick ears with a glowing cup. Small glowing ember eyes in sockets set forward on the face, looking
+     ahead about 30 degrees outward (no whites, lids or irises);
      the mouth line level or a little raised at the back. Calm and confident.
   5. Body up to about 16k triangles, GLOW small; about 3 to 3.5 studs tall, under 5 long.
 
-Final: round 20 (rounds are kept as lavawolf_hq_v1.py ... lavawolf_hq_v20.py; the previous remake, which the
+Final: round 22 (rounds are kept as lavawolf_hq_v1.py ... lavawolf_hq_v22.py; the previous remake, which the
 owner turned down as low quality, is lavawolf_v7_old.py).
+
+Round 22: a corner of a forehead plate made a small arrow-shaped seam just above the eye: the forehead plates
+are narrower and sit a little further back. The jaw is slimmer again at the back and middle (about 5%), so
+the underside of the muzzle tucks in; one jaw tuft fewer each side (budget).
+
+Round 21 (after the coordinator's review: from the front the eyes sat on the far outer corners of a wide,
+boxy skull, almost on its sides, which read hammerhead or fish-like; in 3/4 the lower jaw was a long heavy
+slab): the eyes are found by a ray from in front, so they sit on the front of the head closer together
+(inner corners just wider than the bridge), and their outline and socket are laid on along a direction
+about 30 degrees outward from straight ahead, so from the front each is a full almond looking forward. The
+skull is narrower at eye level on its top and sides, tapering from the cheekbones (kept) into the muzzle;
+the cheekbone corner now stops behind the eyes. The lower jaw is about 15% shorter and 10% slimmer, ending
+well behind the nose.
 
 Round 20: the flames did not show in the silhouette: the tongues at the top of the neck are taller (up to
 0.8) and rise more steeply behind the head; the side ones stay low and swept back.
@@ -145,8 +159,8 @@ SKULL = [
     (0.12, 0.10, 0.07, 0.00, 0.19, -0.14, 0.12),
     (0.02, 0.27, 0.13, 0.04, 0.31, -0.19, 0.22),
     (-0.12, 0.325, 0.16, 0.03, 0.385, -0.20, 0.25),
-    (-0.28, 0.295, 0.15, 0.0, 0.34, -0.19, 0.225),
-    (-0.41, 0.24, 0.115, -0.03, 0.225, -0.17, 0.175),
+    (-0.28, 0.29, 0.13, 0.0, 0.315, -0.19, 0.215),
+    (-0.41, 0.235, 0.1, -0.03, 0.2, -0.17, 0.165),
     (-0.55, 0.195, 0.088, -0.05, 0.14, -0.16, 0.128),
     (-0.71, 0.162, 0.072, -0.06, 0.11, -0.15, 0.102),
     (-0.85, 0.14, 0.058, -0.065, 0.09, -0.145, 0.084),
@@ -155,13 +169,13 @@ SKULL = [
 ]
 # The lower jaw: y, top z, top half width, jaw-corner z, jaw-corner half width, chin-keel z.
 JAW = [
-    (0.02, -0.16, 0.22, -0.31, 0.23, -0.35),
-    (-0.10, -0.17, 0.24, -0.345, 0.235, -0.39),
-    (-0.33, -0.17, 0.19, -0.31, 0.165, -0.34),
-    (-0.56, -0.16, 0.125, -0.262, 0.1, -0.285),
-    (-0.74, -0.15, 0.095, -0.228, 0.076, -0.246),
-    (-0.85, -0.145, 0.072, -0.203, 0.054, -0.216),
-    (-0.9, -0.14, 0.036, -0.18, 0.027, -0.188),
+    (0.02, -0.16, 0.2, -0.29, 0.21, -0.32),
+    (-0.10, -0.17, 0.21, -0.305, 0.2, -0.335),
+    (-0.33, -0.17, 0.16, -0.27, 0.135, -0.29),
+    (-0.54, -0.16, 0.11, -0.232, 0.085, -0.246),
+    (-0.70, -0.15, 0.08, -0.202, 0.062, -0.213),
+    (-0.79, -0.145, 0.06, -0.19, 0.045, -0.2),
+    (-0.83, -0.14, 0.03, -0.17, 0.022, -0.176),
 ]
 
 # colours (sRGB) along the coat: 0 the spine, 1 the belly
@@ -511,7 +525,7 @@ def skull_at(y):
 def skull_corners(sec):
     y, zt, wt, zc, wc, zb, wb = sec
     furrow = 0.045 * smooth(y, -0.1, -0.24) * smooth(y, -0.52, -0.38)       # a furrow down the forehead between the brows
-    bone = smooth(y, -0.02, -0.16) * smooth(y, -0.56, -0.36)
+    bone = smooth(y, -0.02, -0.14) * smooth(y, -0.36, -0.24)
     bw, bz = wt + (wc - wt) * 0.8 + 0.035 * bone, zt + (zc - zt) * 0.5
     return [(0, zt + 0.035 - furrow), (-wt, zt), (-bw, bz), (-wc, zc), (-wb, zb), (0, zb - 0.01), (wb, zb), (wc, zc), (bw, bz), (wt, zt)]
 
@@ -1410,7 +1424,7 @@ def build():
     jaw = shell(JAW, jaw_corners, per=2, m=2, back_cap=0.04, nose_cap=0.01, soft=0.4)
     head_parts = [("head", skull, fur_face, "head"), ("head", jaw, fur_face, "jaw")]
     brows = []
-    EYE_RAY = ((0.55, -0.62, 0.15), (-0.75, 0.6, -0.04))
+    EYE_RAY = ((0.5, -0.95, 0.16), (-0.32, 0.55, -0.01))
     for sx in (-1, 1):
         o, d = V((EYE_RAY[0][0] * sx, EYE_RAY[0][1], EYE_RAY[0][2])), V((EYE_RAY[1][0] * sx, EYE_RAY[1][1], EYE_RAY[1][2]))
         p, nrm = face.hit(o, d)
@@ -1422,7 +1436,11 @@ def build():
                       for dy, dz in ((-0.08, 0.15), (-0.02, 0.15), (0.05, 0.138), (0.12, 0.118))])
         head_parts.append(("ruff", mass([(0.21 * sx, -0.22, -0.14), (0.31 * sx, 0.02, -0.13), (0.30 * sx, 0.22, -0.07)],
                                         [(0.12, 0.13), (0.16, 0.17), (0.11, 0.13)], up=(0, 0, 1)), fur_face, "ruff"))
-        along = Vector((0.0, 1.0, 0.22))
+        # the eye looks forward, about 30 degrees outward, whatever way the surface under it faces: its outline
+        # is laid onto the head along that direction, so from the front it is a full almond
+        look = Vector((0.5 * sx, -0.87, 0.12)).normalized()
+        en = (nrm * 0.35 + look * 0.65).normalized()
+        along = Vector((0.85 * sx, 0.45, 0.28))
         eye8 = [V((-0.5, -0.02)), V((-0.3, 0.14)), V((0.0, 0.205)), V((0.3, 0.175)), V((0.5, 0.06)), V((0.3, -0.1)), V((0.0, -0.14)), V((-0.3, -0.11))]
         eye = []
         for k in range(16):                     # a smooth closed outline: 16 points through the 8 (8 showed facets)
@@ -1432,11 +1450,11 @@ def build():
             q = _cr(pts4, 1.0 + (t_ - i0))
             eye.append((q.x, q.y))
         sock = lens([(a * 0.142, b * 0.215) for a, b in eye], 0.02, rows=((0.6, 0.9), (1.0, 0.0)), centre=(0.0, 0.03))
-        sock.transform(facing(p, nrm, along))
-        head_parts.append(("socket", drape(sock, face, p, nrm, 0.0), dark, None))
+        sock.transform(facing(p, en, along))
+        head_parts.append(("socket", drape(sock, face, p, en, 0.0), dark, None))
         e = lens([(a * 0.12, b * 0.185) for a, b in eye], 0.02, rows=((0.6, 0.9), (1.0, 0.0)), centre=(0.0, 0.03))
-        e.transform(facing(p, nrm, along))
-        head_parts.append(("eyes", drape(e, face, p, nrm, 0.007), glow, None))
+        e.transform(facing(p, en, along))
+        head_parts.append(("eyes", drape(e, face, p, en, 0.007), glow, None))
     skull.normal_update()
     for v in skull.verts:
         lift = 0.0
@@ -1447,7 +1465,7 @@ def build():
             v.co += v.normal * lift
     face2 = Surface(skull)
     head_plates = []
-    for cx, cy, L, Wd, out in ((-0.062, -0.3, 0.25, 0.112, -1), (0.064, -0.285, 0.26, 0.112, 1),
+    for cx, cy, L, Wd, out in ((-0.056, -0.26, 0.25, 0.094, -1), (0.058, -0.25, 0.26, 0.094, 1),
                                (0.004, -0.5, 0.2, 0.07, 0), (-0.003, -0.68, 0.17, 0.058, 0)):
         p, nrm = face2.hit((cx, cy, 1.0), (0, 0, -1))
         rj = random.Random(int(cy * 1000 + cx * 100))
@@ -1658,7 +1676,7 @@ def build():
             put(o, H @ V((0.0, yy, zz)), HR @ V((0.18 * sx, 1.0, -0.3)), L, 0.07, "head", lift=0.012, thick=0.024, boost=HEAD_BOOST,
                 var=0.03, jag=0.15, groove=0.5, tuck=0.015)
     for sx in (-1, 1):
-        for yy, L in ((-0.22, 0.17), (-0.06, 0.2), (0.1, 0.2)):
+        for yy, L in ((-0.16, 0.18), (0.04, 0.2)):
             o = H @ V((0.55 * sx, yy, -0.75))
             put(o, H @ V((0.12 * sx, yy, -0.2)), HR @ V((0.15 * sx, 0.8, -0.6)), L, 0.08, "jaw", lift=0.02, thick=0.03, boost=HEAD_BOOST,
                 var=0.03, jag=0.18, groove=0.5, tuck=0.015, ember=0.3)
