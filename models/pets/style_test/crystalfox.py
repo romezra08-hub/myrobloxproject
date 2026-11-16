@@ -4,11 +4,14 @@
     python models/pets/style_test/crystalfox.py --peek out/peek.png               # quick unbaked look
     python models/pets/style_test/crystalfox.py --review models/preview/crystalfox.png \
         --compare models/preview/crystalfox_style_compare.png --export models/export/style_test/crystalfox.fbx
+    # --silcheck out/sil.png: front 3/4 and side silhouettes beside the reference crops at the same height
 
 Must-haves, checked every round:
-  0. Cool, not toy-like (rounds 13+): a proud, athletic stance on long legs with the left front paw stepping
-     forward, chest deep and forward, head up and turned; tall swept-back ears; a crest of blades from the forehead
-     down the neck; one big tail sweeping up and out in long blade plates; bold crystal clusters as the hero feature.
+  0. Chunky and powerful (rounds 17+), like the Steal an Egg tiger and wolf: about 2.1 studs wide at the
+     shoulders, a massive chest and shoulder armour, a thick neck merging into the chest, short thick legs (amber
+     to the wrist, charcoal only on the big block paws), a big broad head (about 0.9 of the chest width) with
+     ears about two thirds of its height; the left front paw steps forward, the head is raised and turned; a
+     crest of blades down the neck; one bushy tail no taller than the head; bold crystal clusters.
   1. Hard-surface, faceted forms: every part is a convex block with flat planes, its creases (over 20 degrees)
      chamfered so they catch a highlight; fewer, bigger plates (armour bands wrapping the back, layered shoulder
      and hip armour), small plates only as accents; no smooth blobs and no fur.
@@ -17,10 +20,10 @@ Must-haves, checked every round:
      shadow and soft ring are baked onto the plate version, so the colour map reads as studs without the normal map.
   3. Bold colour blocking: amber plates, cream face, chest, ear and tail-tip plates, dark-amber armour bands,
      crest and tail stripe, charcoal stockings, paws, nose and ear tips, bone claws.
-  4. Glow (CrystalFox_GLOW, material GLOW_Crystal): angled teal eye wedges with a nearly level top edge in
-     charcoal sockets that sweep back like a fox's markings, a forehead gem, diamond gems on the hips, crystal
+  4. Glow (CrystalFox_GLOW, material GLOW_Crystal): angled teal eye wedges with a nearly level top edge, set
+     flush into the face (found by a ray onto the head) with only a thin charcoal inset rim, a forehead gem, diamond gems on the hips, crystal
      clusters on the shoulders, along the spine and at the tail tip, thin seams on the chest, forearms and cheeks.
-  5. A determined, calm face: a long sharp muzzle, a defined cheek plate, a dark nose, a closed mouth with a
+  5. A determined, calm face: a sharp muzzle, a defined cheek plate, a dark nose, a closed mouth with a
      small upturn at the corner; no scowl.
 
 Meshes: CrystalFox_Body (colour, roughness and tangent-space OpenGL normal map, one UV map) and CrystalFox_GLOW.
@@ -52,6 +55,16 @@ Round history:
  15. Visibility measured from viewing directions round the pet instead of open sky: the chest and shoulder
      fronts under the raised head had been treated as hidden (no studs, a quarter of the texture); shorter ears.
  16. Shoulder crystal clusters bigger and moved back and out, clear of the cheek plates.
+ Owner feedback after round 16: "it looks very weird, the proportions are weird" and "he's very thin".
+ 17. Proportions rebuilt: torso nearly twice as wide and deeper, legs shorter and much thicker with amber down to
+     the wrist and charcoal only at the paw, big paws, a broad head (scaled 1.5 wide), ears cut to two thirds of
+     the head height, a shorter, bushier tail; the eyes set flush into the face with a thin inset rim instead of
+     a raised socket bar; a silhouette check beside the references.
+ 18. Everything below the head 25% wider (2.2 studs at the shoulders), legs 15% thicker, a thick neck merging
+     into the chest, bigger paws, chest shields brought forward onto the neck front.
+ 19. Body 13% shorter for a compact build, a bigger head, a smaller tail, chest shields lowered off the chin.
+ 20. Head bigger again (about 0.9 of the chest width, a third of the body length), set lower on the neck.
+ 21. Thinner eye rims, so the eyes read as glowing shapes in the face, not a visor.
 """
 import argparse
 import math
@@ -94,8 +107,10 @@ STUD_H = 0.014
 BEVEL = 0.022
 STUD_REGION_ANGLE = 16.0  # faces this close in angle share one stud grid
 CREASE = 20.0            # only edges sharper than this get a chamfer
-HEAD_AT = Vector((0.0, -1.08, 2.42))
-HEAD_SIZE = 1.1
+HEAD_AT = Vector((0.0, -1.14, 2.47))
+HEAD_SCALE = (2.1, 1.45, 1.58)    # a broad, bold head
+BODY = Matrix.Diagonal((1.25, 0.82, 1.0, 1.0))   # everything below the head: wide and heavy
+LEG = 1.15                        # leg thickness
 HEAD_ROT = (-3, -3, -17)  # head up, a small roll, turned towards -X (the cameras)
 
 
@@ -269,94 +284,108 @@ def strip(a, b, width, normal, thick=0.025):
 
 
 def build_head(fox, H):
+    """The head in its own frame (front -Y), placed by H, which also widens it (HEAD_SCALE): a broad, bold head
+    with a short sharp muzzle, a defined cheek plate per side, eyes set into the face and moderate ears."""
     B = 0.5  # head boost for the texture
-    # cranium: a flat top plane, temple edges and a brow edge
-    pts = []
+    crane = []
     for s in (-1, 1):
-        pts += [(s * 0.21, -0.2, 0.3), (s * 0.2, 0.2, 0.27), (s * 0.35, -0.1, 0.12), (s * 0.34, 0.2, 0.09),
-                (s * 0.21, 0.37, -0.02), (s * 0.3, -0.29, 0.11), (s * 0.13, -0.35, 0.19), (s * 0.31, 0.02, -0.14),
-                (s * 0.19, 0.22, -0.23)]
-    pts += [(0, -0.24, 0.32), (0, 0.25, 0.29), (0, 0.41, 0.1), (0, 0.3, -0.22)]
-    fox.add(hull(pts), AMBER, "head", boost=B, at=H)
-    # a long, sharp muzzle: cream core, amber bridge, dark nose
+        crane += [(s * 0.21, -0.2, 0.3), (s * 0.2, 0.2, 0.27), (s * 0.35, -0.1, 0.12), (s * 0.34, 0.2, 0.09),
+                  (s * 0.21, 0.37, -0.02), (s * 0.3, -0.29, 0.11), (s * 0.13, -0.35, 0.19), (s * 0.31, 0.02, -0.14),
+                  (s * 0.19, 0.22, -0.23)]
+    crane += [(0, -0.24, 0.32), (0, 0.25, 0.29), (0, 0.41, 0.1), (0, 0.3, -0.22)]
+    muz = []
+    for sx in (-1, 1):
+        muz += [(sx * 0.17, -0.27, 0.06), (sx * 0.19, -0.25, -0.17), (sx * 0.1, -0.52, 0.02), (sx * 0.1, -0.52, -0.14),
+                (sx * 0.05, -0.74, -0.025), (sx * 0.042, -0.72, -0.1)]
+    muz += [(0, -0.3, -0.23), (0, -0.69, -0.12)]
+    # a ray target in the head's own frame, so the eyes can be set flush into the face
+    tmp = hull(crane, 0.0)
+    t2 = hull(muz, 0.0)
+    vs, ps = [], []
+    t2.free()
+    for bm_ in (tmp,):
+        bm_.verts.index_update()
+        o = len(vs)
+        vs += [v.co.copy() for v in bm_.verts]
+        ps += [[o + v.index for v in f.verts] for f in bm_.faces]
+        bm_.free()
+    face_bvh = BVHTree.FromPolygons(vs, ps)
+    fox.add(hull(crane), AMBER, "head", boost=B, at=H)
+    fox.add(hull(muz), CREAM, "head", boost=B, at=H)
     pts = []
     for sx in (-1, 1):
-        pts += [(sx * 0.2, -0.27, 0.06), (sx * 0.22, -0.25, -0.17), (sx * 0.13, -0.58, 0.02), (sx * 0.13, -0.58, -0.14),
-                (sx * 0.065, -0.88, -0.025), (sx * 0.055, -0.86, -0.1)]
-    pts += [(0, -0.3, -0.23), (0, -0.82, -0.12)]
-    fox.add(hull(pts), CREAM, "head", boost=B, at=H)
-    pts = []
-    for sx in (-1, 1):
-        pts += [(sx * 0.15, -0.22, 0.25), (sx * 0.14, -0.3, 0.1), (sx * 0.06, -0.86, -0.01), (sx * 0.055, -0.84, 0.035)]
-    pts += [(0, -0.24, 0.29), (0, -0.84, 0.055), (0, -0.5, 0.16)]
+        pts += [(sx * 0.13, -0.22, 0.25), (sx * 0.12, -0.3, 0.1), (sx * 0.048, -0.72, -0.01), (sx * 0.044, -0.7, 0.035)]
+    pts += [(0, -0.24, 0.29), (0, -0.7, 0.055), (0, -0.45, 0.15)]
     fox.add(hull(pts, 0.016), AMBER, "head", boost=B, at=H)
     pts = []
     for sx in (-1, 1):
-        pts += [(sx * 0.065, -0.94, 0.015), (sx * 0.075, -0.86, 0.06), (sx * 0.045, -0.92, -0.05), (sx * 0.08, -0.83, -0.0)]
-    pts += [(0, -0.965, 0.04), (0, -0.85, -0.075), (0, -0.84, 0.08)]
+        pts += [(sx * 0.055, -0.8, 0.015), (sx * 0.062, -0.72, 0.06), (sx * 0.038, -0.78, -0.05), (sx * 0.066, -0.69, -0.0)]
+    pts += [(0, -0.825, 0.04), (0, -0.71, -0.075), (0, -0.7, 0.08)]
     fox.add(hull(pts, 0.014), CHAR, "head", boost=B, at=H, rough=0.35)
     pts = []
     for sx in (-1, 1):
-        pts += [(sx * 0.08, -0.66, -0.11), (sx * 0.14, -0.3, -0.18), (sx * 0.055, -0.64, -0.16), (sx * 0.11, -0.3, -0.26)]
-    pts += [(0, -0.7, -0.14), (0, -0.3, -0.28)]
+        pts += [(sx * 0.065, -0.56, -0.11), (sx * 0.12, -0.3, -0.18), (sx * 0.045, -0.54, -0.16), (sx * 0.1, -0.3, -0.26)]
+    pts += [(0, -0.6, -0.14), (0, -0.3, -0.28)]
     fox.add(hull(pts, 0.016), CREAM_DK, "head", boost=B, at=H)
     for s in (-1, 1):
-        # mouth: closed, the back corner turned up a little
-        for p, q in (((s * 0.1, -0.6, -0.135), (s * 0.15, -0.46, -0.145)), ((s * 0.15, -0.46, -0.145), (s * 0.195, -0.38, -0.115))):
+        for p, q in (((s * 0.08, -0.5, -0.135), (s * 0.12, -0.4, -0.145)), ((s * 0.12, -0.4, -0.145), (s * 0.165, -0.33, -0.115))):
             pts = []
             for e in (p, q):
-                pts += [(e[0] + s * 0.012, e[1], e[2] + 0.01), (e[0] + s * 0.012, e[1], e[2] - 0.01),
-                        (e[0] - s * 0.02, e[1], e[2] + 0.01), (e[0] - s * 0.02, e[1], e[2] - 0.01)]
+                pts += [(e[0] + s * 0.01, e[1], e[2] + 0.01), (e[0] + s * 0.01, e[1], e[2] - 0.01),
+                        (e[0] - s * 0.016, e[1], e[2] + 0.01), (e[0] - s * 0.016, e[1], e[2] - 0.01)]
             fox.add(hull(pts, 0.004), CHAR, "head", boost=B, at=H, stud=False)
-        # one big, defined cheek plate per side, swept back to a point
-        o = [Vector((s * x, y, z)) for x, y, z in ((0.17, -0.44, -0.03), (0.32, -0.1, 0.08), (0.64, 0.2, -0.17),
-                                                     (0.44, 0.14, -0.3), (0.19, -0.2, -0.29))]
-        pts = o + [q + Vector((-s * 0.12, 0.06, 0.0)) for q in o]
+        # one defined cheek plate per side, swept back to a point but kept close to the head
+        o = [Vector((s * x, y, z)) for x, y, z in ((0.15, -0.42, -0.07), (0.31, -0.1, 0.0), (0.5, 0.18, -0.19),
+                                                     (0.38, 0.12, -0.29), (0.17, -0.2, -0.28))]
+        pts = o + [q + Vector((-s * 0.1, 0.05, 0.0)) for q in o]
         fox.add(hull(pts, 0.018), CREAM, "head", boost=B, at=H)
-        # a glowing seam along the top edge of the cheek plate, under the eye
-        fox.add_glow(strip((s * 0.36, 0.0, -0.06), (s * 0.58, 0.17, -0.15), 0.018, (s * 0.7, -0.5, 0.5)), "seams", at=H)
-        # eye: a glowing slit with a nearly level top edge, in a thin charcoal socket
-        n = Vector((s * 0.5, -1.0, 0.15)).normalized()
-        ec = Vector((s * 0.2, -0.335, 0.06))
+        fox.add_glow(strip((s * 0.3, 0.0, -0.07), (s * 0.46, 0.15, -0.15), 0.016, (s * 0.7, -0.5, 0.5)), "seams", at=H)
+        # eye: a glowing wedge set flush into the face, ringed by a thin charcoal inset that is part of the face plate
+        n = Vector((s * 0.55, -1.0, 0.18)).normalized()
+        guess = Vector((s * 0.2, -0.29, 0.11))
+        hit = face_bvh.ray_cast(guess + n * 0.3, -n, 1.0)
+        ec = (hit[0] if hit[0] is not None else guess) + n * 0.006
         em = frame(ec, n)
         flip = 1 if s > 0 else -1
-        eye2 = [(-0.085, -0.005), (-0.065, 0.05), (0.09, 0.078), (0.15, 0.058), (0.09, -0.028), (-0.035, -0.05)]
+        eye2 = [(u * 1.2, v * 1.45 + 0.01) for u, v in ((-0.075, -0.005), (-0.058, 0.05), (0.075, 0.072), (0.125, 0.052),
+                                                       (0.075, -0.026), (-0.03, -0.046))]
         cx = sum(u for u, _ in eye2) / len(eye2)
         cy = sum(v for _, v in eye2) / len(eye2)
-        sock = [(flip * (cx + (u - cx) * 1.17) * 1.25, (cy + (v - cy) * 1.28) * 1.25) for u, v in eye2]
-        sock.insert(3, (flip * 0.3, 0.085))          # a pointed sweep back towards the ear: a fox's eye marking
-        fox.add(slab(sock, 0.09, em, bevel=0.01), CHAR, "eyes", boost=B, stud=False, rough=0.4, at=H)
-        fox.add_glow(slab([(flip * u * 1.25, v * 1.25) for u, v in eye2], 0.03, em @ M((0, 0, 0.012)), bevel=0.0),
-                     "eyes", at=H)
-        # ears: tall, sharp, swept back
-        base = Vector((s * 0.22, 0.08, 0.23))
-        up = Vector((s * 0.32, 0.45, 1.0)).normalized()
-        fwd = Vector((s * 0.25, -1.0, 0.3)).normalized()
+        ring_ = [(flip * (cx + (u - cx) * 1.1), cy + (v - cy) * 1.18) for u, v in eye2]   # a thin inset rim, not a visor
+        fox.add(slab(ring_, 0.1, em @ M((0, 0, -0.004)), back=0.95, bevel=0.006), CHAR, "eyes", boost=B, stud=False,
+                rough=0.4, at=H)
+        fox.add_glow(slab([(flip * u, v) for u, v in eye2], 0.03, em @ M((0, 0, 0.006)), bevel=0.0), "eyes", at=H)
+        # a short angled brow plate in amber, part of the forehead, not a bar
+        pts = [(s * 0.1, -0.36, 0.235), (s * 0.3, -0.29, 0.25), (s * 0.12, -0.32, 0.275), (s * 0.29, -0.24, 0.285),
+               (s * 0.1, -0.32, 0.215), (s * 0.3, -0.25, 0.225)]
+        fox.add(hull(pts, 0.012), AMBER_DK, "head", boost=B, at=H)
+        # ears: broad at the base, swept back, about two thirds of the head's height
+        base = Vector((s * 0.2, 0.1, 0.22))
+        up = Vector((s * 0.22, 0.5, 1.0)).normalized()
+        fwd = Vector((s * 0.2, -1.0, 0.4)).normalized()
         fwd = (fwd - up * fwd.dot(up)).normalized()
         side = up.cross(fwd).normalized()
-        h = 0.86
+        h = 0.4
 
         def E(a, b, c):
             return base + side * a + fwd * b + up * c
-        outer = [E(-0.18, 0.06, 0), E(0.18, 0.06, 0), E(-0.16, -0.12, 0), E(0.16, -0.12, 0),
-                 E(-0.11, 0.03, h * 0.45), E(0.11, 0.03, h * 0.45), E(0, -0.06, h * 0.5), E(0.0, 0.0, h)]
+        outer = [E(-0.17, 0.06, 0), E(0.17, 0.06, 0), E(-0.15, -0.12, 0), E(0.15, -0.12, 0),
+                 E(-0.1, 0.03, h * 0.5), E(0.1, 0.03, h * 0.5), E(0, -0.06, h * 0.55), E(0.0, 0.0, h)]
         fox.add(hull(outer), AMBER, "ears", boost=B, at=H)
-        inner = [E(-0.12, 0.075, 0.04), E(0.12, 0.075, 0.04), E(0, 0.075, h * 0.76), E(-0.09, 0.03, 0.02),
-                 E(0.09, 0.03, 0.02), E(0, 0.03, h * 0.68)]
+        inner = [E(-0.11, 0.075, 0.03), E(0.11, 0.075, 0.03), E(0, 0.075, h * 0.78), E(-0.08, 0.03, 0.02),
+                 E(0.08, 0.03, 0.02), E(0, 0.03, h * 0.7)]
         fox.add(hull(inner, 0.012), CREAM, "ears", boost=B, at=H)
-        tip = [E(-0.075, 0.08, h * 0.6), E(0.075, 0.08, h * 0.6), E(-0.07, -0.07, h * 0.6), E(0.07, -0.07, h * 0.6),
-               E(0, 0.01, h * 1.03)]
-        fox.add(hull(tip, 0.012), CHAR, "ears", boost=B, at=H)
-    # forehead gem
-    gm = frame(Vector((0, -0.26, 0.3)), Vector((0, -0.55, 1.0)))
-    fox.add(slab([(0, 0.07), (0.05, 0.0), (0, -0.06), (-0.05, 0.0)], 0.04, gm @ M((0, 0, -0.005)), bevel=0.008),
+        tip = [E(-0.07, 0.08, h * 0.62), E(0.07, 0.08, h * 0.62), E(-0.065, -0.07, h * 0.62), E(0.065, -0.07, h * 0.62),
+               E(0, 0.01, h * 1.04)]
+        fox.add(hull(tip, 0.01), CHAR, "ears", boost=B, at=H)
+    gm = frame(Vector((0, -0.27, 0.3)), Vector((0, -0.55, 1.0)))
+    fox.add(slab([(0, 0.06), (0.04, 0.0), (0, -0.05), (-0.04, 0.0)], 0.04, gm @ M((0, 0, -0.005)), bevel=0.008),
             CHAR, "head", boost=B, stud=False, at=H)
-    fox.add_glow(slab([(0, 0.05), (0.032, 0.0), (0, -0.04), (-0.032, 0.0)], 0.03, gm @ M((0, 0, 0.012)), bevel=0.0),
+    fox.add_glow(slab([(0, 0.042), (0.026, 0.0), (0, -0.034), (-0.026, 0.0)], 0.03, gm @ M((0, 0, 0.012)), bevel=0.0),
                  "gems", at=H)
-    # crest: faceted blades from the forehead back over the skull (it carries on down the neck)
-    for y0, zs, hh in ((-0.14, 0.325, 0.13), (0.04, 0.32, 0.17), (0.21, 0.29, 0.19), (0.36, 0.17, 0.18)):
-        fox.add(blade((0, y0, zs - 0.03), (0, y0 + 0.2, zs - 0.06), (0, y0 + 0.3, zs + hh)), AMBER_DK, "crest",
-                boost=B, at=H)
+    for y0, zs, hh in ((-0.12, 0.325, 0.1), (0.05, 0.32, 0.13), (0.21, 0.29, 0.14), (0.35, 0.17, 0.13)):
+        fox.add(blade((0, y0, zs - 0.03), (0, y0 + 0.18, zs - 0.06), (0, y0 + 0.27, zs + hh), 0.04, 0.01), AMBER_DK,
+                "crest", boost=B, at=H)
 
 
 def sym(lst):
@@ -368,8 +397,8 @@ def sym(lst):
     return out
 
 
-TORSO = [(-0.98, 1.78, 1.08, 0.3), (-0.68, 1.95, 0.93, 0.42), (-0.3, 1.94, 0.99, 0.42), (0.12, 1.88, 1.13, 0.36),
-         (0.45, 1.92, 1.16, 0.42), (0.82, 1.84, 1.34, 0.33)]
+TORSO = [(-1.02, 2.06, 1.16, 0.56), (-0.72, 2.3, 0.98, 0.78), (-0.3, 2.28, 1.0, 0.76), (0.15, 2.17, 1.08, 0.66),
+         (0.5, 2.2, 1.1, 0.72), (0.9, 2.06, 1.32, 0.56)]
 
 
 def torso_at(y):
@@ -409,21 +438,21 @@ def band(y0, y1, upto=3, lift=0.04, sweep=0.1):
     return hull(pts, 0.016)
 
 
-def paw(fox, px, py, s):
-    pts = [(px + 0.19, py - 0.18, 0.0), (px - 0.19, py - 0.18, 0.0), (px + 0.18, py + 0.18, 0.0),
-           (px - 0.18, py + 0.18, 0.0), (px + 0.17, py - 0.14, 0.17), (px - 0.17, py - 0.14, 0.17),
-           (px + 0.15, py + 0.16, 0.25), (px - 0.15, py + 0.16, 0.25)]
-    fox.add(hull(pts), CHAR, "paws")
-    for k, dx in enumerate((-0.118, 0.0, 0.118)):
-        tx = px + dx
-        ty = py - 0.21 - (0.025 if k == 1 else 0.0)
-        toe = [(tx + 0.056, ty - 0.08, 0.0), (tx - 0.056, ty - 0.08, 0.0), (tx + 0.06, ty + 0.07, 0.0),
-               (tx - 0.06, ty + 0.07, 0.0), (tx + 0.05, ty - 0.06, 0.12), (tx - 0.05, ty - 0.06, 0.12),
-               (tx + 0.055, ty + 0.07, 0.15), (tx - 0.055, ty + 0.07, 0.15)]
-        fox.add(hull(toe, 0.014), CHAR_LT, "paws")
-        claw = [(tx + 0.032, ty - 0.07, 0.0), (tx - 0.032, ty - 0.07, 0.0), (tx + 0.027, ty - 0.07, 0.065),
-                (tx - 0.027, ty - 0.07, 0.065), (tx, ty - 0.16, 0.0), (tx, ty - 0.14, 0.027)]
-        fox.add(hull(claw, 0.006), BONE, "paws", stud=False, rough=0.4)
+def paw(fox, px, py, s, k=1.55):
+    """A big charcoal block paw with three toes and bone claws, k times the old size."""
+    def P(x, y, z):
+        return (px + x * k, py + y * k, z * k)
+    fox.add(hull([P(0.19, -0.18, 0.0), P(-0.19, -0.18, 0.0), P(0.18, 0.18, 0.0), P(-0.18, 0.18, 0.0),
+                  P(0.17, -0.14, 0.17), P(-0.17, -0.14, 0.17), P(0.15, 0.16, 0.25), P(-0.15, 0.16, 0.25)]), CHAR, "paws")
+    for i, dx in enumerate((-0.118, 0.0, 0.118)):
+        ty = -0.21 - (0.025 if i == 1 else 0.0)
+        toe = [P(dx + 0.056, ty - 0.08, 0.0), P(dx - 0.056, ty - 0.08, 0.0), P(dx + 0.06, ty + 0.07, 0.0),
+               P(dx - 0.06, ty + 0.07, 0.0), P(dx + 0.05, ty - 0.06, 0.12), P(dx - 0.05, ty - 0.06, 0.12),
+               P(dx + 0.055, ty + 0.07, 0.15), P(dx - 0.055, ty + 0.07, 0.15)]
+        fox.add(hull(toe, 0.016), CHAR_LT, "paws")
+        claw = [P(dx + 0.032, ty - 0.07, 0.0), P(dx - 0.032, ty - 0.07, 0.0), P(dx + 0.027, ty - 0.07, 0.065),
+                P(dx - 0.027, ty - 0.07, 0.065), P(dx, ty - 0.16, 0.0), P(dx, ty - 0.14, 0.027)]
+        fox.add(hull(claw, 0.007), BONE, "paws", stud=False, rough=0.4)
 
 
 def cluster(fox, base, up, sizes, spread=0.55, seed=0.0):
@@ -442,101 +471,89 @@ def cluster(fox, base, up, sizes, spread=0.55, seed=0.0):
 
 def build():
     fox = Fox()
-    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SIZE)
+    H = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE)
     build_head(fox, H)
+    fox.default = BODY
 
-    # ---- torso: a deep chest pushed forward, a tucked waist, strong hips
+    # ---- torso: massive chest and shoulders, a thick body, strong hips
     st = {y: station(y, *torso_at(y)) for y, *_ in TORSO}
     ys = [t[0] for t in TORSO]
     fox.add(hull(st[ys[0]] + st[ys[1]] + st[ys[2]]), AMBER, "torso")
     fox.add(hull(station(-0.34, *torso_at(-0.34)) + st[ys[3]]), AMBER, "torso")
-    fox.add(hull(station(0.08, *torso_at(0.08)) + st[ys[4]] + st[ys[5]]), AMBER, "torso")
-    belly = sym([(0.17, -0.66, 0.9), (0.18, 0.15, 1.1), (0.1, -0.64, 0.87), (0.1, 0.12, 1.07), (0.24, -0.25, 1.02)])
+    fox.add(hull(station(0.1, *torso_at(0.1)) + st[ys[4]] + st[ys[5]]), AMBER, "torso")
+    belly = sym([(0.3, -0.7, 0.95), (0.3, 0.2, 1.06), (0.16, -0.68, 0.92), (0.16, 0.18, 1.03), (0.42, -0.25, 1.02)])
     fox.add(hull(belly), CREAM_DK, "torso")
-    # dark-amber stripe plates wrapping the back and flanks, like armour bands
-    for y0, y1 in ((-0.46, -0.24), (-0.04, 0.17), (0.36, 0.56)):
-        fox.add(band(y0, y1), AMBER_DK, "bands")
-    # chest bib: three big stacked cream shields, a glowing chevron seam between the top two
-    for k, (z, w, hgt, y) in enumerate(((1.68, 0.32, 0.38, -1.02), (1.4, 0.27, 0.36, -1.01))):
+    for y0, y1 in ((-0.44, -0.2), (-0.02, 0.22), (0.4, 0.62)):
+        fox.add(band(y0, y1, lift=0.05, sweep=0.12), AMBER_DK, "bands")
+    # chest bib: two big shields and a glowing chevron seam between them
+    for k, (z, w, hgt, y) in enumerate(((1.88, 0.44, 0.46, -1.28), (1.52, 0.38, 0.42, -1.15))):
         m = frame(Vector((0, y, z)), Vector((0, -1.0, -0.25 - 0.1 * k)))
         fox.add(slab([(-w, hgt * 0.45), (w, hgt * 0.45), (w * 0.8, -hgt * 0.1), (0, -hgt * 0.55), (-w * 0.8, -hgt * 0.1)],
-                     0.12, m), CREAM, "chest")
+                     0.14, m), CREAM, "chest")
     for sx in (-1, 1):
-        fox.add_glow(strip((0, -1.06, 1.49), (sx * 0.24, -1.03, 1.6), 0.022, (0, -1.0, -0.3)), "seams")
-    # neck rising to a raised head, cream throat, crest blades down the back of the neck
-    fox.add(seg([((0, -0.72, 1.72), 0.3, 0.27), ((0, -0.92, 2.1), 0.26, 0.25), ((0, -1.0, 2.3), 0.23, 0.22)], sides=8),
-            AMBER, "neck")
-    m = frame(Vector((0, -1.13, 2.0)), Vector((0, -1.0, -0.35)))
-    fox.add(slab([(-0.24, 0.2), (0.24, 0.2), (0.21, -0.1), (0, -0.24), (-0.21, -0.1)], 0.16, m), CREAM, "chest")
-    for (y0, z0), hh in ((((-0.66, 2.32)), 0.2), (((-0.52, 2.16)), 0.19), (((-0.4, 2.0)), 0.16)):
-        fox.add(blade((0, y0, z0 - 0.04), (0, y0 + 0.2, z0 - 0.14), (0, y0 + 0.3, z0 + hh), 0.06), AMBER_DK, "crest")
-    # crystals along the spine, between the bands
-    cluster(fox, (0, -0.12, 1.93), (0, 0.25, 1.0), [(0.07, 0.42), (0.045, 0.24), (0.04, 0.2)], 0.7, 0.4)
-    cluster(fox, (0, 0.27, 1.9), (0, 0.3, 1.0), [(0.06, 0.34), (0.04, 0.2)], 0.7, 1.9)
+        fox.add_glow(strip((0, -1.27, 1.67), (sx * 0.32, -1.25, 1.77), 0.026, (0, -1.0, -0.3)), "seams")
+    # a short, thick neck under the raised head
+    fox.add(seg([((0, -0.78, 1.95), 0.56, 0.36), ((0, -1.02, 2.3), 0.5, 0.33)], sides=8), AMBER, "neck")
+    for (y0, z0), hh in ((((-0.74, 2.62)), 0.2), (((-0.56, 2.48)), 0.18), (((-0.38, 2.34)), 0.15)):
+        fox.add(blade((0, y0, z0 - 0.04), (0, y0 + 0.2, z0 - 0.14), (0, y0 + 0.3, z0 + hh), 0.07), AMBER_DK, "crest")
+    cluster(fox, (0, -0.1, 2.3), (0, 0.25, 1.0), [(0.08, 0.42), (0.05, 0.26), (0.045, 0.22)], 0.7, 0.4)
+    cluster(fox, (0, 0.32, 2.22), (0, 0.3, 1.0), [(0.07, 0.34), (0.045, 0.22)], 0.7, 1.9)
 
     for s in (-1, 1):
         step = s < 0                                 # the left front paw (camera side) steps forward
-        # ---- front leg: long and athletic
-        x = s * 0.27
-        py = -0.98 if step else -0.66
-        wy = py + 0.05
-        ey = -0.6 if step else -0.5
-        # amber down to below the elbow, then a shorter charcoal stocking
-        ky = ey + (wy - ey) * 0.38                   # where the amber gives way to charcoal
-        fox.add(seg([((x, -0.62, 1.62), 0.26, 0.27), ((x, ey, 1.2), 0.22, 0.23), ((x, ky, 0.8), 0.175, 0.18)]),
+        # ---- front leg: short, thick, amber down to the wrist
+        x = s * 0.47
+        py = -1.02 if step else -0.72
+        wy = py + 0.06
+        ey = -0.72 if step else -0.62
+        fox.add(seg([((x, -0.66, 1.75), 0.36 * LEG, 0.38 * LEG), ((x, ey, 1.2), 0.32 * LEG, 0.33 * LEG), ((x, (ey + wy) / 2, 0.78), 0.285 * LEG, 0.29 * LEG)]),
                 AMBER, "front legs")
-        fox.add(seg([((x, ky, 0.86), 0.17, 0.175), ((x, (ky + wy) / 2, 0.52), 0.155, 0.16), ((x, wy, 0.24), 0.15, 0.15)]),
-                CHAR, "front legs")
-        lean = Vector((0, wy - ey, 0.24 - 1.1)).normalized()
+        fox.add(seg([((x, (ey + wy) / 2, 0.84), 0.28 * LEG, 0.285 * LEG), ((x, wy, 0.44), 0.26 * LEG, 0.265 * LEG)]), AMBER, "front legs")
+        fox.add(seg([((x, wy, 0.5), 0.255 * LEG, 0.26 * LEG), ((x, wy, 0.26), 0.26 * LEG, 0.26 * LEG)]), CHAR, "front legs")
+        lean = Vector((0, wy - ey, 0.44 - 1.2)).normalized()
         fwd = Vector((0, -1, 0)) - lean * lean.y
         fwd.normalize()
-        m = frame(Vector((x + s * 0.03, ky - 0.13, 0.82)), (fwd + Vector((s * 0.35, 0, 0))).normalized(), -lean)
-        fox.add(slab([(-0.16, 0.1), (0.16, 0.1), (0.11, -0.08), (0, -0.2), (-0.11, -0.08)], 0.1, m), AMBER, "front legs")
-        gp = Vector((x, (ky + wy) / 2, 0.5)) + fwd * 0.15
+        gp = Vector((x, (ey + wy) / 2 + 0.04, 0.7)) + fwd * 0.25
         m = frame(gp, fwd, -lean)
-        fox.add(slab([(-0.1, 0.14), (0.1, 0.14), (0.11, -0.11), (0, -0.17), (-0.11, -0.11)], 0.08, m), CHAR_LT, "front legs")
-        fox.add_glow(strip(gp + fwd * 0.012 - lean * 0.1, gp + fwd * 0.012 + lean * 0.08, 0.02, fwd), "seams")
-        # shoulder armour: a big pauldron with a darker layer under it and a crystal cluster on top
-        fox.add(hull([(s * 0.27, -0.98, 1.84), (s * 0.47, -0.86, 1.68), (s * 0.49, -0.48, 1.7), (s * 0.3, -0.36, 1.9),
-                      (s * 0.49, -0.66, 1.3), (s * 0.42, -0.9, 1.22), (s * 0.42, -0.42, 1.26), (s * 0.3, -0.64, 1.08),
-                      (s * 0.18, -0.64, 1.92)]), AMBER, "shoulders")
-        fox.add(hull([(s * 0.49, -0.84, 1.4), (s * 0.515, -0.5, 1.44), (s * 0.505, -0.66, 1.16), (s * 0.44, -0.86, 1.2),
-                      (s * 0.46, -0.46, 1.22), (s * 0.44, -0.84, 1.42), (s * 0.46, -0.5, 1.46)], 0.016), AMBER_DK, "shoulders")
-        sc = Vector((s * 0.4, -0.44, 1.86))
-        fox.add(hull([sc + Vector(p) for p in ((s * 0.13, 0.12, -0.1), (-s * 0.11, 0.12, -0.1), (s * 0.13, -0.13, -0.1),
-                                                  (-s * 0.11, -0.13, -0.1), (s * 0.09, 0.08, 0.06), (-s * 0.07, 0.08, 0.06),
-                                                  (s * 0.09, -0.09, 0.06), (-s * 0.07, -0.09, 0.06))]), CHAR, "crystals")
-        cluster(fox, sc + Vector((0, 0, 0.03)), (s * 0.55, 0.45, 1.0), [(0.1, 0.7), (0.07, 0.44), (0.06, 0.36), (0.05, 0.28)],
+        fox.add(slab([(-0.16, 0.2), (0.16, 0.2), (0.17, -0.16), (0, -0.25), (-0.17, -0.16)], 0.1, m), AMBER_DK, "front legs")
+        fox.add_glow(strip(gp + fwd * 0.012 - lean * 0.14, gp + fwd * 0.012 + lean * 0.1, 0.026, fwd), "seams")
+        # big shoulder armour: pauldron, a darker layer under it, a crystal cluster on top
+        fox.add(hull([(s * 0.45, -1.08, 2.18), (s * 0.84, -0.94, 1.95), (s * 0.88, -0.44, 1.98), (s * 0.5, -0.3, 2.28),
+                      (s * 0.9, -0.7, 1.4), (s * 0.78, -1.02, 1.3), (s * 0.78, -0.4, 1.34), (s * 0.55, -0.7, 1.1),
+                      (s * 0.32, -0.7, 2.3)]), AMBER, "shoulders")
+        fox.add(hull([(s * 0.89, -0.98, 1.62), (s * 0.93, -0.5, 1.66), (s * 0.92, -0.72, 1.3), (s * 0.82, -1.0, 1.32),
+                      (s * 0.85, -0.46, 1.36), (s * 0.82, -0.98, 1.64), (s * 0.85, -0.52, 1.68)], 0.018), AMBER_DK, "shoulders")
+        sc = Vector((s * 0.66, -0.52, 2.16))
+        fox.add(hull([sc + Vector(p) for p in ((s * 0.15, 0.14, -0.12), (-s * 0.13, 0.14, -0.12), (s * 0.15, -0.15, -0.12),
+                                                  (-s * 0.13, -0.15, -0.12), (s * 0.1, 0.09, 0.07), (-s * 0.08, 0.09, 0.07),
+                                                  (s * 0.1, -0.1, 0.07), (-s * 0.08, -0.1, 0.07))]), CHAR, "crystals")
+        cluster(fox, sc + Vector((0, 0, 0.04)), (s * 0.5, 0.45, 1.0), [(0.1, 0.62), (0.07, 0.4), (0.06, 0.33), (0.05, 0.26)],
                 0.6, 0.5 if s > 0 else 2.2)
 
-        # ---- hind leg: big haunch armour, long charcoal shin and foot
-        x = s * 0.28
-        fox.add(hull([(s * 0.26, 0.2, 1.92), (s * 0.45, 0.32, 1.78), (s * 0.46, 0.68, 1.74), (s * 0.33, 0.86, 1.84),
-                      (s * 0.48, 0.42, 1.3), (s * 0.42, 0.72, 1.24), (s * 0.4, 0.2, 1.28), (s * 0.34, 0.32, 0.96),
-                      (s * 0.3, 0.56, 1.0), (s * 0.2, 0.5, 1.92)]), AMBER, "hind legs")
-        fox.add(hull([(s * 0.475, 0.38, 1.66), (s * 0.485, 0.66, 1.6), (s * 0.49, 0.5, 1.4), (s * 0.43, 0.36, 1.68),
-                      (s * 0.44, 0.7, 1.62), (s * 0.445, 0.5, 1.36)], 0.016), AMBER_DK, "hind legs")
-        gm = frame(Vector((s * 0.49, 0.52, 1.52)), Vector((s * 1.0, 0.08, 0.1)))
-        fox.add(slab([(0, 0.085), (0.055, 0.0), (0, -0.075), (-0.055, 0.0)], 0.05, gm @ M((0, 0, 0.012)), bevel=0.008),
+        # ---- hind leg: massive haunch armour, thick shin, charcoal only at the foot
+        x = s * 0.48
+        fox.add(hull([(s * 0.4, 0.18, 2.2), (s * 0.8, 0.32, 2.0), (s * 0.82, 0.78, 1.96), (s * 0.5, 1.0, 2.08),
+                      (s * 0.86, 0.45, 1.3), (s * 0.76, 0.86, 1.24), (s * 0.7, 0.2, 1.28), (s * 0.58, 0.36, 0.92),
+                      (s * 0.5, 0.66, 0.98), (s * 0.3, 0.6, 2.2)]), AMBER, "hind legs")
+        fox.add(hull([(s * 0.85, 0.38, 1.86), (s * 0.87, 0.76, 1.8), (s * 0.88, 0.56, 1.52), (s * 0.79, 0.36, 1.88),
+                      (s * 0.8, 0.8, 1.82), (s * 0.81, 0.56, 1.48)], 0.018), AMBER_DK, "hind legs")
+        gm = frame(Vector((s * 0.88, 0.58, 1.68)), Vector((s * 1.0, 0.08, 0.1)))
+        fox.add(slab([(0, 0.1), (0.065, 0.0), (0, -0.09), (-0.065, 0.0)], 0.05, gm @ M((0, 0, 0.012)), bevel=0.008),
                 CHAR, "hind legs", stud=False)
-        fox.add_glow(slab([(0, 0.062), (0.037, 0.0), (0, -0.054), (-0.037, 0.0)], 0.03, gm @ M((0, 0, 0.028)), bevel=0.0), "gems")
-        fox.add(seg([((x, 0.34, 1.02), 0.19, 0.2), ((x, 0.47, 0.8), 0.17, 0.17)]), AMBER, "hind legs")
-        fox.add(seg([((x, 0.45, 0.84), 0.165, 0.165), ((x, 0.56, 0.66), 0.155, 0.155), ((x, 0.64, 0.5), 0.15, 0.15)]),
-                CHAR, "hind legs")
-        fox.add(seg([((x, 0.65, 0.54), 0.145, 0.145), ((x, 0.56, 0.16), 0.155, 0.155)]), CHAR, "hind legs")
-        m = frame(Vector((x + s * 0.09, 0.5, 0.8)), Vector((s * 1.0, 0.15, 0.05)), (0, -0.4, 1.0))
-        fox.add(slab([(-0.15, 0.1), (0.15, 0.1), (0.1, -0.08), (0, -0.2), (-0.1, -0.08)], 0.1, m), AMBER, "hind legs")
+        fox.add_glow(slab([(0, 0.074), (0.044, 0.0), (0, -0.064), (-0.044, 0.0)], 0.03, gm @ M((0, 0, 0.028)), bevel=0.0), "gems")
+        fox.add(seg([((x, 0.42, 1.0), 0.32 * LEG, 0.33 * LEG), ((x, 0.6, 0.66), 0.27 * LEG, 0.27 * LEG), ((x, 0.66, 0.48), 0.25 * LEG, 0.25 * LEG)]),
+                AMBER, "hind legs")
+        fox.add(seg([((x, 0.66, 0.52), 0.245 * LEG, 0.245 * LEG), ((x, 0.6, 0.26), 0.255 * LEG, 0.255 * LEG)]), CHAR, "hind legs")
 
-        paw(fox, s * 0.27, py, s)
-        paw(fox, s * 0.28, 0.5, s)
+        paw(fox, s * 0.47, py, s)
+        paw(fox, s * 0.48, 0.56, s)
 
-    # ---- tail: a big sweep up and out, long layered blade plates, a cream tip and a crystal cluster
-    path = [Vector(p) for p in ((0, 0.8, 1.74), (0.0, 1.22, 1.84), (0.06, 1.58, 2.12), (0.12, 1.78, 2.52),
-                                (0.15, 1.8, 2.88))]
-    radii = [0.14, 0.27, 0.34, 0.3, 0.06]
+    # ---- tail: big and bushy, sweeping up and back, no taller than the head
+    path = [Vector(p) for p in ((0, 0.92, 1.9), (0.0, 1.34, 1.98), (0.05, 1.72, 2.22), (0.1, 1.9, 2.5), (0.12, 1.9, 2.7))]
+    radii = [0.18, 0.32, 0.4, 0.34, 0.07]
 
     def at(t):
-        return kit._spline(path, t * (len(path) - 1)), max(kit._spline(radii, t * (len(radii) - 1)), 0.03)
+        return kit._spline(path, t * (len(path) - 1)), max(kit._spline(radii, t * (len(radii) - 1)), 0.04)
 
     def tangent(t):
         return (at(min(t + 0.01, 1))[0] - at(max(t - 0.01, 0))[0]).normalized()
@@ -551,21 +568,21 @@ def build():
             side = tg.cross(ref)
             a = math.radians(ang)
             radial = (ref * math.cos(a) + side * math.sin(a)).normalized()
-            L = 0.62 + 0.12 * math.sin(math.pi * tt)
-            w = 0.26 + 0.08 * math.sin(math.pi * tt)
-            nrm = (radial + tg * 0.14).normalized()
+            L = 0.6 + 0.12 * math.sin(math.pi * tt)
+            w = 0.34 + 0.1 * math.sin(math.pi * tt)
+            nrm = (radial + tg * 0.12).normalized()
             m = frame(p + radial * r * 0.95, nrm, tg)
-            outline = [(0, -0.03), (w * 0.5, L * 0.22), (w * 0.3, L * 0.7), (0, L), (-w * 0.3, L * 0.7), (-w * 0.5, L * 0.22)]
+            outline = [(0, -0.03), (w * 0.5, L * 0.24), (w * 0.3, L * 0.7), (0, L), (-w * 0.3, L * 0.7), (-w * 0.5, L * 0.24)]
             if k == 3:
                 col = CREAM
             elif j == 2:
                 col = AMBER_DK
             else:
                 col = AMBER if (j + k) % 2 else AMBER_LT
-            fox.add(slab(outline, 0.07, m, back=0.8, bevel=0.016), col, "tail")
-    tp, _ = at(0.93)
-    cluster(fox, tp, tangent(0.93) + Vector((0, 0.15, 0.1)), [(0.09, 0.5), (0.06, 0.32), (0.055, 0.28), (0.05, 0.24), (0.045, 0.2)],
-            0.65, 0.3)
+            fox.add(slab(outline, 0.08, m, back=0.8, bevel=0.018), col, "tail")
+    tp, _ = at(0.92)
+    cluster(fox, tp, tangent(0.92) + Vector((0, 0.3, 0.0)), [(0.09, 0.42), (0.06, 0.28), (0.055, 0.24), (0.05, 0.2)],
+            0.7, 0.3)
     return fox
 
 
@@ -1158,12 +1175,42 @@ def style_compare(rig, out, px=900, normal_link=None):
     sheet.save(out)
 
 
+def silhouette_check(rig, out, h=420):
+    """The fox's front 3/4 and side silhouettes beside the reference crops, all at the same height, to judge
+    proportions alone."""
+    from PIL import Image, ImageDraw, ImageOps
+    folder = os.path.splitext(out)[0] + "_views"
+    os.makedirs(folder, exist_ok=True)
+    tiles = []
+    ref = Image.open(REF).convert("RGB")
+    for box in ((18, 95, 422, 540), (458, 90, 862, 500)):
+        c = ref.crop(box)
+        tiles.append((c.resize((int(c.size[0] * h / c.size[1]), h), Image.LANCZOS), "reference"))
+    for view in ("front 3/4", "side"):
+        p = rig.render(os.path.join(folder, view.replace(" ", "").replace("/", "") + ".png"), view, "silhouette", 768)
+        im = Image.open(p).convert("L")
+        box = im.point(lambda v: 255 if v < 110 else 0).getbbox()
+        im = im.crop(box)
+        im = im.resize((int(im.size[0] * h / im.size[1]), h), Image.LANCZOS).convert("RGB")
+        tiles.append((im, "Crystal Fox " + view))
+    W = sum(t.size[0] for t, _ in tiles) + 10 * (len(tiles) + 1)
+    sheet = Image.new("RGB", (W, h + 40), (235, 235, 235))
+    d = ImageDraw.Draw(sheet)
+    x = 10
+    for t, label in tiles:
+        sheet.paste(t, (x, 30))
+        d.text((x, 10), label, fill=(20, 20, 20))
+        x += t.size[0] + 10
+    sheet.save(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--review")
     ap.add_argument("--export")
     ap.add_argument("--peek")
     ap.add_argument("--compare")
+    ap.add_argument("--silcheck")
     ap.add_argument("--views", default="front 3/4,face 3/4,side,back 3/4")
     ap.add_argument("--px", type=int, default=512)
     ap.add_argument("--samples", type=int, default=40)
@@ -1173,7 +1220,7 @@ def main():
     kit.fresh()
     fox = build()
     finish(fox)
-    head = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SIZE) @ Vector((0, -0.25, 0.0)) * fox.scale
+    head = M(HEAD_AT, rot=HEAD_ROT, scale=HEAD_SCALE) @ Vector((0, -0.25, 0.0)) * fox.scale
     print("triangles by part:", dict(sorted(fox.tally.items(), key=lambda kv: -kv[1])))
     if a.peek:
         low = to_object(fox.body, NAME + "_Body")
@@ -1204,13 +1251,15 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(a.export)), exist_ok=True)
         kit.export_fbx(fox.objects, os.path.abspath(a.export))
         print("exported", a.export)
-    if a.review or a.compare:
+    if a.review or a.compare or a.silcheck:
         rig = SunRig(fox.objects, head, samples=a.samples)
         if a.review:
             rig.sheet(os.path.abspath(a.review), SHOTS, px=a.px, title=a.title, normal_link=fox.normal_link)
             print("review sheet", a.review)
         if a.compare:
             style_compare(rig, os.path.abspath(a.compare), normal_link=fox.normal_link)
+        if a.silcheck:
+            silhouette_check(rig, os.path.abspath(a.silcheck))
 
 
 if __name__ == "__main__":
