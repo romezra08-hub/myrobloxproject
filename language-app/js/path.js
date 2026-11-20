@@ -46,7 +46,13 @@
         const seen = slice.filter((w) => prog.cards[w.id]).length;
         nodes.push({ state: mark(seen === slice.length), slice, seen, kind: "words" });
       }
-      // grammar lesson for this unit, and a story every second unit
+      // a phrase lesson (one situation per unit), the grammar lesson, and a story every second unit
+      const sit = (D().situations || [])[ui];
+      if (sit) {
+        const ph = C.phrases().filter((x) => x.sit === sit.id);
+        const seenP = ph.filter((x) => prog.cards[x.id]).length;
+        if (ph.length) nodes.push({ kind: "phrases", sit, state: mark(seenP >= Math.ceil(ph.length / 2)) });
+      }
       const g = grammar[ui];
       if (g) nodes.push({ kind: "grammar", g, state: mark(((prog.grammar[g.id] || {}).best || 0) >= 0.7) });
       const st = ui % 2 === 1 ? stories[(ui - 1) / 2] : null;
@@ -69,7 +75,7 @@
       const trail = h("div.trail");
       u.nodes.forEach((node, i) => {
         const x = Math.round(Math.sin((n++) * 0.9) * 70);
-        const icon = node.kind === "grammar" ? (node.state === "done" ? "👑" : "📘") : node.kind === "story" ? (node.state === "done" ? "👑" : "📖") : node.state === "done" ? "👑" : node.state === "current" ? "⭐" : "🔒";
+        const icon = node.kind === "grammar" ? (node.state === "done" ? "👑" : "📘") : node.kind === "story" ? (node.state === "done" ? "👑" : "📖") : node.kind === "phrases" ? (node.state === "done" ? "👑" : "💬") : node.state === "done" ? "👑" : node.state === "current" ? "⭐" : "🔒";
         const btn = h("button.node." + node.state + ".kind-" + node.kind, { type: "button", style: { "--x": x + "px", "--uc": u.color }, "aria-label": pick(u.tp) + " " + (i + 1) }, h("span.node-icon", icon),
           node.state === "current" ? h("span.node-tip", pick(TX.start)) : null,
           node.kind === "words" && node.state !== "locked" && node.seen && node.state !== "done" ? h("span.node-ring", { style: { "--p": Math.round((node.seen / node.slice.length) * 100) } }) : null);
@@ -78,6 +84,7 @@
           root.LSUI.sfx("tap");
           if (node.kind === "grammar") return app.go("#/grammar/" + node.g.id);
           if (node.kind === "story") return app.go("#/story/" + node.st.id);
+          if (node.kind === "phrases") { const pl = C.buildSituation(p, prog, node.sit.id, { canListen: SP.canListen() }); return root.LSSession.run({ steps: pl.steps, back: "#/home" }); }
           const plan = C.buildTopic(p, prog, u.tp.id, { canListen: SP.canListen(), newCount: PER_NODE });
           root.LSSession.run({ steps: plan.steps, back: "#/home" });
         });

@@ -663,3 +663,4 @@ body { background: var(--bg); }
 .quest-bar i { display: block; height: 100%; background: #ffc800; border-radius: 99px; }
 .quest.done .quest-bar i { background: var(--green); }
 .quest-bar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .75em; font-weight: 900; color: var(--text); }
+.node.kind-phrases:not(.locked):not(.done) { border-radius: 22px; }
