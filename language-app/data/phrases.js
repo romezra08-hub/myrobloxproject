@@ -222,7 +222,7 @@ LS_DATA.phrases.push(
   { id: "feelings_09", sit: "feelings", level: 1, en: "That's a good idea!", ru: "Хоро́шая иде́я!", he: "רעיון טוב!" },
   { id: "feelings_10", sit: "feelings", level: 2, en: "I'm worried.", ru: "Я волну́юсь.", he: "אני דואג." },
   { id: "feelings_11", sit: "feelings", level: 2, en: "What do you think?", ru: "Как ты ду́маешь?", he: "מה אתה חושב?" },
-  { id: "feelings_12", sit: "feelings", level: 2, en: "It's not important.", ru: "Э́то не ва́жно.", he: "זה לא חשוב." },
+  { id: "feelings_12", sit: "feelings", level: 2, en: "It's not important.", ru: "Э́то нева́жно.", he: "זה לא חשוב." },
   { id: "feelings_13", sit: "feelings", level: 2, en: "I'm bored.", ru: "Мне ску́чно.", he: "משעמם לי." },
   { id: "feelings_14", sit: "feelings", level: 3, en: "In my opinion, it's great.", ru: "По-мо́ему, э́то здо́рово.", he: "לדעתי, זה מצוין." },
 );

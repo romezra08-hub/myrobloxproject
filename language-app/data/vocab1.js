@@ -224,7 +224,7 @@ LS_DATA.vocab.push(
   { id: "food_bread", topic: "food", level: 1, en: "bread", ru: "хлеб", he: "לחם", g: "m", emoji: "🍞", enEx: "I buy bread every day.", ruEx: "Я покупа́ю хлеб ка́ждый день.", heEx: "אני קונה לחם כל יום." },
   { id: "food_milk", topic: "food", level: 1, en: "milk", ru: "молоко́", he: "חלב", g: "n", emoji: "🥛", enEx: "The child drinks milk.", ruEx: "Ребёнок пьёт молоко́.", heEx: "הילד שותה חלב." },
   { id: "food_coffee", topic: "food", level: 1, en: "coffee", ru: "ко́фе", he: "קפה", g: "m", emoji: "☕", enEx: "I drink coffee with milk.", ruEx: "Я пью ко́фе с молоко́м.", heEx: "אני שותה קפה עם חלב." },
-  { id: "food_tea", topic: "food", level: 1, en: "tea", ru: "чай", he: "תה", g: "m", emoji: "🍵", enEx: "Do you want some tea?", ruEx: "Ты хо́чешь чай?", heEx: "אתה רוצה תה?" },
+  { id: "food_tea", topic: "food", level: 1, en: "tea", ru: "чай", he: "תה", g: "m", emoji: "🍵", enEx: "Do you want some tea?", ruEx: "Хо́чешь ча́ю?", heEx: "אתה רוצה תה?" },
   { id: "food_egg", topic: "food", level: 1, en: "egg", ru: "яйцо́", he: "ביצה", g: "n", emoji: "🥚", enEx: "I eat an egg for breakfast.", ruEx: "На за́втрак я ем яйцо́.", heEx: "בארוחת בוקר אני אוכל ביצה." },
   { id: "food_cheese", topic: "food", level: 1, en: "cheese", ru: "сыр", he: "גבינה", g: "m", emoji: "🧀", enEx: "This cheese is very tasty.", ruEx: "Э́тот сыр о́чень вку́сный.", heEx: "הגבינה הזאת טעימה מאוד." },
   { id: "food_meat", topic: "food", level: 1, en: "meat", ru: "мя́со", he: "בשר", g: "n", emoji: "🥩", enEx: "We don't eat meat.", ruEx: "Мы не еди́м мя́со.", heEx: "אנחנו לא אוכלים בשר." },
