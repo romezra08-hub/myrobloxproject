@@ -187,7 +187,7 @@ LS_DATA.vocab.push(
   { id: "places_metro", topic: "places", level: 2, en: "subway, metro", ru: "метро́", he: "רכבת תחתית", g: "n", emoji: "🚇", enEx: "Moscow has a big metro.", ruEx: "В Москве́ большо́е метро́.", heEx: "במוסקבה יש רכבת תחתית גדולה." },
   { id: "places_map", topic: "places", level: 2, en: "map", ru: "ка́рта", he: "מפה", g: "f", emoji: "🗺️", enEx: "Do you have a city map?", ruEx: "У тебя́ есть ка́рта го́рода?", heEx: "יש לך מפה של העיר?" },
   { id: "places_traffic_light", topic: "places", level: 3, en: "traffic light", ru: "светофо́р", he: "רמזור", g: "m", emoji: "🚦", enEx: "Turn right at the traffic light.", ruEx: "У светофо́ра поверни́ напра́во.", heEx: "ברמזור תפנה ימינה." },
-  { id: "places_bridge", topic: "places", level: 3, en: "bridge", ru: "мост", he: "גשר", g: "m", emoji: "🌉", enEx: "We walk across the bridge.", ruEx: "Мы идём че́рез мост.", heEx: "אנחנו הולכים על הגשר." },
+  { id: "places_bridge", topic: "places", level: 3, en: "bridge", ru: "мост", he: "גשר", g: "m", emoji: "🌉", enEx: "We walk across the bridge.", ruEx: "Мы идём че́рез мост.", heEx: "אנחנו חוצים את הגשר." },
 );
 
 // ---------- WORK & SCHOOL ----------

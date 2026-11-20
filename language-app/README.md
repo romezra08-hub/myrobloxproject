@@ -15,6 +15,7 @@ The interface is in Hebrew, Russian or English, and every explanation comes in a
 | 🧩 Grammar | 17 English + 18 Russian lessons aimed at Hebrew/Russian speakers' typical mistakes, 350 exercises |
 | 👄 Pronunciation | The hard sounds (th, w/v, ы, р, soft signs, stress…), similar-sounding pairs, speaking check |
 | 🎭 Conversations | 13 role-plays: the app speaks one side and you answer out loud |
+| 📚 Stories | Short graded stories: words light up as they're read aloud, tap to reveal translations, comprehension questions |
 | 👨‍👩‍👦 Family | Both learners' streaks, and "quiz each other" (Mom knows Russian, her son knows English) |
 | 📈 Progress | Streak, level, 30-day chart, upcoming reviews, hardest words |
 

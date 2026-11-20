@@ -193,6 +193,7 @@
       { hash: "grammar", icon: "🧩", key: "grammar" },
       { hash: "sounds", icon: "👄", key: "sounds" },
       { hash: "dialogues", icon: "🎭", key: "dialogues" },
+      { hash: "stories", icon: "📚", key: "stories" },
       { hash: "mistakes", icon: "🩹", key: "review" },
     ];
   }

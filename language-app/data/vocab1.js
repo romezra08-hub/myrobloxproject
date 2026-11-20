@@ -139,7 +139,7 @@ LS_DATA.vocab.push(
   { id: "numbers_30", topic: "numbers", level: 2, en: "thirty", ru: "три́дцать", he: "שלושים", enEx: "A month has thirty days.", ruEx: "В ме́сяце три́дцать дней.", heEx: "בחודש יש שלושים יום." },
   { id: "numbers_40", topic: "numbers", level: 2, en: "forty", ru: "со́рок", he: "ארבעים", enEx: "My father is forty years old.", ruEx: "Моему́ па́пе со́рок лет.", heEx: "אבא שלי בן ארבעים." },
   { id: "numbers_50", topic: "numbers", level: 2, en: "fifty", ru: "пятьдеся́т", he: "חמישים", enEx: "This costs fifty shekels.", ruEx: "Э́то сто́ит пятьдеся́т ше́келей.", heEx: "זה עולה חמישים שקל." },
-  { id: "numbers_60", topic: "numbers", level: 2, en: "sixty", ru: "шестьдеся́т", he: "שישים", enEx: "An hour has sixty minutes.", ruEx: "В часе́ шестьдеся́т мину́т.", heEx: "בשעה יש שישים דקות." },
+  { id: "numbers_60", topic: "numbers", level: 2, en: "sixty", ru: "шестьдеся́т", he: "שישים", enEx: "An hour has sixty minutes.", ruEx: "В ча́се шестьдеся́т мину́т.", heEx: "בשעה יש שישים דקות." },
   { id: "numbers_70", topic: "numbers", level: 2, en: "seventy", ru: "се́мьдесят", he: "שבעים", enEx: "Grandma is seventy years old.", ruEx: "Ба́бушке се́мьдесят лет.", heEx: "סבתא בת שבעים." },
   { id: "numbers_80", topic: "numbers", level: 2, en: "eighty", ru: "во́семьдесят", he: "שמונים", enEx: "Grandpa is eighty years old.", ruEx: "Де́душке во́семьдесят лет.", heEx: "סבא בן שמונים." },
   { id: "numbers_90", topic: "numbers", level: 2, en: "ninety", ru: "девяно́сто", he: "תשעים", enEx: "The book has ninety pages.", ruEx: "В кни́ге девяно́сто страни́ц.", heEx: "בספר יש תשעים עמודים." },

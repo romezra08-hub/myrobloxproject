@@ -104,7 +104,7 @@ async function runLesson(page, tag, maxSteps) {
   await page.click(".main-btn");
   await page.waitForSelector(".home");
 
-  const routes = ["learn", "alphabet", "letter/A", "writing", "writing/B", "words", "topic/food", "phrases", "grammar", "sounds", "dialogues", "progress", "settings", "family", "reels", "mistakes"];
+  const routes = ["learn", "alphabet", "letter/A", "writing", "writing/B", "words", "topic/food", "phrases", "grammar", "sounds", "dialogues", "progress", "settings", "family", "reels", "mistakes", "stories"];
   for (const r of routes) {
     await page.goto(base + "#/" + r);
     await page.waitForTimeout(250);
@@ -118,6 +118,18 @@ async function runLesson(page, tag, maxSteps) {
     await shot(page, "mom-grammar-lesson");
     await page.click(".btn.primary.wide");
     await runLesson(page, "mom-grammar-practice", 40);
+  }
+  // a story: read, reveal translations, answer questions
+  const sid = await page.evaluate(() => (LS_DATA.stories || [])[0] && LS_DATA.stories[0].id);
+  if (sid) {
+    await page.goto(base + "#/story/" + sid);
+    await page.waitForTimeout(250);
+    await page.click(".story .btn.ghost");
+    await shot(page, "mom-story");
+    const qs = await page.$$(".story-q");
+    for (const q of qs) { const o = await q.$(".option"); if (o) await o.click(); }
+    await page.waitForTimeout(200);
+    await shot(page, "mom-story-done");
   }
   // reels feed
   await page.goto(base + "#/reels/topic/food");

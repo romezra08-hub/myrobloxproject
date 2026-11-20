@@ -5,7 +5,7 @@ const U = require("../js/util.js");
 
 global.window = global;
 const dir = path.join(__dirname, "..", "data");
-const files = ["topics.js", "vocab1.js", "vocab2.js", "phrases.js", "dialogues.js", "grammar_en.js", "grammar_ru.js", "alphabet.js", "sounds.js"];
+const files = ["topics.js", "vocab1.js", "vocab2.js", "phrases.js", "dialogues.js", "grammar_en.js", "grammar_ru.js", "alphabet.js", "sounds.js", "stories.js"];
 const errors = [], warnings = [];
 files.forEach((f) => {
   const p = path.join(dir, f);
@@ -119,7 +119,21 @@ if ((A.ru || []).length !== 33) errors.push(`alphabet.ru has ${(A.ru || []).leng
   if (lang === "ru") { (s.pairs || []).forEach((p) => p.forEach((w) => checkRu(w, `sounds.${s.id}`))); (s.words || []).forEach((w) => checkRu(w, `sounds.${s.id}`)); }
 }));
 
+// stories
+const sids = new Set();
+(D.stories || []).forEach((s) => {
+  const w = `story[${s.id}]`;
+  if (sids.has(s.id)) errors.push(`${w}: duplicate`); sids.add(s.id);
+  ["en", "ru", "he"].forEach((l) => { if (!s.title || !s.title[l]) errors.push(`${w}: title.${l}`); });
+  (s.sentences || []).forEach((sn, i) => { ["en", "ru", "he"].forEach((l) => { if (!sn[l]) errors.push(`${w}.s${i}: ${l}`); }); checkRu(sn.ru, `${w}.s${i}`); });
+  (s.questions || []).forEach((q, i) => {
+    if (typeof q.answer !== "number" || q.answer < 0 || q.answer >= (q.options || []).length) errors.push(`${w}.q${i}: answer`);
+    checkRu(q.q && q.q.ru, `${w}.q${i}`); (q.options || []).forEach((o) => checkRu(o.ru, `${w}.q${i}`));
+  });
+});
+
 const counts = {
+  stories: (D.stories || []).length,
   vocab: (D.vocab || []).length, phrases: (D.phrases || []).length, dialogues: (D.dialogues || []).length,
   grammar_en: (D.grammar || []).filter((g) => g.target === "en").length, grammar_ru: (D.grammar || []).filter((g) => g.target === "ru").length,
   exercises: (D.grammar || []).reduce((s, g) => s + (g.exercises || []).length, 0),

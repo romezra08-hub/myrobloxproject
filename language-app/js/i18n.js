@@ -49,6 +49,8 @@
     sec_sounds_sub: { he: "הצלילים הקשים, בדיוק בשבילך", en: "The tricky sounds, made for you", ru: "Трудные звуки — специально для вас" },
     sec_dialogues: { he: "שיחות", en: "Conversations", ru: "Диалоги" },
     sec_dialogues_sub: { he: "מדברים בתפקידים", en: "Role-play real conversations", ru: "Разговор по ролям" },
+    sec_stories: { he: "סיפורים", en: "Stories", ru: "Истории" },
+    sec_stories_sub: { he: "קוראים ומקשיבים לסיפורים קצרים", en: "Read and listen to short stories", ru: "Читаем и слушаем короткие истории" },
     sec_review: { he: "תיקון טעויות", en: "Fix my mistakes", ru: "Работа над ошибками" },
     sec_review_sub: { he: "המילים שהכי קשות לך", en: "The words you find hardest", ru: "Самые трудные для вас слова" },
     check: { he: "בדיקה", en: "Check", ru: "Проверить" },

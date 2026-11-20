@@ -66,7 +66,7 @@ LS_DATA.dialogues.push(
       { who: "A", en: "Good evening! A table for two?", ru: "До́брый ве́чер! Сто́лик на двои́х?", he: "ערב טוב! שולחן לשניים?" },
       { who: "B", en: "Yes, please. By the window.", ru: "Да, пожа́луйста. У окна́.", he: "כן, בבקשה. ליד החלון." },
       { who: "A", en: "Here is the menu.", ru: "Вот меню́.", he: "הנה התפריט." },
-      { who: "B", en: "What do you recommend?", ru: "Что вы посове́туете?", he: "מה אתה ממליץ?" },
+      { who: "B", en: "What do you recommend?", ru: "Что вы посове́туете?", he: "על מה אתה ממליץ?" },
       { who: "A", en: "The fish is very good today.", ru: "Сего́дня о́чень хоро́шая ры́ба.", he: "הדג מצוין היום." },
       { who: "B", en: "Okay, I'll have the fish.", ru: "Хорошо́, я возьму́ ры́бу.", he: "בסדר, אני אקח את הדג." },
       { who: "A", en: "And what would you like to drink?", ru: "А что бу́дете пить?", he: "ומה תשתו?" },
@@ -96,7 +96,7 @@ LS_DATA.dialogues.push(
     title: { en: "Taking a taxi", ru: "В такси́", he: "במונית" },
     lines: [
       { who: "A", en: "Hello, where to?", ru: "Здра́вствуйте, куда́ е́дем?", he: "שלום, לאן?" },
-      { who: "B", en: "To the central station, please.", ru: "На центра́льный вокза́л, пожа́луйста.", he: "לתחנה המרכזית, בבקשה." },
+      { who: "B", en: "To the central station, please.", ru: "На центра́льный вокза́л, пожа́луйста.", he: "לתחנת הרכבת המרכזית, בבקשה." },
       { who: "A", en: "Okay. Are you in a hurry?", ru: "Хорошо́. Вы торо́питесь?", he: "בסדר. אתה ממהר?" },
       { who: "B", en: "Yes, my train is at five.", ru: "Да, мой по́езд в пять.", he: "כן, הרכבת שלי בחמש." },
       { who: "A", en: "No problem, we'll be there soon.", ru: "Без пробле́м, ско́ро прие́дем.", he: "אין בעיה, נגיע בקרוב." },

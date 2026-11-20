@@ -58,7 +58,7 @@ LS_DATA.phrases.push(
   { id: "cafe_03", sit: "cafe", level: 1, en: "I'd like tea, please.", ru: "Мне чай, пожа́луйста.", he: "אני רוצה תה, בבקשה." },
   { id: "cafe_04", sit: "cafe", level: 2, en: "With milk, no sugar.", ru: "С молоко́м, без са́хара.", he: "עם חלב, בלי סוכר." },
   { id: "cafe_05", sit: "cafe", level: 1, en: "A glass of water, please.", ru: "Стака́н воды́, пожа́луйста.", he: "כוס מים, בבקשה." },
-  { id: "cafe_06", sit: "cafe", level: 3, en: "What do you recommend?", ru: "Что вы посове́туете?", he: "מה אתה ממליץ?" },
+  { id: "cafe_06", sit: "cafe", level: 3, en: "What do you recommend?", ru: "Что вы посове́туете?", he: "על מה אתה ממליץ?" },
   { id: "cafe_07", sit: "cafe", level: 2, en: "I'm a vegetarian.", ru: "Я вегетариа́нец.", he: "אני צמחוני." },
   { id: "cafe_08", sit: "cafe", level: 2, en: "Is it very spicy?", ru: "Э́то о́чень о́стро?", he: "זה חריף מאוד?" },
   { id: "cafe_09", sit: "cafe", level: 1, en: "It's very tasty!", ru: "О́чень вку́сно!", he: "טעים מאוד!" },
