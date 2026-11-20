@@ -664,3 +664,5 @@ body { background: var(--bg); }
 .quest.done .quest-bar i { background: var(--green); }
 .quest-bar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .75em; font-weight: 900; color: var(--text); }
 .node.kind-phrases:not(.locked):not(.done) { border-radius: 22px; }
+.stat-card, .family-card, .stat, .topic-tile + .topic-tile { border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+.topic-tile + .topic-tile { border: none; }
