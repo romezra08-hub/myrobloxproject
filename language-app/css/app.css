@@ -649,3 +649,7 @@ body { background: var(--bg); }
 .summary .big-emoji:has(+ .mascot) { display: none; }
 .summary .mascot .fox { font-size: 84px; animation: foxjump .6s ease 2; }
 @keyframes foxjump { 50% { transform: translateY(-16px) rotate(8deg); } }
+.node.kind-grammar:not(.locked):not(.done) { border-radius: 22px; }
+.node.kind-story:not(.locked):not(.done) { border-radius: 22px; }
+.node.locked.kind-grammar .node-icon, .node.locked.kind-story .node-icon { opacity: .7; }
+.trail { padding-top: 46px; }

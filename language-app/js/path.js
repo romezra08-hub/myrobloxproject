@@ -31,20 +31,26 @@
 
   const UNIT_COLORS = ["#58b80a", "#1c9cf0", "#ce82ff", "#ff9600", "#ff4b4b", "#00b8a9", "#7048e8", "#f0428c"];
 
-  function units(prog) {
+  function units(prog, target) {
     const topics = (D().topics || []).filter((tp) => C.vocab().some((v) => v.topic === tp.id));
+    const grammar = (D().grammar || []).filter((g) => g.target === target).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const stories = (D().stories || []).slice().sort((a, b) => a.level - b.level);
+    prog.stories = prog.stories || {};
     let foundCurrent = false;
+    const mark = (done) => { if (done) return "done"; if (!foundCurrent) { foundCurrent = true; return "current"; } return "locked"; };
     return topics.map((tp, ui) => {
       const words = C.vocab().filter((v) => v.topic === tp.id);
       const nodes = [];
       for (let i = 0; i < words.length; i += PER_NODE) {
         const slice = words.slice(i, i + PER_NODE);
         const seen = slice.filter((w) => prog.cards[w.id]).length;
-        const done = seen === slice.length;
-        let state = done ? "done" : "locked";
-        if (!done && !foundCurrent) { state = "current"; foundCurrent = true; }
-        nodes.push({ state, slice, seen });
+        nodes.push({ state: mark(seen === slice.length), slice, seen, kind: "words" });
       }
+      // grammar lesson for this unit, and a story every second unit
+      const g = grammar[ui];
+      if (g) nodes.push({ kind: "grammar", g, state: mark(((prog.grammar[g.id] || {}).best || 0) >= 0.7) });
+      const st = ui % 2 === 1 ? stories[(ui - 1) / 2] : null;
+      if (st) nodes.push({ kind: "story", st, state: mark(!!prog.stories[st.id]) });
       return { tp, ui, nodes, color: UNIT_COLORS[ui % UNIT_COLORS.length] };
     });
   }
@@ -52,7 +58,7 @@
   function render(app) {
     const p = app.profile();
     const prog = ST.progress(p.id);
-    const list = units(prog);
+    const list = units(prog, p.target);
     const wrap = h("div.path");
     let n = 0;
     list.forEach((u) => {
@@ -63,13 +69,15 @@
       const trail = h("div.trail");
       u.nodes.forEach((node, i) => {
         const x = Math.round(Math.sin((n++) * 0.9) * 70);
-        const icon = node.state === "done" ? "👑" : i === u.nodes.length - 1 ? "🏆" : node.state === "current" ? "⭐" : "🔒";
-        const btn = h("button.node." + node.state, { type: "button", style: { "--x": x + "px", "--uc": u.color }, "aria-label": pick(u.tp) + " " + (i + 1) }, h("span.node-icon", icon),
+        const icon = node.kind === "grammar" ? (node.state === "done" ? "👑" : "📘") : node.kind === "story" ? (node.state === "done" ? "👑" : "📖") : node.state === "done" ? "👑" : node.state === "current" ? "⭐" : "🔒";
+        const btn = h("button.node." + node.state + ".kind-" + node.kind, { type: "button", style: { "--x": x + "px", "--uc": u.color }, "aria-label": pick(u.tp) + " " + (i + 1) }, h("span.node-icon", icon),
           node.state === "current" ? h("span.node-tip", pick(TX.start)) : null,
-          node.state !== "locked" && node.seen && node.state !== "done" ? h("span.node-ring", { style: { "--p": Math.round((node.seen / node.slice.length) * 100) } }) : null);
+          node.kind === "words" && node.state !== "locked" && node.seen && node.state !== "done" ? h("span.node-ring", { style: { "--p": Math.round((node.seen / node.slice.length) * 100) } }) : null);
         btn.addEventListener("click", () => {
           if (node.state === "locked") { root.LSUI.toast(pick(TX.locked)); root.LSUI.sfx("wrong"); return; }
           root.LSUI.sfx("tap");
+          if (node.kind === "grammar") return app.go("#/grammar/" + node.g.id);
+          if (node.kind === "story") return app.go("#/story/" + node.st.id);
           const plan = C.buildTopic(p, prog, u.tp.id, { canListen: SP.canListen(), newCount: PER_NODE });
           root.LSSession.run({ steps: plan.steps, back: "#/home" });
         });
