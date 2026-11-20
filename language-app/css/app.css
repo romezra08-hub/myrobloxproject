@@ -665,3 +665,6 @@ body { background: var(--bg); }
 .quest-bar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .75em; font-weight: 900; color: var(--text); }
 .node.kind-phrases:not(.locked):not(.done) { border-radius: 22px; }
 .stat-card, .family-card, .stat { border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+.story-t .kw { cursor: pointer; position: relative; }
+.story-t .kw:hover { text-decoration: underline dotted; }
+.gloss-pop { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: .8em; font-weight: 800; padding: 4px 10px; border-radius: 10px; white-space: nowrap; z-index: 5; animation: rise .15s ease; pointer-events: none; }

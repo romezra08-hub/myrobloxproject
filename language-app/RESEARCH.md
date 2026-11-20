@@ -104,3 +104,7 @@ Sources: https://scite.ai/authors/fabienne-van-der-kleij-5G8ErD ; https://acures
 ## Round 11 (stories + native review)
 - **Comprehensible input with reading-while-listening:** stories plus audio support vocabulary and listening (Brown & Waring 2008; Chang & Millett 2015), and synchronized highlighting helps (Jung & Zhang 2024). → New **Stories** section: 12 graded stories (3 levels) with karaoke reading, tap-to-reveal translations (try to understand first), and comprehension questions.
 - **Native-quality review:** every word list, phrase, conversation and grammar lesson was re-checked by a native-level reviewer. 9 fixes went in (a Russian stress error, Hebrew prepositions, a wrong grammar rule about -ий/-ой, ambiguous multiple-choice questions).
+
+## Round 12
+- **Glossing while reading:** short translations of unknown words (glosses) during reading support incidental vocabulary learning and comprehension (Hulstijn et al. 1996; Yanagisawa, Webb & Uchihara 2020 meta-analysis). → In Stories, tapping a word speaks it and shows its meaning when it's in the word lists. Changed forms such as Russian cases, verb forms and English past tense are matched too.
+- **Daily quests:** goals that are small, specific and achievable today raise effort (goal-setting theory, Locke & Latham 2002). → 3 daily quests that each require real practice, with a chest bonus when all are done.

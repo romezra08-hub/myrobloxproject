@@ -12,7 +12,7 @@
     sub: { he: "סיפורים קצרים עם קול, תמונות ושאלות. מנסים להבין לפני שמציצים בתרגום!", en: "Short stories with audio, pictures and questions. Try to understand before peeking at the translation!", ru: "Короткие истории со звуком, картинками и вопросами. Попробуйте понять, прежде чем смотреть перевод!" },
     playAll: { he: "הקראת הסיפור", en: "Read it to me", ru: "Прочитать вслух" },
     stop: { he: "עצירה", en: "Stop", ru: "Стоп" },
-    tapReveal: { he: "הקישו לתרגום", en: "Tap for translation", ru: "Нажмите для перевода" },
+    tapReveal: { he: "תרגום המשפט (אפשר גם להקיש על מילה)", en: "Sentence translation (or tap a word)", ru: "Перевод фразы (или нажмите на слово)" },
     questions: { he: "הבנת הנקרא", en: "Did you understand?", ru: "Вы поняли?" },
     showAll: { he: "להציג את כל התרגומים", en: "Show all translations", ru: "Показать все переводы" },
     done: { he: "כל הכבוד! סיימת את הסיפור", en: "Well done! You finished the story", ru: "Молодец! История прочитана" },
@@ -44,6 +44,36 @@
         }))))));
   }
 
+  // Glosses: tap a word to see its meaning if it's in the word lists (exact form or a close stem).
+  let glossIndex = null;
+  function gloss(word, T, H) {
+    if (!glossIndex) {
+      glossIndex = { en: {}, ru: {} };
+      root.LSContent.vocab().forEach((v) => ["en", "ru"].forEach((l) => {
+        const k = U.normalize(v[l] || "", { lang: l, loose: true });
+        if (k && !k.includes(" ") && !glossIndex[l][k]) glossIndex[l][k] = v;
+      }));
+      // verb forms: Russian present (я/ты/они) and perfective, English past
+      root.LSContent.vocab().forEach((v) => {
+        [v.ruPres, v.ruPf].filter(Boolean).forEach((f) => String(f).split(/[,\s]+/).forEach((tok) => {
+          const k = U.normalize(tok, { lang: "ru" });
+          if (k.length > 2 && !["они", "ты"].includes(k) && !glossIndex.ru[k]) glossIndex.ru[k] = v;
+        }));
+        if (v.enPast) { const k = U.normalize(v.enPast, { lang: "en" }); if (k && !glossIndex.en[k]) glossIndex.en[k] = v; }
+      });
+    }
+    const w = U.normalize(word, { lang: T, loose: true });
+    const idx = glossIndex[T] || {};
+    if (idx[w]) return idx[w];
+    // try trimming common endings (Russian cases / English -s -ed -ing)
+    for (let cut = 1; cut <= 3 && w.length - cut >= 3; cut++) {
+      const stem = w.slice(0, w.length - cut);
+      const hit = Object.keys(idx).find((k) => k.startsWith(stem) && k.length - stem.length <= 3);
+      if (hit) return idx[hit];
+    }
+    return null;
+  }
+
   function story(app, args) {
     const p = app.profile();
     const prog = ST.progress(p.id);
@@ -54,6 +84,16 @@
     let stopFlag = false, playing = false;
     const rows = s.sentences.map((sn, i) => {
       const k = karaoke(sn[T], T, "story-t");
+      k.el.querySelectorAll(".kw").forEach((w) => w.addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelectorAll(".gloss-pop").forEach((n) => n.remove());
+        const hit = gloss(w.textContent, T, H);
+        SP.speak(w.textContent, T, { rate: 0.8 });
+        if (!hit) return;
+        const pop = h("span.gloss-pop", hit.emoji ? hit.emoji + " " : "", L(hit[H] || "", H));
+        w.appendChild(pop);
+        setTimeout(() => pop.remove(), 2600);
+      }));
       const tr = h("div.story-h", { hidden: true }, L(sn[H] || "", H));
       const reveal = h("button.link-btn.small", { type: "button", onclick: (e) => { e.stopPropagation(); tr.hidden = !tr.hidden; } }, "👁️ " + x("tapReveal"));
       const row = h("div.story-line", { onclick: () => { stopFlag = true; k.play(app.ttsRate()); } },
