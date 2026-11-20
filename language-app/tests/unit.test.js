@@ -89,3 +89,7 @@ test("gradeFrom", () => {
   assert.equal(SRS.gradeFrom(true), 3);
   assert.equal(SRS.gradeFrom(true, { close: true }), 2);
 });
+
+test("compareWords ignores standalone dashes", () => {
+  assert.equal(U.compareWords("мама только я", "Ма́ма — то́лько я", "ru").score, 1);
+});

@@ -55,6 +55,8 @@
           h("div.row.end",
             h("button.btn.ghost", { onclick: () => close(false) }, t("cancel")),
             h("button.btn.danger", { onclick: () => close(true) }, "OK"))));
+      const onEsc = (e) => { if (e.key === "Escape") { document.removeEventListener("keydown", onEsc); close(false); } };
+      document.addEventListener("keydown", onEsc);
       document.body.appendChild(overlay);
     });
   }

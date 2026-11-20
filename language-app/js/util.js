@@ -78,7 +78,7 @@
   // Returns { score: 0..1, words: [{w, ok}] } relative to the expected sentence.
   function compareWords(heard, expected, lang) {
     const hw = normalize(heard, { lang }).split(" ").filter(Boolean);
-    const ewDisplay = stripStress(expected).replace(/[.,!?;:"«»„“”…]/g, "").split(/\s+/).filter(Boolean);
+    const ewDisplay = stripStress(expected).replace(/[.,!?;:"«»„“”…]/g, "").split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w));
     const ew = ewDisplay.map((w) => normalize(w, { lang }));
     const used = new Array(hw.length).fill(false);
     let hits = 0;
