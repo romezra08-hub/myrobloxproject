@@ -100,3 +100,7 @@ Sources: https://link.springer.com/content/pdf/10.3758/s13421-013-0371-0.pdf ; h
 ## Round 10
 - **Elaborated feedback:** in computer-based learning, explanations (g≈0.49) beat just giving the correct answer (≈0.32) and plain right/wrong (≈0.05) (Van der Kleij, Feskens & Eggen 2015, 40 studies). Elaboration helps most after *incorrect* answers (Attali & van der Kleij 2017). → Wrong answers now show what the chosen option really means and an example sentence with the correct word. Grammar mistakes already show a "why" line.
 Sources: https://scite.ai/authors/fabienne-van-der-kleij-5G8ErD ; https://acuresearchbank.acu.edu.au/item/8610z/effects-of-feedback-elaboration-and-feedback-timing-during-computer-based-practice-in-mathematics-problem-solving
+
+## Round 11 (stories + native review)
+- **Comprehensible input with reading-while-listening:** stories plus audio support vocabulary and listening (Brown & Waring 2008; Chang & Millett 2015), and synchronized highlighting helps (Jung & Zhang 2024). → New **Stories** section: 12 graded stories (3 levels) with karaoke reading, tap-to-reveal translations (try to understand first), and comprehension questions.
+- **Native-quality review:** every word list, phrase, conversation and grammar lesson was re-checked by a native-level reviewer. 9 fixes went in (a Russian stress error, Hebrew prepositions, a wrong grammar rule about -ий/-ой, ambiguous multiple-choice questions).

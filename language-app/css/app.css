@@ -593,3 +593,4 @@ h1, h2, .hero-title, .st-title, .target-word, .reel-word { font-family: "Rubik",
 .story-q { display: flex; flex-direction: column; gap: 8px; }
 .section-tile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 90px; }
 @media (min-width: 560px) { .section-tile:last-child:nth-child(odd) { grid-column: auto; } }
+.karaoke.story-t { display: block; }
