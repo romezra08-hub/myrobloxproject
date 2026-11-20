@@ -39,8 +39,17 @@
     return voices.length === 0 ? true : !!voiceFor(lang);
   }
 
+  // Fallback voice inside claude.ai: the platform's "tts" capability, used only when the
+  // device has no voice for the language (common for Russian/Hebrew on some phones).
+  let claudeTts = null;
+  if (root.claude && root.claude.use) { try { root.claude.use("tts").then((t) => { claudeTts = t; }).catch(() => {}); } catch (e) {} }
+  function speakClaude(text, lang, opts) {
+    return claudeTts.speak(U.stripStress(text), { language: lang, rate: Math.max(0.7, Math.min(1.5, opts.rate || 0.9)) }).then(() => true, () => false);
+  }
+
   function speak(text, lang, opts) {
     opts = opts || {};
+    if (text && claudeTts && voices.length && !voiceFor(lang)) return speakClaude(text, lang, opts);
     return new Promise((resolve) => {
       if (!synth || !text) return resolve(false);
       try {
@@ -69,7 +78,7 @@
     });
   }
 
-  function stop() { try { synth && synth.cancel(); } catch (e) {} }
+  function stop() { try { synth && synth.cancel(); } catch (e) {} try { claudeTts && claudeTts.stop(); } catch (e) {} }
 
   const Rec = root.SpeechRecognition || root.webkitSpeechRecognition;
   // Inside a claude.ai artifact the browser mic is blocked; the platform's "dictation" capability replaces it.
