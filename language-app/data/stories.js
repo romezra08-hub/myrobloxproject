@@ -331,3 +331,332 @@ LS_DATA.stories.push({
       answer: 2 }
   ]
 });
+
+LS_DATA.stories.push({
+  id: "s_new_phone", level: 1, emoji: "📱",
+  title: { en: "Grandpa's New Phone", ru: "Но́вый телефо́н де́душки", he: "הטלפון החדש של סבא" },
+  sentences: [
+    { en: "Grandpa Boris has a new phone.", ru: "У де́душки Бори́са но́вый телефо́н.", he: "לסבא בוריס יש טלפון חדש.", emoji: "📱" },
+    { en: "The phone is big and black.", ru: "Телефо́н большо́й и чёрный.", he: "הטלפון גדול ושחור.", emoji: "⬛" },
+    { en: "Boris does not understand the buttons.", ru: "Бори́с не понима́ет кно́пки.", he: "בוריס לא מבין את הכפתורים.", emoji: "🤔" },
+    { en: "He calls his grandson Dan.", ru: "Он звони́т вну́ку Да́ну.", he: "הוא מתקשר לנכד שלו, דן.", emoji: "📞" },
+    { en: "Dan comes and helps him.", ru: "Дан прихо́дит и помога́ет ему́.", he: "דן בא ועוזר לו.", emoji: "🧑" },
+    { en: "Now Boris sends photos to the family.", ru: "Тепе́рь Бори́с отправля́ет фо́то семье́.", he: "עכשיו בוריס שולח תמונות למשפחה.", emoji: "📸" },
+    { en: "Everyone gets twenty photos of his cat!", ru: "Все получа́ют два́дцать фо́то его́ ко́шки!", he: "כולם מקבלים עשרים תמונות של החתולה שלו!", emoji: "😂" }
+  ],
+  questions: [
+    { q: { en: "What color is the phone?", ru: "Како́го цве́та телефо́н?", he: "באיזה צבע הטלפון?" },
+      options: [ { en: "White", ru: "Бе́лый", he: "לבן" }, { en: "Black", ru: "Чёрный", he: "שחור" }, { en: "Red", ru: "Кра́сный", he: "אדום" } ],
+      answer: 1 },
+    { q: { en: "Who helps Boris?", ru: "Кто помога́ет Бори́су?", he: "מי עוזר לבוריס?" },
+      options: [ { en: "His grandson", ru: "Его́ внук", he: "הנכד שלו" }, { en: "His wife", ru: "Его́ жена́", he: "אשתו" }, { en: "A neighbor", ru: "Сосе́д", he: "שכן" } ],
+      answer: 0 },
+    { q: { en: "What is in the photos?", ru: "Что на фо́то?", he: "מה יש בתמונות?" },
+      options: [ { en: "The sea", ru: "Мо́ре", he: "הים" }, { en: "Flowers", ru: "Цветы́", he: "פרחים" }, { en: "His cat", ru: "Его́ ко́шка", he: "החתולה שלו" } ],
+      answer: 2 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_first_snow", level: 1, emoji: "❄️",
+  title: { en: "The First Snow", ru: "Пе́рвый снег", he: "השלג הראשון" },
+  sentences: [
+    { en: "Today it is very cold in Jerusalem.", ru: "Сего́дня в Иерусали́ме о́чень хо́лодно.", he: "היום קר מאוד בירושלים.", emoji: "🥶" },
+    { en: "In the morning, Lena looks out the window.", ru: "У́тром Ле́на смо́трит в окно́.", he: "בבוקר לנה מסתכלת מהחלון.", emoji: "🪟" },
+    { en: "Everything is white!", ru: "Всё бе́лое!", he: "הכול לבן!", emoji: "⬜" },
+    { en: "It is the first snow of the year.", ru: "Э́то пе́рвый снег в э́том году́.", he: "זה השלג הראשון השנה.", emoji: "❄️" },
+    { en: "The children run outside.", ru: "Де́ти бегу́т на у́лицу.", he: "הילדים רצים החוצה.", emoji: "🏃" },
+    { en: "They make a small snowman.", ru: "Они́ де́лают ма́ленького снегови́ка.", he: "הם בונים איש שלג קטן.", emoji: "⛄" },
+    { en: "Then they drink hot tea at home.", ru: "Пото́м они́ пьют горя́чий чай до́ма.", he: "אחר כך הם שותים תה חם בבית.", emoji: "🍵" }
+  ],
+  questions: [
+    { q: { en: "Where is it cold today?", ru: "Где сего́дня хо́лодно?", he: "איפה קר היום?" },
+      options: [ { en: "In Haifa", ru: "В Ха́йфе", he: "בחיפה" }, { en: "In Eilat", ru: "В Эйла́те", he: "באילת" }, { en: "In Jerusalem", ru: "В Иерусали́ме", he: "בירושלים" } ],
+      answer: 2 },
+    { q: { en: "What do the children make?", ru: "Что де́лают де́ти?", he: "מה הילדים בונים?" },
+      options: [ { en: "A snowman", ru: "Снегови́ка", he: "איש שלג" }, { en: "A cake", ru: "Торт", he: "עוגה" }, { en: "A house", ru: "Дом", he: "בית" } ],
+      answer: 0 },
+    { q: { en: "What do they drink at home?", ru: "Что они́ пьют до́ма?", he: "מה הם שותים בבית?" },
+      options: [ { en: "Cold juice", ru: "Холо́дный сок", he: "מיץ קר" }, { en: "Hot tea", ru: "Горя́чий чай", he: "תה חם" }, { en: "Milk", ru: "Молоко́", he: "חלב" } ],
+      answer: 1 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_dentist", level: 1, emoji: "🦷",
+  title: { en: "At the Dentist", ru: "У зубно́го врача́", he: "אצל רופאת השיניים" },
+  sentences: [
+    { en: "Michael has a toothache.", ru: "У Михаи́ла боли́т зуб.", he: "למיכאל כואבת השן.", emoji: "🦷" },
+    { en: "He cannot eat or sleep.", ru: "Он не мо́жет ни есть, ни спать.", he: "הוא לא יכול לאכול וגם לא לישון.", emoji: "😣" },
+    { en: "He goes to the dentist.", ru: "Он идёт к зубно́му врачу́.", he: "הוא הולך לרופאת שיניים.", emoji: "🏥" },
+    { en: "The dentist smiles and says: Open your mouth.", ru: "Врач улыба́ется и говори́т: «Откро́йте рот».", he: "הרופאה מחייכת ואומרת: תפתח את הפה.", emoji: "😁" },
+    { en: "It does not hurt much.", ru: "Э́то не о́чень бо́льно.", he: "זה לא כואב הרבה.", emoji: "👍" },
+    { en: "After ten minutes, the tooth is fine.", ru: "Че́рез де́сять мину́т зуб в поря́дке.", he: "אחרי עשר דקות השן בסדר.", emoji: "⏱️" },
+    { en: "Michael smiles and goes home.", ru: "Михаи́л улыба́ется и идёт домо́й.", he: "מיכאל מחייך והולך הביתה.", emoji: "😊" }
+  ],
+  questions: [
+    { q: { en: "What hurts Michael?", ru: "Что боли́т у Михаи́ла?", he: "מה כואב למיכאל?" },
+      options: [ { en: "His head", ru: "Голова́", he: "הראש" }, { en: "His tooth", ru: "Зуб", he: "השן" }, { en: "His leg", ru: "Нога́", he: "הרגל" } ],
+      answer: 1 },
+    { q: { en: "What does the dentist say?", ru: "Что говори́т врач?", he: "מה הרופאה אומרת?" },
+      options: [ { en: "Open your mouth", ru: "Откро́йте рот", he: "תפתח את הפה" }, { en: "Go home", ru: "Иди́те домо́й", he: "לך הביתה" }, { en: "Come back tomorrow", ru: "Приходи́те за́втра", he: "תחזור מחר" } ],
+      answer: 0 },
+    { q: { en: "How long does it take?", ru: "Ско́лько вре́мени э́то занима́ет?", he: "כמה זמן זה לוקח?" },
+      options: [ { en: "An hour", ru: "Час", he: "שעה" }, { en: "Two days", ru: "Два дня", he: "יומיים" }, { en: "Ten minutes", ru: "Де́сять мину́т", he: "עשר דקות" } ],
+      answer: 2 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_picnic", level: 1, emoji: "🧺",
+  title: { en: "A Picnic in the Park", ru: "Пикни́к в па́рке", he: "פיקניק בפארק" },
+  sentences: [
+    { en: "It is a sunny Saturday.", ru: "Сего́дня со́лнечная суббо́та.", he: "היום שבת שמשית.", emoji: "☀️" },
+    { en: "The family goes to the park.", ru: "Семья́ идёт в парк.", he: "המשפחה הולכת לפארק.", emoji: "🌳" },
+    { en: "Mom brings sandwiches and fruit.", ru: "Ма́ма берёт бутербро́ды и фру́кты.", he: "אמא לוקחת כריכים ופירות.", emoji: "🥪" },
+    { en: "Dad brings a big blanket.", ru: "Па́па берёт большо́е покрыва́ло.", he: "אבא לוקח שמיכה גדולה.", emoji: "🧺" },
+    { en: "They sit under a tree and eat.", ru: "Они́ сидя́т под де́ревом и едя́т.", he: "הם יושבים מתחת לעץ ואוכלים.", emoji: "🍉" },
+    { en: "A bird comes and takes some bread.", ru: "Прилета́ет пти́ца и берёт хлеб.", he: "ציפור מגיעה ולוקחת לחם.", emoji: "🐦" },
+    { en: "Everyone laughs.", ru: "Все смею́тся.", he: "כולם צוחקים.", emoji: "😄" }
+  ],
+  questions: [
+    { q: { en: "What day is it?", ru: "Како́й сего́дня день?", he: "איזה יום היום?" },
+      options: [ { en: "Monday", ru: "Понеде́льник", he: "יום שני" }, { en: "Friday", ru: "Пя́тница", he: "יום שישי" }, { en: "Saturday", ru: "Суббо́та", he: "שבת" } ],
+      answer: 2 },
+    { q: { en: "What does Dad bring?", ru: "Что берёт па́па?", he: "מה אבא לוקח?" },
+      options: [ { en: "Sandwiches", ru: "Бутербро́ды", he: "כריכים" }, { en: "A blanket", ru: "Покрыва́ло", he: "שמיכה" }, { en: "A ball", ru: "Мяч", he: "כדור" } ],
+      answer: 1 },
+    { q: { en: "Who takes the bread?", ru: "Кто берёт хлеб?", he: "מי לוקח את הלחם?" },
+      options: [ { en: "A bird", ru: "Пти́ца", he: "ציפור" }, { en: "A dog", ru: "Соба́ка", he: "כלב" }, { en: "A child", ru: "Ребёнок", he: "ילד" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_gift", level: 2, emoji: "🎁",
+  title: { en: "A Gift for Mom", ru: "Пода́рок для ма́мы", he: "מתנה לאמא" },
+  sentences: [
+    { en: "Next week is Mom's birthday.", ru: "На сле́дующей неде́ле у ма́мы день рожде́ния.", he: "בשבוע הבא יום ההולדת של אמא.", emoji: "🎂" },
+    { en: "Daniel wants to buy her a gift.", ru: "Дании́л хо́чет купи́ть ей пода́рок.", he: "דניאל רוצה לקנות לה מתנה.", emoji: "🎁" },
+    { en: "He has only one hundred shekels.", ru: "У него́ то́лько сто ше́келей.", he: "יש לו רק מאה שקלים.", emoji: "💰" },
+    { en: "First he goes to a flower shop.", ru: "Снача́ла он идёт в цвето́чный магази́н.", he: "קודם הוא הולך לחנות פרחים.", emoji: "💐" },
+    { en: "The flowers are beautiful, but they die quickly.", ru: "Цветы́ краси́вые, но они́ бы́стро вя́нут.", he: "הפרחים יפים, אבל הם נובלים מהר.", emoji: "🥀" },
+    { en: "Then he sees a small bookshop.", ru: "Пото́м он ви́дит ма́ленький кни́жный магази́н.", he: "אחר כך הוא רואה חנות ספרים קטנה.", emoji: "📚" },
+    { en: "Mom loves to read, but she reads in Russian.", ru: "Ма́ма лю́бит чита́ть, но она́ чита́ет по-ру́сски.", he: "אמא אוהבת לקרוא, אבל היא קוראת ברוסית.", emoji: "📖" },
+    { en: "The seller finds a Russian cookbook.", ru: "Продаве́ц нахо́дит ру́сскую кулина́рную кни́гу.", he: "המוכר מוצא ספר בישול ברוסית.", emoji: "🔍" },
+    { en: "It costs ninety shekels.", ru: "Она́ сто́ит девяно́сто ше́келей.", he: "הוא עולה תשעים שקלים.", emoji: "🏷️" },
+    { en: "Daniel is happy: the gift is perfect.", ru: "Дании́л дово́лен: пода́рок идеа́льный.", he: "דניאל מרוצה: המתנה מושלמת.", emoji: "😊" }
+  ],
+  questions: [
+    { q: { en: "How much money does Daniel have?", ru: "Ско́лько де́нег у Дании́ла?", he: "כמה כסף יש לדניאל?" },
+      options: [ { en: "Fifty shekels", ru: "Пятьдеся́т ше́келей", he: "חמישים שקלים" }, { en: "One hundred shekels", ru: "Сто ше́келей", he: "מאה שקלים" }, { en: "Two hundred shekels", ru: "Две́сти ше́келей", he: "מאתיים שקלים" } ],
+      answer: 1 },
+    { q: { en: "Why doesn't he buy flowers?", ru: "Почему́ он не покупа́ет цветы́?", he: "למה הוא לא קונה פרחים?" },
+      options: [ { en: "They are expensive", ru: "Они́ дороги́е", he: "הם יקרים" }, { en: "Mom doesn't like flowers", ru: "Ма́ма не лю́бит цветы́", he: "אמא לא אוהבת פרחים" }, { en: "They die quickly", ru: "Они́ бы́стро вя́нут", he: "הם נובלים מהר" } ],
+      answer: 2 },
+    { q: { en: "What gift does he buy?", ru: "Како́й пода́рок он покупа́ет?", he: "איזו מתנה הוא קונה?" },
+      options: [ { en: "A cookbook", ru: "Кулина́рную кни́гу", he: "ספר בישול" }, { en: "A scarf", ru: "Шарф", he: "צעיף" }, { en: "Chocolate", ru: "Шокола́д", he: "שוקולד" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_power_outage", level: 2, emoji: "🕯️",
+  title: { en: "The Power Outage", ru: "Без све́та", he: "הפסקת חשמל" },
+  sentences: [
+    { en: "On Tuesday evening, the electricity went out.", ru: "Во вто́рник ве́чером пропа́ло электри́чество.", he: "ביום שלישי בערב החשמל נפל.", emoji: "💡" },
+    { en: "The whole building was dark.", ru: "Весь дом был в темноте́.", he: "כל הבניין היה בחושך.", emoji: "🌑" },
+    { en: "The TV and the internet did not work.", ru: "Телеви́зор и интерне́т не рабо́тали.", he: "הטלוויזיה והאינטרנט לא עבדו.", emoji: "📺" },
+    { en: "Grandma found candles in the kitchen.", ru: "Ба́бушка нашла́ све́чи на ку́хне.", he: "סבתא מצאה נרות במטבח.", emoji: "🕯️" },
+    { en: "The family sat together at the table.", ru: "Семья́ се́ла вме́сте за стол.", he: "המשפחה ישבה ביחד ליד השולחן.", emoji: "👨‍👩‍👧" },
+    { en: "Grandma told stories about her childhood.", ru: "Ба́бушка расска́зывала исто́рии о своём де́тстве.", he: "סבתא סיפרה סיפורים על הילדות שלה.", emoji: "👵" },
+    { en: "Then they played cards.", ru: "Пото́м они́ игра́ли в ка́рты.", he: "אחר כך הם שיחקו בקלפים.", emoji: "🃏" },
+    { en: "After two hours, the light came back.", ru: "Че́рез два часа́ свет верну́лся.", he: "אחרי שעתיים האור חזר.", emoji: "💡" },
+    { en: "But nobody wanted to turn on the TV.", ru: "Но никто́ не хоте́л включа́ть телеви́зор.", he: "אבל אף אחד לא רצה להדליק את הטלוויזיה.", emoji: "🙂" }
+  ],
+  questions: [
+    { q: { en: "When did the electricity go out?", ru: "Когда́ пропа́ло электри́чество?", he: "מתי החשמל נפל?" },
+      options: [ { en: "On Monday morning", ru: "В понеде́льник у́тром", he: "ביום שני בבוקר" }, { en: "On Friday night", ru: "В пя́тницу но́чью", he: "ביום שישי בלילה" }, { en: "On Tuesday evening", ru: "Во вто́рник ве́чером", he: "ביום שלישי בערב" } ],
+      answer: 2 },
+    { q: { en: "What did Grandma find?", ru: "Что нашла́ ба́бушка?", he: "מה סבתא מצאה?" },
+      options: [ { en: "A flashlight", ru: "Фона́рик", he: "פנס" }, { en: "Candles", ru: "Све́чи", he: "נרות" }, { en: "Cards", ru: "Ка́рты", he: "קלפים" } ],
+      answer: 1 },
+    { q: { en: "How long was there no light?", ru: "Ско́лько вре́мени не бы́ло све́та?", he: "כמה זמן לא היה אור?" },
+      options: [ { en: "Two hours", ru: "Два часа́", he: "שעתיים" }, { en: "Ten minutes", ru: "Де́сять мину́т", he: "עשר דקות" }, { en: "All night", ru: "Всю ночь", he: "כל הלילה" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_lost_passport", level: 2, emoji: "🛂",
+  title: { en: "The Lost Passport", ru: "Поте́рянный па́спорт", he: "הדרכון שאבד" },
+  sentences: [
+    { en: "Olga was at the airport with her husband.", ru: "О́льга была́ в аэропорту́ с му́жем.", he: "אולגה הייתה בשדה התעופה עם בעלה.", emoji: "✈️" },
+    { en: "Their flight to Rome was in two hours.", ru: "Их рейс в Рим был че́рез два часа́.", he: "הטיסה שלהם לרומא הייתה בעוד שעתיים.", emoji: "🕑" },
+    { en: "Suddenly Olga could not find her passport.", ru: "Вдруг О́льга не смогла́ найти́ свой па́спорт.", he: "פתאום אולגה לא הצליחה למצוא את הדרכון שלה.", emoji: "😱" },
+    { en: "She looked in her bag and in her pockets.", ru: "Она́ посмотре́ла в су́мке и в карма́нах.", he: "היא חיפשה בתיק ובכיסים.", emoji: "👜" },
+    { en: "The passport was gone.", ru: "Па́спорт пропа́л.", he: "הדרכון נעלם.", emoji: "❌" },
+    { en: "Her husband called the café where they ate breakfast.", ru: "Муж позвони́л в кафе́, где они́ за́втракали.", he: "בעלה התקשר לבית הקפה שבו הם אכלו ארוחת בוקר.", emoji: "☎️" },
+    { en: "A waiter answered: \"Yes, we have a passport here!\"", ru: "Официа́нт отве́тил: «Да, у нас есть па́спорт!»", he: "מלצר ענה: \"כן, יש אצלנו דרכון!\"", emoji: "🙌" },
+    { en: "Olga ran to the café and took it.", ru: "О́льга побежа́ла в кафе́ и забрала́ его́.", he: "אולגה רצה לבית הקפה ולקחה אותו.", emoji: "🏃‍♀️" },
+    { en: "They made it to the flight just in time.", ru: "Они́ успе́ли на рейс в после́днюю мину́ту.", he: "הם הספיקו לטיסה ברגע האחרון.", emoji: "✅" },
+    { en: "Now Olga always keeps her passport in one place.", ru: "Тепе́рь О́льга всегда́ храни́т па́спорт в одно́м ме́сте.", he: "עכשיו אולגה תמיד שומרת את הדרכון במקום אחד.", emoji: "📌" }
+  ],
+  questions: [
+    { q: { en: "Where were they flying?", ru: "Куда́ они́ лете́ли?", he: "לאן הם טסו?" },
+      options: [ { en: "To Paris", ru: "В Пари́ж", he: "לפריז" }, { en: "To Rome", ru: "В Рим", he: "לרומא" }, { en: "To London", ru: "В Ло́ндон", he: "ללונדון" } ],
+      answer: 1 },
+    { q: { en: "Where was the passport?", ru: "Где был па́спорт?", he: "איפה היה הדרכון?" },
+      options: [ { en: "In the café", ru: "В кафе́", he: "בבית הקפה" }, { en: "In a taxi", ru: "В такси́", he: "במונית" }, { en: "At home", ru: "До́ма", he: "בבית" } ],
+      answer: 0 },
+    { q: { en: "Did they miss the flight?", ru: "Они́ опозда́ли на рейс?", he: "הם פספסו את הטיסה?" },
+      options: [ { en: "Yes", ru: "Да", he: "כן" }, { en: "Yes, by one hour", ru: "Да, на час", he: "כן, בשעה" }, { en: "No, they made it", ru: "Нет, они́ успе́ли", he: "לא, הם הספיקו" } ],
+      answer: 2 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_train", level: 2, emoji: "🚆",
+  title: { en: "A Train Journey", ru: "Пое́здка на по́езде", he: "נסיעה ברכבת" },
+  sentences: [
+    { en: "Sara takes the train from Tel Aviv to Haifa.", ru: "Са́ра е́дет на по́езде из Тель-Ави́ва в Ха́йфу.", he: "שרה נוסעת ברכבת מתל אביב לחיפה.", emoji: "🚆" },
+    { en: "There are many people on the train, but she finds a seat by the window.", ru: "В по́езде мно́го люде́й, но она́ нахо́дит ме́сто у окна́.", he: "ברכבת יש הרבה אנשים, אבל היא מוצאת מקום ליד החלון.", emoji: "🪑" },
+    { en: "An old man sits down next to her.", ru: "Ря́дом с ней сади́тся пожило́й мужчи́на.", he: "לידה מתיישב איש מבוגר.", emoji: "👴" },
+    { en: "He is reading a newspaper in Russian.", ru: "Он чита́ет газе́ту на ру́сском.", he: "הוא קורא עיתון ברוסית.", emoji: "📰" },
+    { en: "Sara asks him: \"Are you from Russia?\"", ru: "Са́ра спра́шивает его́: «Вы из Росси́и?»", he: "שרה שואלת אותו: \"אתה מרוסיה?\"", emoji: "❓" },
+    { en: "\"No, from Riga,\" he says with a smile.", ru: "«Нет, из Ри́ги», — говори́т он с улы́бкой.", he: "\"לא, מריגה,\" הוא אומר בחיוך.", emoji: "😊" },
+    { en: "They talk the whole way.", ru: "Они́ разгова́ривают всю доро́гу.", he: "הם מדברים כל הדרך.", emoji: "💬" },
+    { en: "Outside, the sea shines in the sun.", ru: "За окно́м мо́ре блести́т на со́лнце.", he: "בחוץ הים מנצנץ בשמש.", emoji: "🌊" },
+    { en: "The hour goes by very fast.", ru: "Час прохо́дит о́чень бы́стро.", he: "השעה עוברת מהר מאוד.", emoji: "⏱️" },
+    { en: "At the station, they say goodbye like old friends.", ru: "На ста́нции они́ проща́ются как ста́рые друзья́.", he: "בתחנה הם נפרדים כמו חברים ותיקים.", emoji: "👋" }
+  ],
+  questions: [
+    { q: { en: "Where is Sara going?", ru: "Куда́ е́дет Са́ра?", he: "לאן שרה נוסעת?" },
+      options: [ { en: "To Eilat", ru: "В Эйла́т", he: "לאילת" }, { en: "To Jerusalem", ru: "В Иерусали́м", he: "לירושלים" }, { en: "To Haifa", ru: "В Ха́йфу", he: "לחיפה" } ],
+      answer: 2 },
+    { q: { en: "Where is the man from?", ru: "Отку́да мужчи́на?", he: "מאיפה האיש?" },
+      options: [ { en: "From Russia", ru: "Из Росси́и", he: "מרוסיה" }, { en: "From Riga", ru: "Из Ри́ги", he: "מריגה" }, { en: "From Haifa", ru: "Из Ха́йфы", he: "מחיפה" } ],
+      answer: 1 },
+    { q: { en: "What do they do on the way?", ru: "Что они́ де́лают в доро́ге?", he: "מה הם עושים בדרך?" },
+      options: [ { en: "They talk", ru: "Разгова́ривают", he: "מדברים" }, { en: "They sleep", ru: "Спят", he: "ישנים" }, { en: "They eat", ru: "Едя́т", he: "אוכלים" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_job_interview", level: 3, emoji: "💼",
+  title: { en: "The Job Interview", ru: "Собесе́дование", he: "ראיון עבודה" },
+  sentences: [
+    { en: "Irina had a job interview at a big hotel.", ru: "У Ири́ны бы́ло собесе́дование в большо́й гости́нице.", he: "לאירינה היה ראיון עבודה במלון גדול.", emoji: "💼" },
+    { en: "She wanted to work as a receptionist.", ru: "Она́ хоте́ла рабо́тать администра́тором.", he: "היא רצתה לעבוד בקבלה.", emoji: "🛎️" },
+    { en: "The night before, she could not sleep at all.", ru: "Накану́не но́чью она́ совсе́м не могла́ спать.", he: "בלילה שלפני היא בכלל לא הצליחה לישון.", emoji: "🌙" },
+    { en: "In the morning, she put on her best dress.", ru: "У́тром она́ наде́ла своё лу́чшее пла́тье.", he: "בבוקר היא לבשה את השמלה הכי יפה שלה.", emoji: "👗" },
+    { en: "She arrived twenty minutes early.", ru: "Она́ пришла́ на два́дцать мину́т ра́ньше.", he: "היא הגיעה עשרים דקות מוקדם.", emoji: "⏰" },
+    { en: "The manager asked her many questions.", ru: "Ме́неджер задава́л ей мно́го вопро́сов.", he: "המנהל שאל אותה הרבה שאלות.", emoji: "❓" },
+    { en: "Then he asked: \"Do you speak English?\"", ru: "Пото́м он спроси́л: «Вы говори́те по-англи́йски?»", he: "ואז הוא שאל: \"את מדברת אנגלית?\"", emoji: "🗣️" },
+    { en: "Irina was nervous, but she answered in English.", ru: "Ири́на волнова́лась, но отве́тила по-англи́йски.", he: "אירינה הייתה לחוצה, אבל היא ענתה באנגלית.", emoji: "😬" },
+    { en: "She also said that she speaks Hebrew and Russian.", ru: "Она́ та́кже сказа́ла, что говори́т на иври́те и по-ру́сски.", he: "היא גם אמרה שהיא מדברת עברית ורוסית.", emoji: "🌍" },
+    { en: "The manager smiled: \"Three languages! That is great for a hotel.\"", ru: "Ме́неджер улыбну́лся: «Три языка́! Для гости́ницы э́то прекра́сно».", he: "המנהל חייך: \"שלוש שפות! זה מצוין למלון.\"", emoji: "😊" },
+    { en: "Two days later, Irina got a phone call.", ru: "Че́рез два дня Ири́не позвони́ли.", he: "יומיים אחר כך התקשרו לאירינה.", emoji: "📞" },
+    { en: "She got the job!", ru: "Её взя́ли на рабо́ту!", he: "היא התקבלה לעבודה!", emoji: "🎉" }
+  ],
+  questions: [
+    { q: { en: "Where was the interview?", ru: "Где бы́ло собесе́дование?", he: "איפה היה הראיון?" },
+      options: [ { en: "At a bank", ru: "В ба́нке", he: "בבנק" }, { en: "At a hotel", ru: "В гости́нице", he: "במלון" }, { en: "At a school", ru: "В шко́ле", he: "בבית ספר" } ],
+      answer: 1 },
+    { q: { en: "How early did she arrive?", ru: "На ско́лько ра́ньше она́ пришла́?", he: "כמה מוקדם היא הגיעה?" },
+      options: [ { en: "Five minutes early", ru: "На пять мину́т", he: "חמש דקות" }, { en: "One hour early", ru: "На час", he: "שעה" }, { en: "Twenty minutes early", ru: "На два́дцать мину́т", he: "עשרים דקות" } ],
+      answer: 2 },
+    { q: { en: "Why did the manager like her?", ru: "Почему́ она́ понра́вилась ме́неджеру?", he: "למה היא מצאה חן בעיני המנהל?" },
+      options: [ { en: "She speaks three languages", ru: "Она́ говори́т на трёх языка́х", he: "היא מדברת שלוש שפות" }, { en: "She has a nice dress", ru: "У неё краси́вое пла́тье", he: "יש לה שמלה יפה" }, { en: "She lives near the hotel", ru: "Она́ живёт ря́дом с гости́ницей", he: "היא גרה ליד המלון" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_wedding", level: 3, emoji: "💍",
+  title: { en: "The Wedding", ru: "Сва́дьба", he: "החתונה" },
+  sentences: [
+    { en: "Last week, my cousin Yael got married.", ru: "На про́шлой неде́ле моя́ двою́родная сестра́ Яэ́ль вы́шла за́муж.", he: "בשבוע שעבר בת הדודה שלי יעל התחתנה.", emoji: "💍" },
+    { en: "The wedding was in a garden near the sea.", ru: "Сва́дьба была́ в саду́ у мо́ря.", he: "החתונה הייתה בגן אירועים ליד הים.", emoji: "🌊" },
+    { en: "There were almost three hundred guests.", ru: "Там бы́ло почти́ три́ста госте́й.", he: "היו שם כמעט שלוש מאות אורחים.", emoji: "👥" },
+    { en: "Yael wore a long white dress.", ru: "На Яэ́ли бы́ло дли́нное бе́лое пла́тье.", he: "יעל לבשה שמלה לבנה וארוכה.", emoji: "👰" },
+    { en: "The groom, Amir, cried when he saw her.", ru: "Жени́х, Ами́р, запла́кал, когда́ уви́дел её.", he: "החתן, אמיר, בכה כשהוא ראה אותה.", emoji: "🤵" },
+    { en: "Under the chuppah, he broke a glass, and everyone shouted: \"Mazal tov!\"", ru: "Под ху́пой он разби́л стака́н, и все закрича́ли: «Мазл тов!»", he: "מתחת לחופה הוא שבר כוס, וכולם צעקו: \"מזל טוב!\"", emoji: "🥂" },
+    { en: "Then the music started and the dancing began.", ru: "Пото́м заигра́ла му́зыка, и начали́сь та́нцы.", he: "ואז התחילו המוזיקה והריקודים.", emoji: "💃" },
+    { en: "My grandmother danced more than anyone.", ru: "Моя́ ба́бушка танцева́ла бо́льше всех.", he: "סבתא שלי רקדה יותר מכולם.", emoji: "👵" },
+    { en: "The food was delicious, but there was too much of it.", ru: "Еда́ была́ вку́сной, но её бы́ло сли́шком мно́го.", he: "האוכל היה טעים, אבל היה ממנו יותר מדי.", emoji: "🍽️" },
+    { en: "We came home at three in the morning.", ru: "Мы верну́лись домо́й в три часа́ но́чи.", he: "חזרנו הביתה בשלוש בלילה.", emoji: "🌙" },
+    { en: "My feet hurt, but my heart was happy.", ru: "Но́ги боле́ли, но на душе́ бы́ло ра́достно.", he: "כאבו לי הרגליים, אבל הלב היה שמח.", emoji: "❤️" }
+  ],
+  questions: [
+    { q: { en: "Where was the wedding?", ru: "Где была́ сва́дьба?", he: "איפה הייתה החתונה?" },
+      options: [ { en: "In a hotel", ru: "В гости́нице", he: "במלון" }, { en: "In a garden near the sea", ru: "В саду́ у мо́ря", he: "בגן ליד הים" }, { en: "In a restaurant", ru: "В рестора́не", he: "במסעדה" } ],
+      answer: 1 },
+    { q: { en: "What did the groom do when he saw Yael?", ru: "Что сде́лал жени́х, когда́ уви́дел Яэ́ль?", he: "מה החתן עשה כשהוא ראה את יעל?" },
+      options: [ { en: "He laughed", ru: "Засмея́лся", he: "צחק" }, { en: "He sang", ru: "Запе́л", he: "שר" }, { en: "He cried", ru: "Запла́кал", he: "בכה" } ],
+      answer: 2 },
+    { q: { en: "Who danced more than anyone?", ru: "Кто танцева́л бо́льше всех?", he: "מי רקד יותר מכולם?" },
+      options: [ { en: "The grandmother", ru: "Ба́бушка", he: "סבתא" }, { en: "The groom", ru: "Жени́х", he: "החתן" }, { en: "Yael", ru: "Яэ́ль", he: "יעל" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_borscht", level: 3, emoji: "🍲",
+  title: { en: "Borscht with Grandma", ru: "Борщ с ба́бушкой", he: "בורשט עם סבתא" },
+  sentences: [
+    { en: "Every winter, Grandma Valya makes borscht.", ru: "Ка́ждую зи́му ба́бушка Ва́ля ва́рит борщ.", he: "כל חורף סבתא ואליה מבשלת בורשט.", emoji: "🍲" },
+    { en: "This year, she decided to teach her grandson Noam.", ru: "В э́том году́ она́ реши́ла научи́ть вну́ка Ноа́ма.", he: "השנה היא החליטה ללמד את הנכד שלה, נועם.", emoji: "👵" },
+    { en: "Noam washed the beets, potatoes, carrots, and cabbage.", ru: "Ноа́м помы́л свёклу, карто́шку, морко́вку и капу́сту.", he: "נועם שטף סלק, תפוחי אדמה, גזר וכרוב.", emoji: "🥕" },
+    { en: "Grandma showed him how to cut the vegetables.", ru: "Ба́бушка показа́ла ему́, как ре́зать о́вощи.", he: "סבתא הראתה לו איך לחתוך את הירקות.", emoji: "🔪" },
+    { en: "\"Small pieces, not big ones!\" she said.", ru: "«Ма́ленькими кусо́чками, не больши́ми!» — сказа́ла она́.", he: "\"חתיכות קטנות, לא גדולות!\" היא אמרה.", emoji: "☝️" },
+    { en: "First they cooked the meat for a whole hour.", ru: "Снача́ла они́ ва́рили мя́со це́лый час.", he: "קודם הם בישלו את הבשר שעה שלמה.", emoji: "🥩" },
+    { en: "Then they added the vegetables one by one.", ru: "Пото́м они́ доба́вили о́вощи по о́череди.", he: "אחר כך הם הוסיפו את הירקות אחד אחרי השני.", emoji: "➕" },
+    { en: "Noam asked: \"How much salt?\"", ru: "Ноа́м спроси́л: «Ско́лько со́ли?»", he: "נועם שאל: \"כמה מלח?\"", emoji: "🧂" },
+    { en: "Grandma laughed: \"I never measure. I just know.\"", ru: "Ба́бушка засмея́лась: «Я никогда́ не ме́ряю. Я про́сто зна́ю».", he: "סבתא צחקה: \"אני אף פעם לא מודדת. אני פשוט יודעת.\"", emoji: "😄" },
+    { en: "Two hours later, the borscht was red and beautiful.", ru: "Че́рез два часа́ борщ был кра́сный и краси́вый.", he: "אחרי שעתיים הבורשט היה אדום ויפה.", emoji: "❤️" },
+    { en: "They ate it with sour cream and black bread.", ru: "Они́ е́ли его́ со смета́ной и чёрным хле́бом.", he: "הם אכלו אותו עם שמנת חמוצה ולחם שחור.", emoji: "🍞" },
+    { en: "Noam said it was the best borscht in the world.", ru: "Ноа́м сказа́л, что э́то лу́чший борщ на све́те.", he: "נועם אמר שזה הבורשט הכי טוב בעולם.", emoji: "🏆" }
+  ],
+  questions: [
+    { q: { en: "What did Noam wash?", ru: "Что помы́л Ноа́м?", he: "מה נועם שטף?" },
+      options: [ { en: "The dishes", ru: "Посу́ду", he: "את הכלים" }, { en: "The vegetables", ru: "О́вощи", he: "את הירקות" }, { en: "The floor", ru: "Пол", he: "את הרצפה" } ],
+      answer: 1 },
+    { q: { en: "How does Grandma know how much salt to use?", ru: "Как ба́бушка зна́ет, ско́лько класть со́ли?", he: "איך סבתא יודעת כמה מלח לשים?" },
+      options: [ { en: "She reads a recipe", ru: "Она́ чита́ет реце́пт", he: "היא קוראת מתכון" }, { en: "She asks Noam", ru: "Она́ спра́шивает Ноа́ма", he: "היא שואלת את נועם" }, { en: "She just knows", ru: "Она́ про́сто зна́ет", he: "היא פשוט יודעת" } ],
+      answer: 2 },
+    { q: { en: "What did they eat the borscht with?", ru: "С чем они́ е́ли борщ?", he: "עם מה הם אכלו את הבורשט?" },
+      options: [ { en: "With sour cream and black bread", ru: "Со смета́ной и чёрным хле́бом", he: "עם שמנת חמוצה ולחם שחור" }, { en: "With rice", ru: "С ри́сом", he: "עם אורז" }, { en: "With cheese", ru: "С сы́ром", he: "עם גבינה" } ],
+      answer: 0 }
+  ]
+});
+
+LS_DATA.stories.push({
+  id: "s_jerusalem", level: 3, emoji: "🏛️",
+  title: { en: "A Day in Jerusalem", ru: "День в Иерусали́ме", he: "יום בירושלים" },
+  sentences: [
+    { en: "Tanya's friend Lisa came from Berlin to Israel.", ru: "По́друга Та́ни, Ли́за, прие́хала из Берли́на в Изра́иль.", he: "החברה של טניה, ליזה, הגיעה מברלין לישראל.", emoji: "✈️" },
+    { en: "On Friday, they took the train to Jerusalem.", ru: "В пя́тницу они́ пое́хали на по́езде в Иерусали́м.", he: "ביום שישי הן נסעו ברכבת לירושלים.", emoji: "🚆" },
+    { en: "First they walked in the Old City.", ru: "Снача́ла они́ гуля́ли по Ста́рому го́роду.", he: "קודם הן טיילו בעיר העתיקה.", emoji: "🏛️" },
+    { en: "The narrow streets were full of people and smells.", ru: "У́зкие у́лицы бы́ли полны́ люде́й и за́пахов.", he: "הסמטאות הצרות היו מלאות אנשים וריחות.", emoji: "👃" },
+    { en: "They stood at the Western Wall, and Lisa put a note between the stones.", ru: "Они́ постоя́ли у Стены́ Пла́ча, и Ли́за положи́ла запи́ску ме́жду камня́ми.", he: "הן עמדו ליד הכותל, וליזה שמה פתק בין האבנים.", emoji: "🧱" },
+    { en: "Then they went to the Mahane Yehuda market.", ru: "Пото́м они́ пошли́ на ры́нок Махане́ Иегу́да.", he: "אחר כך הן הלכו לשוק מחנה יהודה.", emoji: "🛒" },
+    { en: "Before Shabbat, the market was very loud and busy.", ru: "Пе́ред суббо́той на ры́нке бы́ло о́чень шу́мно и лю́дно.", he: "לפני שבת השוק היה רועש ועמוס מאוד.", emoji: "🔊" },
+    { en: "They bought warm challah, olives, and sweet halva.", ru: "Они́ купи́ли тёплую ха́лу, масли́ны и сла́дкую халву́.", he: "הן קנו חלה חמה, זיתים וחלבה מתוקה.", emoji: "🥖" },
+    { en: "In the evening, the city became very quiet.", ru: "Ве́чером го́род стал о́чень ти́хим.", he: "בערב העיר נהייתה שקטה מאוד.", emoji: "🌇" },
+    { en: "The stones of the houses looked golden in the sunset.", ru: "На зака́те ка́мни домо́в каза́лись золоты́ми.", he: "בשקיעה אבני הבתים נראו זהובות.", emoji: "✨" },
+    { en: "Lisa said: \"Now I understand why people love this city.\"", ru: "Ли́за сказа́ла: «Тепе́рь я понима́ю, почему́ лю́ди лю́бят э́тот го́род».", he: "ליזה אמרה: \"עכשיו אני מבינה למה אנשים אוהבים את העיר הזאת.\"", emoji: "❤️" }
+  ],
+  questions: [
+    { q: { en: "How did they get to Jerusalem?", ru: "Как они́ добрали́сь до Иерусали́ма?", he: "איך הן הגיעו לירושלים?" },
+      options: [ { en: "By car", ru: "На маши́не", he: "במכונית" }, { en: "By bus", ru: "На авто́бусе", he: "באוטובוס" }, { en: "By train", ru: "На по́езде", he: "ברכבת" } ],
+      answer: 2 },
+    { q: { en: "What did Lisa put between the stones?", ru: "Что Ли́за положи́ла ме́жду камня́ми?", he: "מה ליזה שמה בין האבנים?" },
+      options: [ { en: "A coin", ru: "Моне́ту", he: "מטבע" }, { en: "A note", ru: "Запи́ску", he: "פתק" }, { en: "A flower", ru: "Цвето́к", he: "פרח" } ],
+      answer: 1 },
+    { q: { en: "What did they buy at the market?", ru: "Что они́ купи́ли на ры́нке?", he: "מה הן קנו בשוק?" },
+      options: [ { en: "Challah, olives, and halva", ru: "Ха́лу, масли́ны и халву́", he: "חלה, זיתים וחלבה" }, { en: "Fish and rice", ru: "Ры́бу и рис", he: "דגים ואורז" }, { en: "Clothes", ru: "Оде́жду", he: "בגדים" } ],
+      answer: 0 }
+  ]
+});
