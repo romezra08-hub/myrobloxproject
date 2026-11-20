@@ -34,12 +34,20 @@
       if (e.key === "Enter" && !mainBtn.disabled && checkFn && !(e.target && e.target.tagName === "TEXTAREA")) {
         if (e.target && e.target.tagName === "INPUT" && mainBtn.dataset.mode === "check") return; // input handles its own Enter
         if (e.target === mainBtn) return; // the focused main button gets a native click
+        if (e.target && /^(BUTTON|A|SUMMARY|SELECT)$/.test(e.target.tagName)) return; // other focused controls keep their native Enter
         e.preventDefault();
         checkFn();
       }
     };
     document.addEventListener("keydown", onKey);
-    app.onLeave(() => { document.removeEventListener("keydown", onKey); saveTime(); SP.stop(); SP.cancelListen(); });
+    app.onLeave(() => { document.removeEventListener("keydown", onKey); saveXp(); saveTime(); SP.stop(); SP.cancelListen(); });
+
+    let xpSaved = false;
+    function saveXp() {
+      if (xpSaved || !xp) return;
+      xpSaved = true;
+      ST.addXp(profile.id, xp);
+    }
 
     let timeSaved = false;
     function saveTime() {
@@ -61,7 +69,12 @@
       counter.textContent = Math.min(idx + 1, steps.length) + "/" + steps.length;
     }
 
+    // Only the first answer per item in a lesson moves its schedule forward (mistakes always count),
+    // so a word answered 4 times on day one doesn't jump to a multi-day interval.
+    const gradedNow = new Set();
     function gradeItem(id, correct, res) {
+      if (gradedNow.has(id) && correct) return;
+      gradedNow.add(id);
       const before = prog.cards[id] || SRS.newCard();
       const grade = SRS.gradeFrom(correct, { close: res.close });
       prog.cards[id] = SRS.review(before, grade, Date.now());
@@ -120,7 +133,7 @@
       results.push({ step, correct });
 
       if (step.item) gradeItem(step.item.id, correct, res);
-      if (res.matchIds) res.matchIds.forEach((id) => gradeItem(id, true, res));
+      if (res.matchIds) res.matchIds.forEach((id) => gradeItem(id, !!res.correct, res));
       if (res.letter) {
         const ls = prog.letters[res.letter] || (prog.letters[res.letter] = { seen: 1, right: 0, wrong: 0 });
         if (correct) ls.right = (ls.right || 0) + 1; else ls.wrong = (ls.wrong || 0) + 1;
@@ -213,6 +226,7 @@
     async function quit() {
       if (idx > 0 && !(await confirmBox(t("quitConfirm")))) return;
       ended = true;
+      saveXp();
       saveTime();
       app.go(opts.back || "#/home");
     }
@@ -220,7 +234,7 @@
     function end() {
       ended = true;
       xp += 10;
-      ST.addXp(profile.id, xp);
+      saveXp();
       saveTime();
       if (opts.onComplete) opts.onComplete({ right, wrong, xp, results });
       const total = right + wrong;

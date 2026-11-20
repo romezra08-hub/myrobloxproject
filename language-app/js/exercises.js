@@ -199,6 +199,7 @@
       btn.querySelector(".mic-label").textContent = t("listening");
       const res = await SP.listen(lang);
       busy = false;
+      if (!btn.isConnected) return; // exercise was left while listening
       btn.classList.remove("listening");
       btn.querySelector(".mic-label").textContent = t("tryAgain");
       out.innerHTML = "";
@@ -222,6 +223,7 @@
     let tries = 0;
     const msg = h("div.speak-msg");
     const w = micWidget(expected, T, ctx, (m) => {
+      if (step._done) return;
       if (m === null) { ctx.setCheck(true, () => ctx.finish({ correct: null, skipped: true }), t("skip")); return; }
       tries++;
       if (m.score >= 0.8) {

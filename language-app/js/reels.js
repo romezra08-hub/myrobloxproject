@@ -71,6 +71,7 @@
     const surprise = () => {
       const pool = topics.map((tp) => ({ type: "topic", id: tp.id, left: C.vocab().filter((v) => v.topic === tp.id && !prog.cards[v.id]).length }));
       const best = U.shuffle(pool).sort((a, b) => (b.left > 0) - (a.left > 0))[0];
+      if (!best) return;
       app.go(`#/reels/${best.type}/${best.id}`);
     };
     return h("div.page.reels-chooser",
@@ -128,8 +129,10 @@
       const word = it[T];
       const exT = it[T + "Ex"], exH = it[H + "Ex"];
       const isPhrase = it._type === "phrase";
-      const know = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); know.classList.add("on"); again.classList.remove("on"); grade(it, true); } }, h("span", "❤️"), h("small", tx("know")));
-      const again = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); again.classList.add("on"); know.classList.remove("on"); grade(it, false); } }, h("span", "🔁"), h("small", tx("again")));
+      // grade the card at most once per feed card (re-tapping must not stack SRS reviews / XP)
+      const gradeOnce = (ok) => { if (c.graded) return; c.graded = true; grade(it, ok); };
+      const know = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); know.classList.add("on"); again.classList.remove("on"); gradeOnce(true); } }, h("span", "❤️"), h("small", tx("know")));
+      const again = h("button.rail-btn", { type: "button", onclick: (e) => { e.stopPropagation(); again.classList.add("on"); know.classList.remove("on"); gradeOnce(false); } }, h("span", "🔁"), h("small", tx("again")));
       // 🎤 Say it: word first, then (for words) the example sentence.
       const sayBox = h("div.reel-say", { hidden: true, "aria-live": "polite" });
       let sayTarget = word, sayingSentence = false;
@@ -137,6 +140,7 @@
       const mic = h("button.rail-btn.mic", { type: "button", onclick: (e) => {
         e.stopPropagation();
         if (!SP.canListen()) { sayBox.hidden = false; sayBox.textContent = t("noSpeech"); return; }
+        if (mic.classList.contains("on")) return; // already listening
         mic.classList.add("on"); sayLbl.textContent = t("listening");
         sayBox.hidden = false; sayBox.innerHTML = "";
         mic.closest(".reel").classList.add("saying");
@@ -155,7 +159,7 @@
           root.LSUI.sfx(good ? "right" : "wrong");
           if (good) {
             ST.addXp(profile.id, sayingSentence ? 8 : 5);
-            if (!sayingSentence) { grade(it, true); know.classList.add("on"); }
+            if (!sayingSentence) { gradeOnce(true); know.classList.add("on"); }
             if (!sayingSentence && !isPhrase && exT) {
               sayBox.appendChild(h("button.say-next", { type: "button", onclick: (ev) => {
                 ev.stopPropagation(); sayTarget = exT; sayingSentence = true;
@@ -231,8 +235,7 @@
       c.onShow = () => {
         const main = el.querySelector(".reel-main");
         main.innerHTML = "";
-        ST.addSeconds(profile.id, Math.min(1800, Math.round((Date.now() - started) / 1000)));
-        ST.flush(profile.id);
+        saveTime();
         main.append(...[
           h("div.big-emoji", "🎬"),
           h("h2", tx("end")),
@@ -251,6 +254,14 @@
       scroller.appendChild(c.el);
     });
     scroller.firstChild && scroller.firstChild.appendChild(h("div.swipe-hint", "⬆️ " + tx("swipe")));
+
+    let timeSaved = false;
+    function saveTime() {
+      if (timeSaved) return;
+      timeSaved = true;
+      ST.addSeconds(profile.id, Math.min(1800, Math.round((Date.now() - started) / 1000)));
+      ST.flush(profile.id);
+    }
 
     let current = -1;
     function play(c) { if (c && c.play) c.play(); }
@@ -275,10 +286,10 @@
     cards.forEach((c) => io.observe(c.el));
 
     scroller.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); goTo(Math.min(cards.length - 1, current + 1)); }
+      if (e.key === "ArrowDown" || e.key === "PageDown" || (e.key === " " && e.target === scroller)) { e.preventDefault(); goTo(Math.min(cards.length - 1, current + 1)); }
       if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); goTo(Math.max(0, current - 1)); }
     });
-    app.onLeave(() => { io.disconnect(); SP.stop(); });
+    app.onLeave(() => { io.disconnect(); SP.stop(); SP.cancelListen(); saveTime(); });
 
     const wrap = h("div.reels-wrap", scroller, closeBtn, dots, soundHint);
     setTimeout(() => scroller.focus({ preventScroll: true }), 50);

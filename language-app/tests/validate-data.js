@@ -5,7 +5,7 @@ const U = require("../js/util.js");
 
 global.window = global;
 const dir = path.join(__dirname, "..", "data");
-const files = ["topics.js", "vocab1.js", "vocab2.js", "phrases.js", "dialogues.js", "grammar_en.js", "grammar_ru.js", "alphabet.js", "sounds.js", "stories.js"];
+const files = ["topics.js", "vocab1.js", "vocab2.js", "vocab3.js", "phrases.js", "dialogues.js", "grammar_en.js", "grammar_ru.js", "alphabet.js", "sounds.js", "stories.js"];
 const errors = [], warnings = [];
 files.forEach((f) => {
   const p = path.join(dir, f);

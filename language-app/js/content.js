@@ -210,7 +210,7 @@
     if (ctx.canListen && fresh.length) mixed.push({ kind: "speak", item: fresh[0], learning: true });
 
     // Spaced grammar review: a few questions from a grammar lesson that's due again.
-    const gDue = ((root.LS_DATA.grammar) || []).filter((g) => g.target === T && prog.grammar[g.id] && prog.grammar[g.id].due && prog.grammar[g.id].due <= Date.now());
+    const gDue = ((D().grammar) || []).filter((g) => g.target === T && prog.grammar[g.id] && prog.grammar[g.id].due && prog.grammar[g.id].due <= Date.now());
     if (gDue.length) {
       const g = gDue[0];
       const kinds = { choice: "gchoice", fill: "gfill", order: "gorder", fix: "gfix" };

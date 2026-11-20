@@ -82,7 +82,8 @@
     return new Promise((resolve) => {
       let finals = "", partial = "", settled = false;
       const offs = [];
-      const finish = (res) => { if (settled) return; settled = true; offs.forEach((f) => { try { f(); } catch (e) {} }); current = null; resolve(res); };
+      const me = { abort: () => { try { dict.stop(); } catch (e) {} } };
+      const finish = (res) => { if (settled) return; settled = true; offs.forEach((f) => { try { f(); } catch (e) {} }); if (current === me) current = null; resolve(res); };
       offs.push(dict.onFinal(({ text }) => { finals += " " + text; }));
       offs.push(dict.onPartial(({ text }) => { partial = text; }));
       offs.push(dict.onState(({ state, reason }) => {
@@ -91,7 +92,7 @@
         if (text) finish({ ok: true, alternatives: [text] });
         else finish({ ok: false, alternatives: [], error: reason === "not_granted" ? "not-allowed" : "no-speech" });
       }));
-      current = { abort: () => { try { dict.stop(); } catch (e) {} } };
+      current = me;
       dict.start({ language: (LOCALES[lang] || lang).slice(0, 2) }).catch((e) => finish({ ok: false, alternatives: [], error: e && e.code === "not_granted" ? "not-allowed" : (e && e.code) || "error" }));
       setTimeout(() => { try { dict.stop(); } catch (e) {} }, opts.timeout || 6000);
     });
@@ -113,7 +114,7 @@
       r.maxAlternatives = 5;
       r.continuous = false;
       let settled = false;
-      const finish = (res) => { if (!settled) { settled = true; current = null; resolve(res); } };
+      const finish = (res) => { if (!settled) { settled = true; if (current === r) current = null; resolve(res); } };
       r.onresult = (e) => {
         const alts = [];
         const res = e.results[0];

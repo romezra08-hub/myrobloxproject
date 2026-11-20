@@ -141,6 +141,8 @@
     const modeLbl = h("div.ex-title", t("trace"));
     const setStyle = (s) => { style = s; pad.setStyle(s); model.style.fontFamily = root.LSWriting.FONTS[s]; styleBtns.forEach((b) => b.classList.toggle("on", b.dataset.s === s)); };
     const styleBtns = [["print", t("printed")], ["cursive", t("cursive")]].map(([s, lbl]) => h("button.seg-btn" + (s === style ? ".on" : ""), { type: "button", "data-s": s, onclick: () => setStyle(s) }, lbl));
+    let scored = false; // XP once per drawing; new ink re-arms it
+    pad.el.addEventListener("pointerdown", () => { scored = false; });
     const done = () => {
       if (!pad.hasInk()) return;
       const sc = pad.score();
@@ -151,7 +153,7 @@
         ls.best = Math.max(ls.best || 0, mode === "write" ? sc : Math.round(sc * 0.8));
         ST.saveProgress(p.id);
       }
-      ST.addXp(p.id, sc >= 60 ? 5 : 2);
+      if (!scored) { scored = true; ST.addXp(p.id, sc >= 60 ? 5 : 2); }
       if (mode === "trace" && sc >= 55) {
         setTimeout(() => {
           mode = "write"; modeLbl.textContent = t("traceWrite"); pad.setGuide(false); pad.clear(); model.hidden = false;
@@ -203,7 +205,7 @@
     const start = () => { const plan = C.buildTopic(p, prog, tp.id, { canListen: SP.canListen() }); root.LSSession.run({ steps: plan.steps, back: "#/topic/" + tp.id }); };
     const status = (it) => { const c = prog.cards[it.id]; return SRS.isMastered(c) ? "mastered" : c ? "learning" : "new"; };
     app.mount(h("div.page.topic",
-      app.header(tp.emoji + " " + pick(tp), "#/words"),
+      app.header((tp.emoji || "") + " " + pick(tp), "#/words"),
       h("div.row",
         h("button.btn.primary", { type: "button", onclick: start }, "▶ " + t("learnTopic")),
         h("a.btn.ghost", { href: `#/reels/topic/${tp.id}` }, "🎬 Reels")),
@@ -241,7 +243,7 @@
     const list = C.phrases().filter((ph) => ph.sit === s.id);
     const start = () => { const plan = C.buildSituation(p, prog, s.id, { canListen: SP.canListen() }); root.LSSession.run({ steps: plan.steps, back: "#/situation/" + s.id }); };
     app.mount(h("div.page",
-      app.header(s.emoji + " " + pick(s), "#/phrases"),
+      app.header((s.emoji || "") + " " + pick(s), "#/phrases"),
       h("div.row", h("button.btn.primary", { type: "button", onclick: start }, "▶ " + t("practice")), h("a.btn.ghost", { href: `#/reels/sit/${s.id}` }, "🎬 Reels")),
       h("div.word-list", list.map((ph) => h("div.word-row.phrase-row" + (prog.cards[ph.id] ? ".learning" : ".new"),
         h("div.wr-main", h("div", L(ph[p.target], p.target, "strong")), h("div.muted.small", L(ph[p.help] || "", p.help))),
@@ -324,7 +326,9 @@
     const markDone = () => { prog.sounds[s.id] = Object.assign({}, prog.sounds[s.id], { done: true }); ST.saveProgress(p.id); };
     // minimal-pair listening quiz
     const quizBox = h("div");
+    let quizRun = 0;
     const pairQuiz = () => {
+      const run = ++quizRun;
       const pairs = U.shuffle(s.pairs || []);
       let i = 0, right = 0;
       const one = () => {
@@ -341,7 +345,7 @@
             if (answered) return; answered = true;
             const ok = w === target; if (ok) right++;
             e.currentTarget.classList.add(ok ? "right" : "wrong");
-            setTimeout(() => { i++; one(); }, ok ? 700 : 1500);
+            setTimeout(() => { if (run !== quizRun) return; i++; one(); }, ok ? 700 : 1500);
           } }, L(w, T))))));
       };
       one();
@@ -383,7 +387,7 @@
     const d = (D().dialogues || []).find((z) => z.id === args[0]);
     if (!d) return app.go("#/dialogues");
     const T = p.target, H = p.help;
-    let showTr = true, hide = false, stopFlag = false;
+    let showTr = true, hide = false, stopFlag = false, runId = 0;
     const linesBox = h("div.chat");
     const kar = [];
     const renderLines = (active) => {
@@ -399,18 +403,21 @@
     renderLines(null);
     const playAll = async () => {
       stopFlag = false;
-      for (let i = 0; i < d.lines.length && !stopFlag; i++) {
+      const run = ++runId; // cancels a running roleplay / earlier playAll
+      for (let i = 0; i < d.lines.length && !stopFlag && run === runId; i++) {
         renderLines(i);
         await (kar[i] ? kar[i].play(app.ttsRate()) : SP.speak(d.lines[i][T], T, { rate: app.ttsRate() }));
         await new Promise((r) => setTimeout(r, 400));
       }
-      renderLines(null);
+      if (run === runId) renderLines(null);
     };
     const stage = h("div");
     const roleplay = () => {
       stopFlag = true; SP.stop();
+      const run = ++runId;
       let i = 0, scoreSum = 0, count = 0;
       const step = async () => {
+        if (run !== runId) return; // left the page or restarted
         stage.innerHTML = "";
         if (i >= d.lines.length) {
           renderLines(null);
@@ -427,13 +434,16 @@
         if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
         if (ln.who === "A") {
           await SP.speak(ln[T], T, { rate: app.ttsRate() });
+          if (run !== runId) return;
           i++; setTimeout(step, 350);
           return;
         }
-        const nextBtn = h("button.btn.ghost", { type: "button", onclick: () => { i++; step(); } }, t("next") + " ⏭");
+        let moved = false;
+        const advance = () => { if (moved) return; moved = true; i++; step(); };
+        const nextBtn = h("button.btn.ghost", { type: "button", onclick: advance }, t("next") + " ⏭");
         const mw = root.LSEx.micWidget(ln[T], T, {}, (m) => {
-          if (m === null) return;
-          if (m.score >= 0.7) { scoreSum += m.score; count++; setTimeout(() => { i++; step(); }, 1100); }
+          if (m === null || moved) return;
+          if (m.score >= 0.7) { scoreSum += m.score; count++; setTimeout(advance, 1100); }
         });
         stage.appendChild(h("div.card.your-turn",
           h("b", t("yourTurn")),
@@ -447,7 +457,7 @@
     trBox.addEventListener("change", () => { showTr = trBox.checked; renderLines(null); });
     const hideBox = h("input", { type: "checkbox" });
     hideBox.addEventListener("change", () => { hide = hideBox.checked; renderLines(null); });
-    app.onLeave(() => { stopFlag = true; SP.stop(); SP.cancelListen(); });
+    app.onLeave(() => { stopFlag = true; runId++; SP.stop(); SP.cancelListen(); });
     app.mount(h("div.page.dialogue",
       app.header((d.emoji || "") + " " + pick(d.title, [p.ui, p.help]), "#/dialogues"),
       h("div.row.wrap",

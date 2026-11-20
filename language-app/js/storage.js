@@ -39,6 +39,8 @@
 
   function deleteProfile(id) {
     saveProfiles(profiles().filter((p) => p.id !== id));
+    clearTimeout(saveTimers[id]);
+    delete cache[id];
     store.del(PKEY(id));
     if (store.get(KEY_ACTIVE) === id) store.del(KEY_ACTIVE);
   }
@@ -68,14 +70,14 @@
     if (!cache[id]) cache[id] = Object.assign(emptyProgress(), readJSON(PKEY(id), {}));
     return cache[id];
   }
-  let saveTimer = null;
+  const saveTimers = {};
   function saveProgress(id) {
     if (!cache[id]) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => store.set(PKEY(id), JSON.stringify(cache[id])), 150);
+    clearTimeout(saveTimers[id]);
+    saveTimers[id] = setTimeout(() => { delete saveTimers[id]; if (cache[id]) store.set(PKEY(id), JSON.stringify(cache[id])); }, 150);
   }
   function flush(id) {
-    clearTimeout(saveTimer);
+    clearTimeout(saveTimers[id]);
     if (cache[id]) store.set(PKEY(id), JSON.stringify(cache[id]));
   }
 
@@ -116,7 +118,7 @@
     data.profiles.forEach((p) => {
       const i = list.findIndex((x) => x.id === p.id);
       if (i >= 0) list[i] = p; else list.push(p);
-      cache[p.id] = Object.assign(emptyProgress(), data.progress[p.id] || {});
+      cache[p.id] = Object.assign(emptyProgress(), (data.progress || {})[p.id] || {});
       store.set(PKEY(p.id), JSON.stringify(cache[p.id]));
     });
     saveProfiles(list);

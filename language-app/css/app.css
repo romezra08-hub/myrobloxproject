@@ -638,3 +638,5 @@ body { background: var(--bg); }
 .node-ring { position: absolute; inset: -9px; border-radius: 50%; background: conic-gradient(var(--uc) calc(var(--p) * 1%), transparent 0); -webkit-mask: radial-gradient(circle, transparent 41px, #000 42px); mask: radial-gradient(circle, transparent 41px, #000 42px); pointer-events: none; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gray-line: #37464f; } }
 :root[data-theme="dark"] { --gray-line: #37464f; }
+.target-word { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; direction: ltr; }
+.target-word .speakers, .target-word .icon-btn.speaker { margin: 0; }
