@@ -1,0 +1,40 @@
+// Vocabulary part 3: more everyday words (levels 2-3).
+window.LS_DATA = window.LS_DATA || {};
+LS_DATA.vocab = LS_DATA.vocab || [];
+
+// ---------- FOOD ----------
+LS_DATA.vocab.push(
+  { id: "food_garlic", topic: "food", level: 2, en: "garlic", ru: "чесно́к", he: "שום", g: "m", emoji: "🧄", enEx: "Add a little garlic.", ruEx: "Доба́вь немно́го чеснока́.", heEx: "תוסיף קצת שום." },
+  { id: "food_pepper", topic: "food", level: 2, en: "pepper", ru: "пе́рец", he: "פלפל", g: "m", emoji: "🌶️", enEx: "This pepper is very hot.", ruEx: "Э́тот пе́рец о́чень о́стрый.", heEx: "הפלפל הזה חריף מאוד." },
+  { id: "food_pasta", topic: "food", level: 2, en: "pasta", ru: "макаро́ны", he: "פסטה", g: "pl", emoji: "🍝", enEx: "The children love pasta.", ruEx: "Де́ти лю́бят макаро́ны.", heEx: "הילדים אוהבים פסטה." },
+  { id: "food_flour", topic: "food", level: 3, en: "flour", ru: "мука́", he: "קמח", g: "f", enEx: "We need flour for the cake.", ruEx: "Нам нужна́ мука́ для то́рта.", heEx: "אנחנו צריכים קמח לעוגה." },
+  { id: "food_lemon", topic: "food", level: 2, en: "lemon", ru: "лимо́н", he: "לימון", g: "m", emoji: "🍋", enEx: "Tea with lemon, please.", ruEx: "Чай с лимо́ном, пожа́луйста.", heEx: "תה עם לימון, בבקשה." },
+  { id: "food_grapes", topic: "food", level: 2, en: "grapes", ru: "виногра́д", he: "ענבים", g: "m", emoji: "🍇", enEx: "These grapes are very sweet.", ruEx: "Э́тот виногра́д о́чень сла́дкий.", heEx: "הענבים האלה מתוקים מאוד." },
+  { id: "food_strawberry", topic: "food", level: 2, en: "strawberry", ru: "клубни́ка", he: "תות", g: "f", emoji: "🍓", enEx: "I love strawberries with cream.", ruEx: "Я люблю́ клубни́ку со сли́вками.", heEx: "אני אוהב תותים עם שמנת." },
+  { id: "food_watermelon", topic: "food", level: 2, en: "watermelon", ru: "арбу́з", he: "אבטיח", g: "m", emoji: "🍉", enEx: "In summer we eat watermelon.", ruEx: "Ле́том мы еди́м арбу́з.", heEx: "בקיץ אנחנו אוכלים אבטיח." },
+  { id: "food_pear", topic: "food", level: 2, en: "pear", ru: "гру́ша", he: "אגס", g: "f", emoji: "🍐", enEx: "The pear is soft and sweet.", ruEx: "Гру́ша мя́гкая и сла́дкая.", heEx: "האגס רך ומתוק." },
+  { id: "food_peach", topic: "food", level: 2, en: "peach", ru: "пе́рсик", he: "אפרסק", g: "m", emoji: "🍑", enEx: "Wash the peach before eating.", ruEx: "Помо́й пе́рсик пе́ред едо́й.", heEx: "תשטוף את האפרסק לפני האוכל." },
+  { id: "food_cabbage", topic: "food", level: 3, en: "cabbage", ru: "капу́ста", he: "כרוב", g: "f", emoji: "🥬", enEx: "Grandma makes soup with cabbage.", ruEx: "Ба́бушка ва́рит суп с капу́стой.", heEx: "סבתא מבשלת מרק עם כרוב." },
+  { id: "food_eggplant", topic: "food", level: 2, en: "eggplant", ru: "баклажа́н", he: "חציל", g: "m", emoji: "🍆", enEx: "I fried an eggplant.", ruEx: "Я пожа́рил баклажа́н.", heEx: "טיגנתי חציל." },
+  { id: "food_mushrooms", topic: "food", level: 2, en: "mushrooms", ru: "грибы́", he: "פטריות", g: "pl", emoji: "🍄", enEx: "Pizza with mushrooms, please.", ruEx: "Пи́ццу с гриба́ми, пожа́луйста.", heEx: "פיצה עם פטריות, בבקשה." },
+  { id: "food_corn", topic: "food", level: 2, en: "corn", ru: "кукуру́за", he: "תירס", g: "f", emoji: "🌽", enEx: "The corn is still hot.", ruEx: "Кукуру́за ещё горя́чая.", heEx: "התירס עדיין חם." },
+  { id: "food_olives", topic: "food", level: 2, en: "olives", ru: "масли́ны", he: "זיתים", g: "pl", emoji: "🫒", enEx: "Put olives in the salad.", ruEx: "Положи́ масли́ны в сала́т.", heEx: "תשים זיתים בסלט." },
+  { id: "food_nuts", topic: "food", level: 2, en: "nuts", ru: "оре́хи", he: "אגוזים", g: "pl", emoji: "🥜", enEx: "He is allergic to nuts.", ruEx: "У него́ аллерги́я на оре́хи.", heEx: "יש לו אלרגיה לאגוזים." },
+  { id: "food_beef", topic: "food", level: 3, en: "beef", ru: "говя́дина", he: "בשר בקר", g: "f", enEx: "I don't eat beef.", ruEx: "Я не ем говя́дину.", heEx: "אני לא אוכל בשר בקר." },
+  { id: "food_sausage", topic: "food", level: 2, en: "sausage", ru: "колбаса́", he: "נקניק", g: "f", emoji: "🌭", enEx: "A sandwich with sausage and cheese.", ruEx: "Бутербро́д с колбасо́й и сы́ром.", heEx: "כריך עם נקניק וגבינה." },
+  { id: "food_yogurt", topic: "food", level: 2, en: "yogurt", ru: "йо́гурт", he: "יוגורט", g: "m", enEx: "I eat yogurt for breakfast.", ruEx: "На за́втрак я ем йо́гурт.", heEx: "בארוחת בוקר אני אוכל יוגורט." },
+  { id: "food_sour_cream", topic: "food", level: 3, en: "sour cream", ru: "смета́на", he: "שמנת חמוצה", g: "f", enEx: "Soup with sour cream is tasty.", ruEx: "Суп со смета́ной – э́то вку́сно.", heEx: "מרק עם שמנת חמוצה טעים." },
+  { id: "food_ice_cream", topic: "food", level: 2, en: "ice cream", ru: "моро́женое", he: "גלידה", g: "n", emoji: "🍦", enEx: "Let's buy ice cream!", ruEx: "Дава́й ку́пим моро́женое!", heEx: "בוא נקנה גלידה!" },
+  { id: "food_cookies", topic: "food", level: 2, en: "cookies", ru: "пече́нье", he: "עוגיות", g: "n", emoji: "🍪", enEx: "Tea and cookies for everyone.", ruEx: "Чай и пече́нье для всех.", heEx: "תה ועוגיות לכולם." },
+  { id: "food_chocolate", topic: "food", level: 2, en: "chocolate", ru: "шокола́д", he: "שוקולד", g: "m", emoji: "🍫", enEx: "I want a piece of chocolate.", ruEx: "Я хочу́ кусо́чек шокола́да.", heEx: "אני רוצה חתיכת שוקולד." },
+  { id: "food_beer", topic: "food", level: 2, en: "beer", ru: "пи́во", he: "בירה", g: "n", emoji: "🍺", enEx: "Dad drinks a cold beer.", ruEx: "Па́па пьёт холо́дное пи́во.", heEx: "אבא שותה בירה קרה." },
+  { id: "food_sandwich", topic: "food", level: 2, en: "sandwich", ru: "бутербро́д", he: "כריך", g: "m", emoji: "🥪", enEx: "I made you a sandwich.", ruEx: "Я сде́лал тебе́ бутербро́д.", heEx: "הכנתי לך כריך." },
+  { id: "food_porridge", topic: "food", level: 3, en: "porridge, hot cereal", ru: "ка́ша", he: "דייסה", g: "f", emoji: "🥣", enEx: "The children eat porridge every morning.", ruEx: "Де́ти едя́т ка́шу ка́ждое у́тро.", heEx: "הילדים אוכלים דייסה כל בוקר." },
+  { id: "food_jam", topic: "food", level: 3, en: "jam", ru: "варе́нье", he: "ריבה", g: "n", enEx: "Bread with butter and jam.", ruEx: "Хлеб с ма́слом и варе́ньем.", heEx: "לחם עם חמאה וריבה." },
+  { id: "food_pie", topic: "food", level: 2, en: "pie", ru: "пиро́г", he: "פאי, עוגה ממולאת", g: "m", emoji: "🥧", enEx: "Mom baked an apple pie.", ruEx: "Ма́ма испекла́ я́блочный пиро́г.", heEx: "אמא אפתה פאי תפוחים." },
+  { id: "food_pancakes", topic: "food", level: 2, en: "pancakes, crepes", ru: "блины́", he: "פנקייק, בלינצ'ס", g: "pl", emoji: "🥞", enEx: "Grandma makes the best pancakes.", ruEx: "Ба́бушка де́лает са́мые вку́сные блины́.", heEx: "סבתא מכינה את הפנקייקים הכי טובים." },
+  { id: "food_dessert", topic: "food", level: 2, en: "dessert", ru: "десе́рт", he: "קינוח", g: "m", enEx: "What is for dessert today?", ruEx: "Что сего́дня на десе́рт?", heEx: "מה יש היום לקינוח?" },
+  { id: "food_drink", topic: "food", level: 2, en: "drink, beverage", ru: "напи́ток", he: "משקה", g: "m", emoji: "🥤", enEx: "Cold drinks are in the fridge.", ruEx: "Холо́дные напи́тки в холоди́льнике.", heEx: "המשקאות הקרים במקרר." },
+  { id: "food_hummus", topic: "food", level: 2, en: "hummus", ru: "хуму́с", he: "חומוס", g: "m", enEx: "Pita with hummus and salad.", ruEx: "Пи́та с хуму́сом и сала́том.", heEx: "פיתה עם חומוס וסלט." },
+  { id: "food_melon", topic: "food", level: 3, en: "melon", ru: "ды́ня", he: "מלון", g: "f", emoji: "🍈", enEx: "The melon smells wonderful.", ruEx: "Ды́ня замеча́тельно па́хнет.", heEx: "למלון יש ריח נפלא." },
+);
