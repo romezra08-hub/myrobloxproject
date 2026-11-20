@@ -150,6 +150,7 @@
         ring,
         h("div", h("div.small.muted", t("goal")), h("div.goal-num", `${xpToday} / ${goal} ${t("xp")}`), pct >= 100 ? h("div.small.good", t("goalDone")) : null),
         h("div.mini-stats", h("div", h("b", st.seen), h("small", t("wordsKnown"))), h("div", h("b", st.due), h("small", t("toReview"))))),
+      root.LSPlacement ? root.LSPlacement.card(app) : null,
       p.plan ? h("div.plan-line", "📌 ", h("span", { dir: "auto" }, p.plan)) : null,
       focusChips(app, p),
       h("button.hero-card", { type: "button", onclick: startDaily },

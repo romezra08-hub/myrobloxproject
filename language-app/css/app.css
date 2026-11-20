@@ -668,3 +668,4 @@ body { background: var(--bg); }
 .story-t .kw { cursor: pointer; position: relative; }
 .story-t .kw:hover { text-decoration: underline dotted; }
 .gloss-pop { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: .8em; font-weight: 800; padding: 4px 10px; border-radius: 10px; white-space: nowrap; z-index: 5; animation: rise .15s ease; pointer-events: none; }
+.placement { background: linear-gradient(135deg, #e7f5ff, #ebfbee); color: #22163d; } .placement .muted { color: #5e5478; }
