@@ -91,6 +91,11 @@ async function runLesson(page, tag, maxSteps) {
   await page.goto(base);
   await page.waitForSelector(".welcome");
   await shot(page, "01-welcome");
+  // switching interface language on the welcome screen must keep the page working
+  await page.click(".chip-btn >> nth=1");
+  await page.waitForSelector(".preset");
+  await page.click(".chip-btn >> nth=0");
+  await page.waitForSelector(".preset");
 
   // --- Mom: learns English ---
   await page.click(".preset >> nth=0");
