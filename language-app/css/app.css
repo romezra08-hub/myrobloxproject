@@ -653,3 +653,13 @@ body { background: var(--bg); }
 .node.kind-story:not(.locked):not(.done) { border-radius: 22px; }
 .node.locked.kind-grammar .node-icon, .node.locked.kind-story .node-icon { opacity: .7; }
 .trail { padding-top: 46px; }
+.quests { display: flex; flex-direction: column; gap: 10px; }
+.quests-head { display: flex; justify-content: space-between; align-items: center; }
+.quest { display: flex; align-items: center; gap: 12px; }
+.quest-icon { font-size: 1.6em; width: 40px; text-align: center; }
+.quest-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.quest-text { font-weight: 800; }
+.quest-bar { position: relative; height: 18px; border-radius: 99px; background: var(--gray-line); overflow: hidden; }
+.quest-bar i { display: block; height: 100%; background: #ffc800; border-radius: 99px; }
+.quest.done .quest-bar i { background: var(--green); }
+.quest-bar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .75em; font-weight: 900; color: var(--text); }

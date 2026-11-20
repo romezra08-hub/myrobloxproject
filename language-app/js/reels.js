@@ -159,6 +159,7 @@
           root.LSUI.sfx(good ? "right" : "wrong");
           if (good) {
             ST.addXp(profile.id, sayingSentence ? 8 : 5);
+            if (root.LSQuests) root.LSQuests.bump(profile.id, "spoken");
             if (!sayingSentence) { gradeOnce(true); know.classList.add("on"); }
             if (!sayingSentence && !isPhrase && exT) {
               sayBox.appendChild(h("button.say-next", { type: "button", onclick: (ev) => {
@@ -235,6 +236,7 @@
       c.onShow = () => {
         const main = el.querySelector(".reel-main");
         main.innerHTML = "";
+        if (!c.counted && root.LSQuests) { c.counted = true; root.LSQuests.bump(profile.id, "reels"); }
         saveTime();
         main.append(...[
           h("div.big-emoji", "🎬"),

@@ -167,6 +167,7 @@
         h("span.ac-emoji", "🎬"), h("div", h("b", x("reelsCard")), h("div.small.muted", x("reelsCardSub")))),
       hour >= 19 || hour < 3 ? h("button.card.action-card.night", { type: "button", onclick: startBedtime },
         h("span.ac-emoji", "🌙"), h("div", h("b", x("bedtime")), h("div.small.muted", x("bedtimeSub")))) : null,
+      root.LSQuests ? root.LSQuests.card(p) : null,
       root.LSPath ? root.LSPath.render(app) : h("div", h("h2.section-title", t("learn")), sectionGrid(app, p)),
       root.LSHabits.journeyCard(p),
       h("button.card.action-card", { type: "button", onclick: () => app.go("#/family") },

@@ -103,6 +103,7 @@
       const prev = prog.stories[s.id] || {};
       prog.stories[s.id] = { best: Math.max(prev.best || 0, score), done: (prev.done || 0) + 1 };
       ST.addXp(p.id, 10 + right * 5);
+      if (root.LSQuests) root.LSQuests.bump(p.id, "story");
       ST.saveProgress(p.id);
       result.appendChild(h("div.card.center", h("div.big-emoji", score === 1 ? "🏆" : "🌟"), h("h3", x("done")), h("div", right + "/" + s.questions.length)));
       confetti(); sfx("done");

@@ -133,6 +133,7 @@
       results.push({ step, correct });
 
       if (step.item) gradeItem(step.item.id, correct, res);
+      if (step.kind === "speak" && correct && root.LSQuests) root.LSQuests.bump(profile.id, "spoken");
       if (res.matchIds) res.matchIds.forEach((id) => gradeItem(id, !!res.correct, res));
       if (res.letter) {
         const ls = prog.letters[res.letter] || (prog.letters[res.letter] = { seen: 1, right: 0, wrong: 0 });
@@ -239,6 +240,12 @@
       if (opts.onComplete) opts.onComplete({ right, wrong, xp, results });
       const total = right + wrong;
       const acc = total ? Math.round((right / total) * 100) : 100;
+      if (root.LSQuests) {
+        root.LSQuests.bump(profile.id, "lessons");
+        root.LSQuests.bump(profile.id, "combo", bestCombo);
+        if (acc >= 90 && total >= 5) root.LSQuests.bump(profile.id, "perfect");
+        root.LSQuests.checkChest(profile.id);
+      }
       const streak = ST.streak(profile.id);
       body.innerHTML = "";
       fb.className = "feedback";
