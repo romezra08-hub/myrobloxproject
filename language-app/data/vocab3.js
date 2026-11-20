@@ -64,7 +64,7 @@ LS_DATA.vocab.push(
   { id: "home_drawer", topic: "home", level: 3, en: "drawer", ru: "я́щик", he: "מגירה", g: "m", enEx: "The knives are in the drawer.", ruEx: "Ножи́ в я́щике.", heEx: "הסכינים במגירה." },
   { id: "home_trash", topic: "home", level: 2, en: "trash, garbage", ru: "му́сор", he: "זבל", g: "m", emoji: "🗑️", enEx: "Take out the trash, please.", ruEx: "Вы́неси му́сор, пожа́луйста.", heEx: "תוריד את הזבל, בבקשה." },
   { id: "home_air_conditioner", topic: "home", level: 2, en: "air conditioner", ru: "кондиционе́р", he: "מזגן", g: "m", enEx: "Turn on the air conditioner.", ruEx: "Включи́ кондиционе́р.", heEx: "תדליק את המזגן." },
-  { id: "home_bottle", topic: "home", level: 2, en: "bottle", ru: "буты́лка", he: "בקבוק", g: "f", emoji: "🍾", enEx: "A bottle of water, please.", ruEx: "Буты́лку воды́, пожа́луйста.", heEx: "בקבוק מים, בבקשה." },
+  { id: "home_bottle", topic: "home", level: 2, en: "bottle", ru: "буты́лка", he: "בקבוק", g: "f", enEx: "A bottle of water, please.", ruEx: "Буты́лку воды́, пожа́луйста.", heEx: "בקבוק מים, בבקשה." },
   { id: "home_iron", topic: "home", level: 3, en: "iron (for clothes)", ru: "утю́г", he: "מגהץ", g: "m", enEx: "Don't forget to turn off the iron.", ruEx: "Не забу́дь вы́ключить утю́г.", heEx: "אל תשכח לכבות את המגהץ." },
   { id: "home_vacuum", topic: "home", level: 3, en: "vacuum cleaner", ru: "пылесо́с", he: "שואב אבק", g: "m", enEx: "The vacuum cleaner is very loud.", ruEx: "Пылесо́с о́чень гро́мкий.", heEx: "שואב האבק רועש מאוד." },
   { id: "home_living_room", topic: "home", level: 2, en: "living room", ru: "гости́ная", he: "סלון", g: "f", enEx: "We watch TV in the living room.", ruEx: "Мы смо́трим телеви́зор в гости́ной.", heEx: "אנחנו רואים טלוויזיה בסלון." },
@@ -333,7 +333,7 @@ LS_DATA.vocab.push(
   { id: "nature_desert", topic: "nature", level: 3, en: "desert", ru: "пусты́ня", he: "מדבר", g: "f", emoji: "🏜️", enEx: "It is very hot in the desert.", ruEx: "В пусты́не о́чень жа́рко.", heEx: "במדבר חם מאוד." },
   { id: "nature_field", topic: "nature", level: 3, en: "field", ru: "по́ле", he: "שדה", g: "n", enEx: "The cows are in the field.", ruEx: "Коро́вы в по́ле.", heEx: "הפרות בשדה." },
   { id: "nature_leaf", topic: "nature", level: 2, en: "leaf", ru: "лист", he: "עלה", g: "m", emoji: "🍃", enEx: "The leaves are yellow in autumn.", ruEx: "О́сенью ли́стья жёлтые.", heEx: "בסתיו העלים צהובים." },
-  { id: "nature_plant", topic: "nature", level: 2, en: "plant", ru: "расте́ние", he: "צמח", g: "n", emoji: "🪴", enEx: "Water the plants, please.", ruEx: "Полей расте́ния, пожа́луйста.", heEx: "תשקה את הצמחים, בבקשה." },
+  { id: "nature_plant", topic: "nature", level: 2, en: "plant", ru: "расте́ние", he: "צמח", g: "n", emoji: "🪴", enEx: "Water the plants, please.", ruEx: "Поле́й расте́ния, пожа́луйста.", heEx: "תשקה את הצמחים, בבקשה." },
   { id: "nature_mosquito", topic: "nature", level: 2, en: "mosquito", ru: "кома́р", he: "יתוש", g: "m", emoji: "🦟", enEx: "A mosquito bit me.", ruEx: "Меня́ укуси́л кома́р.", heEx: "יתוש עקץ אותי." },
   { id: "nature_fly", topic: "nature", level: 2, en: "fly (insect)", ru: "му́ха", he: "זבוב", g: "f", emoji: "🪰", enEx: "There is a fly in my soup!", ruEx: "У меня́ в су́пе му́ха!", heEx: "יש זבוב במרק שלי!" },
   { id: "nature_sheep", topic: "nature", level: 2, en: "sheep", ru: "овца́", he: "כבשה", g: "f", emoji: "🐑", enEx: "The sheep eat grass.", ruEx: "О́вцы едя́т траву́.", heEx: "הכבשים אוכלות עשב." },
@@ -352,7 +352,7 @@ LS_DATA.vocab.push(
   { id: "shopping_order", topic: "shopping", level: 3, en: "order", ru: "зака́з", he: "הזמנה", g: "m", enEx: "Your order is ready.", ruEx: "Ваш зака́з гото́в.", heEx: "ההזמנה שלך מוכנה." },
   { id: "shopping_product", topic: "shopping", level: 3, en: "product, goods", ru: "това́р", he: "מוצר, סחורה", g: "m", enEx: "This product is out of stock.", ruEx: "Э́того това́ра нет в нали́чии.", heEx: "המוצר הזה אזל מהמלאי." },
   { id: "shopping_fitting_room", topic: "shopping", level: 3, en: "fitting room", ru: "приме́рочная", he: "תא מדידה", g: "f", enEx: "Where is the fitting room?", ruEx: "Где приме́рочная?", heEx: "איפה תא המדידה?" },
-  { id: "shopping_refund", topic: "shopping", level: 3, en: "refund, return", ru: "возвра́т", he: "החזר, החזרה", g: "m", enEx: "Can I get a refund?", ruEx: "Мо́жно оформить возвра́т?", heEx: "אפשר לקבל החזר?" },
+  { id: "shopping_refund", topic: "shopping", level: 3, en: "refund, return", ru: "возвра́т", he: "החזר, החזרה", g: "m", enEx: "Can I get a refund?", ruEx: "Мо́жно офо́рмить возвра́т?", heEx: "אפשר לקבל החזר?" },
 );
 
 // ---------- FEELINGS ----------

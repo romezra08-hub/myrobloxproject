@@ -246,6 +246,11 @@
       bar.style.width = "100%";
       body.appendChild(h("div.summary",
         h("div.big-emoji", acc >= 90 ? "🏆" : acc >= 70 ? "🌟" : "💪"),
+        root.LSPath ? root.LSPath.mascot({
+          he: acc >= 90 ? "וואו! כמעט מושלם! 🎉" : acc >= 70 ? "עבודה מצוינת, ממשיכים ככה!" : "כל טעות מלמדת — מחר זה יהיה קל יותר 💪",
+          en: acc >= 90 ? "Wow! Almost perfect! 🎉" : acc >= 70 ? "Great work, keep it up!" : "Every mistake teaches — tomorrow it'll be easier 💪",
+          ru: acc >= 90 ? "Ух ты! Почти идеально! 🎉" : acc >= 70 ? "Отличная работа, так держать!" : "Каждая ошибка учит — завтра будет легче 💪",
+        }[I()], "center") : null,
         h("h2", t("lessonDone")),
         h("div.stat-row",
           h("div.stat", h("div.stat-num", "+" + xp), h("div.stat-lbl", t("xp"))),

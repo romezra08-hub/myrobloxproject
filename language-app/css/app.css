@@ -640,3 +640,12 @@ body { background: var(--bg); }
 :root[data-theme="dark"] { --gray-line: #37464f; }
 .target-word { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; direction: ltr; }
 .target-word .speakers, .target-word .icon-btn.speaker { margin: 0; }
+.ex-title { font-family: "Rubik", sans-serif; font-size: 1.35em; font-weight: 800; color: var(--text); text-align: start; }
+.mascot.center { justify-content: center; }
+.summary .big-emoji { font-size: 90px; }
+.summary h2 { font-family: "Rubik", sans-serif; font-size: 1.6em; color: var(--warn); }
+.session-top .icon-btn { background: transparent; font-size: 1.4em; color: var(--muted); }
+.help-prompt { border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+.summary .big-emoji:has(+ .mascot) { display: none; }
+.summary .mascot .fox { font-size: 84px; animation: foxjump .6s ease 2; }
+@keyframes foxjump { 50% { transform: translateY(-16px) rotate(8deg); } }
