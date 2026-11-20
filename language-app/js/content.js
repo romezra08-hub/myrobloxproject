@@ -231,8 +231,8 @@
     const steps = [];
     for (let i = 0; i < fresh.length; i += 3) {
       const b = fresh.slice(i, i + 3);
-      b.forEach((it) => steps.push({ kind: "intro", item: it }));
-      U.shuffle(b).forEach((it) => steps.push({ kind: "mc", dir: "t2h", item: it, learning: true }));
+      b.forEach((it) => { steps.push({ kind: "mc", dir: "t2h", item: it, pretest: true }); steps.push({ kind: "intro", item: it }); });
+      U.shuffle(b).forEach((it) => steps.push({ kind: "mc", dir: Math.random() < 0.5 ? "h2t" : "listen", item: it, learning: true }));
     }
     if (fresh.length >= 3) steps.push({ kind: "match", items: U.sample(fresh, Math.min(5, fresh.length)), learning: true });
     old.forEach((it) => steps.push(exerciseFor(it, prog.cards[it.id], ctx)));

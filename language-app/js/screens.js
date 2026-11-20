@@ -48,7 +48,7 @@
   // ---------- profiles ----------
   function profiles(app) {
     const list = ST.profiles();
-    const langBtns = h("div.row.center.wrap", ["he", "ru", "en"].map((l) => h("button.chip-btn" + (I.getLang() === l ? ".on" : ""), { type: "button", onclick: () => { I.setLang(l); document.documentElement.dir = l === "he" ? "rtl" : "ltr"; app.mount(profiles(app), { full: true }); } }, { he: "עברית", ru: "Русский", en: "English" }[l])));
+    const langBtns = h("div.row.center.wrap", ["he", "ru", "en"].map((l) => h("button.chip-btn" + (I.getLang() === l ? ".on" : ""), { type: "button", onclick: () => { I.setLang(l); document.documentElement.dir = l === "he" ? "rtl" : "ltr"; profiles(app); } }, { he: "עברית", ru: "Русский", en: "English" }[l])));
     const preset = (p) => () => { const prof = ST.createProfile(p); app.setProfile(prof); app.go("#/home"); };
     const el = h("div.page.welcome",
       h("div.logo", "🗣️"),
