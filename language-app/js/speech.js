@@ -25,8 +25,9 @@
       let s = 0;
       const l = (v.lang || "").replace("_", "-").toLowerCase();
       if (l === loc.toLowerCase()) s += 4;
-      if (/natural|neural|online|google|premium|enhanced/i.test(v.name)) s += 3;
-      if (/samantha|milena|yuri|daniel|alex/i.test(v.name)) s += 1;
+      if (/natural|neural|online|google|premium|enhanced|siri/i.test(v.name)) s += 3;
+      if (/samantha|milena|yuri|daniel|alex|ava|zoe/i.test(v.name)) s += 1;
+      if (/compact|espeak|robot|novelty|bad news|bells|whisper|zarvox|trinoids/i.test(v.name)) s -= 6;
       return s;
     };
     return cands.sort((a, b) => score(b) - score(a))[0];
@@ -39,32 +40,40 @@
     return voices.length === 0 ? true : !!voiceFor(lang);
   }
 
-  // Fallback voice inside claude.ai: the platform's "tts" capability, used only when the
-  // device has no voice for the language (common for Russian/Hebrew on some phones).
+  // Natural voice inside claude.ai: the platform's "tts" capability with an explicit language,
+  // so Russian is read with a native Russian accent and English with an American one.
+  // It's the default there; Settings can switch back to the device voice.
   let claudeTts = null;
   if (root.claude && root.claude.use) { try { root.claude.use("tts").then((t) => { claudeTts = t; }).catch(() => {}); } catch (e) {} }
-  function speakClaude(text, lang, opts) {
-    return claudeTts.speak(U.stripStress(text), { language: lang, rate: Math.max(0.7, Math.min(1.5, opts.rate || 0.9)) }).then(() => true, () => false);
+  function preferNatural() {
+    const p = root.LSApp && root.LSApp.profile && root.LSApp.profile();
+    return !p || p.voice !== "device";
   }
+  function speakClaude(text, lang, opts) {
+    const plain = U.stripStress(text);
+    const rate = Math.max(0.7, Math.min(1.5, (opts.rate || 0.9) * 1.05));
+    let off = null;
+    if (opts.onWord && claudeTts.onPosition) {
+      // approximate karaoke: ~14 characters per second at normal speed
+      off = claudeTts.onPosition(({ ms }) => opts.onWord(Math.min(plain.length - 1, Math.floor((ms / 1000) * 14 * rate))));
+    }
+    const done = () => { try { off && off(); } catch (e) {} if (opts.onWord) opts.onWord(-1); };
+    return claudeTts.speak(plain, { language: lang, rate }).then(() => { done(); return true; }, () => { done(); return false; });
+  }
+  function hasNatural() { return !!claudeTts; }
 
   function speak(text, lang, opts) {
     opts = opts || {};
-    if (text && claudeTts && voices.length && !voiceFor(lang)) return speakClaude(text, lang, opts);
+    if (text && claudeTts && (preferNatural() || (voices.length && !voiceFor(lang)))) return speakClaude(text, lang, opts);
     return new Promise((resolve) => {
       if (!synth || !text) return resolve(false);
       try {
         synth.cancel();
         const u = new root.SpeechSynthesisUtterance(U.stripStress(text));
         u.lang = LOCALES[lang] || lang;
-        let v = voiceFor(lang);
-        if (opts.vary) {
-          // High-variability phonetic training: different voices and speeds train the ear.
-          const prefix = (LOCALES[lang] || lang).slice(0, 2);
-          const all = voices.filter((x) => (x.lang || "").toLowerCase().startsWith(prefix));
-          if (all.length) v = all[Math.floor(Math.random() * all.length)];
-        }
+        const v = voiceFor(lang);
         if (v) u.voice = v;
-        u.rate = (opts.rate || 0.9) * (opts.vary ? 0.85 + Math.random() * 0.3 : 1);
+        u.rate = opts.rate || 0.9;
         u.pitch = 1;
         let done = false;
         const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
@@ -149,5 +158,5 @@
     return best;
   }
 
-  root.LSSpeech = { speak, stop, canSpeak, canListen, listen, cancelListen, bestMatch, voiceFor, LOCALES };
+  root.LSSpeech = { hasNatural, speak, stop, canSpeak, canListen, listen, cancelListen, bestMatch, voiceFor, LOCALES };
 })(window);

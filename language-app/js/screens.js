@@ -164,6 +164,8 @@
         h("span.ac-emoji", p.target === "ru" ? "🔤" : "🔠"),
         h("div", h("b", x("alphabetFirst")), h("div.small.muted", x("alphabetFirstSub")),
           h("div.mini-bar", h("i", { style: { width: Math.round((lettersKnown / al.length) * 100) + "%" } })), h("div.small", `${lettersKnown}/${al.length} ${t("letters")}`))) : null,
+      h("button.card.action-card.chat-cta", { type: "button", onclick: () => app.go("#/chat") },
+        h("span.ac-emoji", "🦊"), h("div", h("b", t("sec_chat")), h("div.small.muted", t("sec_chat_sub")))),
       h("button.card.action-card.reels-cta", { type: "button", onclick: () => app.go("#/reels") },
         h("span.ac-emoji", "🎬"), h("div", h("b", x("reelsCard")), h("div.small.muted", x("reelsCardSub")))),
       hour >= 19 || hour < 3 ? h("button.card.action-card.night", { type: "button", onclick: startBedtime },
@@ -196,6 +198,7 @@
       { hash: "sounds", icon: "👄", key: "sounds" },
       { hash: "dialogues", icon: "🎭", key: "dialogues" },
       { hash: "stories", icon: "📚", key: "stories" },
+      { hash: "chat", icon: "🦊", key: "chat" },
       { hash: "mistakes", icon: "🩹", key: "review" },
     ];
   }
@@ -299,6 +302,13 @@
         h("button.btn.ghost", { type: "button", onclick: () => app.go("#/edit") }, t("edit")),
         h("button.btn.ghost", { type: "button", onclick: () => app.go("#/who") }, t("switchLearner"))),
       h("div.card",
+        SP.hasNatural() ? h("div.field", h("span", { he: "קול", en: "Voice", ru: "Голос" }[I.getLang()]), (() => {
+          const cur = p.voice === "device" ? "device" : "natural";
+          const row = h("div.seg");
+          [["natural", { he: "🦊 טבעי (מבטא אמיתי)", en: "🦊 Natural (native accent)", ru: "🦊 Естественный (родной акцент)" }], ["device", { he: "📱 קול המכשיר", en: "📱 Device voice", ru: "📱 Голос устройства" }]].forEach(([k, n]) =>
+            row.appendChild(h("button.seg-btn" + (cur === k ? ".on" : ""), { type: "button", onclick: () => { ST.updateProfile(p.id, { voice: k }); app.refreshProfile(); app.go("#/settings"); } }, n[I.getLang()])));
+          return row;
+        })()) : null,
         h("div.field", h("span", t("speechRate")), range("ttsRate", 0.5, 1.2, 0.05, (v) => (v || 0.9).toFixed(2) + "×")),
         h("div.row", h("button.btn.ghost", { type: "button", onclick: () => SP.speak(p.target === "en" ? "Hello! How are you today?" : "Приве́т! Как дела́?", p.target, { rate: app.ttsRate() }) }, "🔊 " + t("testVoice"))),
         voiceInfo(),
